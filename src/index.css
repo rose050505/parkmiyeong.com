@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+
+@theme {
+  --font-sans: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+
+  /* 바탕·글자 */
+  --color-paper: #f3efe5;
+  --color-paper-2: #e9e3d4;
+  --color-ink: #11231b;
+  --color-ink-2: #46544c;
+  --color-ink-3: #7c877f;
+  --color-line: #d5cdbb;
+
+  /* 색 — 발표자료에서 쓰던 짙은 초록과 크림 */
+  --color-green: #1f4d38;
+  --color-green-2: #2f6a4e;
+  --color-leaf: #8fcaa8;
+  --color-gold: #8d6d12;
+  --color-rust: #a03f2b;
+
+  --container-site: 72rem;
+  --container-read: 44rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #0f1b15;
+    --color-paper-2: #16261e;
+    --color-ink: #ece6d8;
+    --color-ink-2: #b7b0a2;
+    --color-ink-3: #7f8a82;
+    --color-line: #2a3b32;
+    --color-green: #9bd4b4;
+    --color-green-2: #7fbf9a;
+    --color-leaf: #2f6a4e;
+    --color-gold: #d9b24a;
+    --color-rust: #e0866e;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-feature-settings: "ss01", "tnum";
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-green) 28%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-green);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* 큰 숫자 — 이 사이트에서 가장 눈에 띄는 요소. 굵기와 자간으로만 말한다. */
+.num {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 본문 링크 */
+.link {
+  color: var(--color-green);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in oklab, var(--color-green) 40%, transparent);
+}
+.link:hover { text-decoration-color: var(--color-green); }
+
+/* 읽기 본문 */
+.prose p { margin-top: 1rem; }
+.prose p:first-child { margin-top: 0; }
+.prose strong { font-weight: 650; color: var(--color-ink); }
+.prose ul { margin-top: 0.9rem; padding-left: 1.2rem; list-style: disc; }
+.prose li { margin-top: 0.35rem; }
+.prose li::marker { color: var(--color-ink-3); }
+
+/* 인용 — 본인 문서에서 그대로 가져온 문장 */
+.pull {
+  border-left: 3px solid var(--color-green);
+  padding-left: 1.1rem;
+}
+
+/* 표 */
+.facts { border-top: 1px solid var(--color-line); }
+.facts > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) 1fr;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-line);
+}
+@media (max-width: 480px) {
+  .facts > div { grid-template-columns: 1fr; gap: 0.15rem; }
+}
+
+/* 이미지 틀 */
+.shot {
+  background: var(--color-paper-2);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.shot img { display: block; width: 100%; height: auto; }
+
+.phone {
+  border-radius: 18px;
+  border: 1px solid var(--color-line);
+  overflow: hidden;
+  background: var(--color-paper-2);
+}
+.phone img { display: block; width: 100%; height: auto; }
