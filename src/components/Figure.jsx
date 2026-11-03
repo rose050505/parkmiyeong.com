@@ -16,7 +16,7 @@ export default function Figure({ kind = 'wide', images, caption, className = '' 
         </div>
       )}
       {kind === 'phones' && (
-        <div className="mx-auto grid max-w-[640px] grid-cols-2 gap-4 sm:gap-6">
+        <div className="mx-auto grid max-w-[640px] grid-cols-2 items-start gap-4 sm:gap-6">
           {list.map((im) => (
             <div key={im.src} className="phone">
               <img src={im.src} alt={im.alt || ''} loading="lazy" decoding="async" />

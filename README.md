@@ -10,7 +10,7 @@ npm run build    # dist/
 
 ## 어디를 고치나
 
-- 프로젝트 다섯 개의 모든 글과 숫자: `src/content/projects.js`
+- 프로젝트 여섯 개의 모든 글과 숫자: `src/content/projects.js`
 - 첫 화면의 확인된 결과(3), 강점(4), 2026년 기록: `src/content/home.js`
 - 프로젝트 순서는 `projects.js` 배열 순서. 카드의 공들인 부분은 `craft`, 키운 능력은 `skills`
 - 일하는 방식 페이지: `src/content/how.js`

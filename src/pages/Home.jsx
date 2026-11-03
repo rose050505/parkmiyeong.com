@@ -135,7 +135,7 @@ export default function Home() {
         {/* 만든 것들 */}
         <section id="work" className="mt-24 scroll-mt-10 sm:mt-32">
           <SectionHead title="만든 것들">
-            제대로 만들어 내놓은 다섯입니다. 상을 받았거나 지금도 운영 중인 것부터 놓았고, 프로젝트마다 공들인 부분과 그 과정에서
+            제대로 만들어 내놓은 여섯입니다. 상을 받았거나 지금도 쓰이는 것부터 놓았고, 프로젝트마다 공들인 부분과 그 과정에서
             키운 능력을 적었습니다.
           </SectionHead>
           <div className="mt-10">
@@ -148,7 +148,7 @@ export default function Home() {
         {/* 2026 기록 */}
         <section id="log" className="mt-16 scroll-mt-10 border-t border-line pt-14 sm:mt-20">
           <SectionHead title="2026년 기록">
-            위 다섯을 포함해 올해 한 일입니다. 끝난 것, 안 된 것, 하는 중인 것을 함께 적었습니다.
+            위 여섯을 포함해 올해 한 일입니다. 끝난 것, 안 된 것, 하는 중인 것을 함께 적었습니다.
           </SectionHead>
           <ol className="mt-8 max-w-[52rem]">
             {log.map((e, i) => (
