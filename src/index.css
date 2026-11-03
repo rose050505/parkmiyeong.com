@@ -1,30 +1,34 @@
 @import "tailwindcss";
 @import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
+/*
+  방향: plan·focuslock 에서 쓰던 "밤하늘 남색"을 다듬어 가져온다.
+  첫 화면 위쪽만 짙은 남색 띠(별점 무늬), 나머지는 차가운 라벤더빛 흰 바탕에 보라 하나.
+*/
 @theme {
   --font-sans: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
 
   /* 바탕·글자 */
-  --color-paper: #f3efe5;
-  --color-paper-2: #e9e3d4;
-  --color-ink: #11231b;
-  --color-ink-2: #46544c;
-  --color-ink-3: #7c877f;
-  --color-line: #d5cdbb;
+  --color-paper: #f6f5fb;
+  --color-paper-2: #ecebf5;
+  --color-surface: #ffffff;
+  --color-ink: #17152c;
+  --color-ink-2: #4b4965;
+  --color-ink-3: #7f7d98;
+  --color-line: #dedbea;
 
-  /* 색 — 발표자료에서 쓰던 짙은 초록과 크림 */
-  --color-green: #1f4d38;
-  --color-green-2: #2f6a4e;
-  --color-leaf: #8fcaa8;
-  --color-gold: #8d6d12;
-  --color-rust: #a03f2b;
+  /* 강조 — 보라 하나. 수상은 호박색, 문제는 적색 */
+  --color-accent: #5b3fd9;
+  --color-accent-soft: #ece8ff;
+  --color-gold: #9a5f00;
+  --color-rust: #b8352a;
 
-  /* 강점 구간만 쓰는 짙은 초록 면 */
-  --color-panel: #1c4432;
-  --color-panel-ink: #f3efe5;
-  --color-panel-ink-2: #c9d6cc;
-  --color-panel-line: #3b6450;
-  --color-panel-accent: #a9dcbd;
+  /* 첫 화면 남색 띠 */
+  --color-hero: #13112a;
+  --color-hero-ink: #f3f1fc;
+  --color-hero-ink-2: #b6b2d3;
+  --color-hero-line: #2d2952;
+  --color-hero-accent: #8fe3d4;
 
   --container-site: 72rem;
   --container-read: 44rem;
@@ -32,45 +36,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-paper: #0f1b15;
-    --color-paper-2: #16261e;
-    --color-ink: #ece6d8;
-    --color-ink-2: #b7b0a2;
-    --color-ink-3: #7f8a82;
-    --color-line: #2a3b32;
-    --color-green: #9bd4b4;
-    --color-green-2: #7fbf9a;
-    --color-leaf: #2f6a4e;
-    --color-gold: #d9b24a;
-    --color-rust: #e0866e;
-    --color-panel: #1a3d2e;
-    --color-panel-ink: #ece6d8;
-    --color-panel-ink-2: #b9c7bd;
-    --color-panel-line: #2f5443;
-    --color-panel-accent: #9bd4b4;
+    --color-paper: #0f0e1c;
+    --color-paper-2: #191730;
+    --color-surface: #15132a;
+    --color-ink: #eceaf7;
+    --color-ink-2: #b5b2cf;
+    --color-ink-3: #817e9c;
+    --color-line: #2a2746;
+    --color-accent: #a894ff;
+    --color-accent-soft: #241f45;
+    --color-gold: #e4b55a;
+    --color-rust: #ee8a7c;
+    --color-hero: #0a0916;
+    --color-hero-line: #262246;
   }
-}
-
-/* 공들인 부분: 굵은 첫 문장만 진하게 */
-.craft strong { font-weight: 650; color: var(--color-ink); }
-
-/* 키운 능력: 짧은 초록 막대 표시 */
-.skill::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.8em;
-  width: 0.65rem;
-  height: 2px;
-  background: var(--color-green);
-}
-
-/* 작은 제목. 섹션 안에서 내용 덩어리를 가른다. */
-.subhead {
-  font-size: 15px;
-  font-weight: 650;
-  color: var(--color-ink-3);
-  letter-spacing: -0.01em;
 }
 
 html {
@@ -92,16 +71,29 @@ body {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--color-green) 28%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 26%, transparent);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-green);
+  outline: 2px solid var(--color-accent);
   outline-offset: 3px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
-/* 큰 숫자 — 이 사이트에서 가장 눈에 띄는 요소. 굵기와 자간으로만 말한다. */
+/* 첫 화면 띠: 아주 옅은 별점 격자 + 오른쪽 위 보랏빛 번짐 */
+.hero-band {
+  background-color: var(--color-hero);
+  background-image:
+    radial-gradient(60rem 28rem at 85% -10%, color-mix(in oklab, #6f52ff 34%, transparent), transparent 70%),
+    radial-gradient(40rem 22rem at 0% 110%, color-mix(in oklab, #2bb9a3 16%, transparent), transparent 70%),
+    radial-gradient(circle at center, rgb(255 255 255 / 0.11) 1px, transparent 1.3px);
+  background-size: auto, auto, 24px 24px;
+  color: var(--color-hero-ink);
+}
+.hero-band ::selection { background: rgb(143 227 212 / 0.35); }
+.hero-band :focus-visible { outline-color: var(--color-hero-accent); }
+
+/* 숫자 */
 .num {
   font-weight: 800;
   letter-spacing: -0.035em;
@@ -111,25 +103,17 @@ body {
 
 /* 본문 링크 */
 .link {
-  color: var(--color-green);
+  color: var(--color-accent);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-  text-decoration-color: color-mix(in oklab, var(--color-green) 40%, transparent);
+  text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
 }
-.link:hover { text-decoration-color: var(--color-green); }
+.link:hover { text-decoration-color: var(--color-accent); }
 
-/* 읽기 본문 */
-.prose p { margin-top: 1rem; }
-.prose p:first-child { margin-top: 0; }
-.prose strong { font-weight: 650; color: var(--color-ink); }
-.prose ul { margin-top: 0.9rem; padding-left: 1.2rem; list-style: disc; }
-.prose li { margin-top: 0.35rem; }
-.prose li::marker { color: var(--color-ink-3); }
-
-/* 인용 — 본인 문서에서 그대로 가져온 문장 */
+/* 인용 */
 .pull {
-  border-left: 3px solid var(--color-green);
+  border-left: 3px solid var(--color-accent);
   padding-left: 1.1rem;
 }
 
@@ -146,19 +130,81 @@ body {
   .facts > div { grid-template-columns: 1fr; gap: 0.15rem; }
 }
 
-/* 이미지 틀 */
+/* 이미지 틀 — 연보라 판 위에 얹는다. 휴대폰은 판 가운데, 넓은 화면은 판 안쪽 여백 */
+.frame {
+  background: var(--tint, var(--color-paper-2));
+  border-radius: 20px;
+  padding: clamp(14px, 3vw, 28px);
+}
 .shot {
-  background: var(--color-paper-2);
-  border: 1px solid var(--color-line);
-  border-radius: 6px;
+  border-radius: 10px;
   overflow: hidden;
+  box-shadow: 0 1px 2px rgb(23 21 44 / 0.08), 0 12px 32px -12px rgb(23 21 44 / 0.25);
 }
 .shot img { display: block; width: 100%; height: auto; }
 
 .phone {
-  border-radius: 18px;
-  border: 1px solid var(--color-line);
+  border-radius: 22px;
   overflow: hidden;
-  background: var(--color-paper-2);
+  height: fit-content;
+  box-shadow: 0 1px 2px rgb(23 21 44 / 0.1), 0 16px 40px -14px rgb(23 21 44 / 0.35);
 }
 .phone img { display: block; width: 100%; height: auto; }
+
+/* 공들인 부분: 굵은 첫 문장만 진하게 */
+.craft strong { font-weight: 650; color: var(--color-ink); }
+
+/* 키운 능력: 짧은 보라 막대 */
+.skill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.8em;
+  width: 0.65rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+/* 작은 제목 */
+.subhead {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--color-ink-3);
+  letter-spacing: -0.01em;
+}
+
+/* ---------- 첫 화면 검산 기록 ---------- */
+.v-who { display: block; font-size: 12.5px; font-weight: 600; color: var(--color-hero-ink-2); letter-spacing: -0.005em; }
+.v-text { margin-top: 0.3rem; font-size: 17px; line-height: 1.5; font-weight: 600; letter-spacing: -0.015em; }
+.v-claim .v-text { color: var(--color-hero-ink); }
+.v-strike {
+  background-image: linear-gradient(var(--color-rust-hero), var(--color-rust-hero));
+  background-repeat: no-repeat;
+  background-position: 0 58%;
+  background-size: 100% 2px;
+}
+:root { --color-rust-hero: #ff7b8a; }
+.verify-run .v-line { opacity: 0; animation: v-in 420ms cubic-bezier(.2,.7,.2,1) forwards; }
+.verify-run .v-claim { animation-delay: 80ms; }
+.verify-run .v-check { animation-delay: 1250ms; }
+.verify-run .v-verdict { animation-delay: 2200ms; }
+.verify-run .v-strike { background-size: 0% 2px; animation: v-strike 520ms ease-out 900ms forwards; }
+.verify-run .v-claim .v-text { animation: v-dim 520ms ease-out 900ms forwards; }
+@keyframes v-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes v-strike { to { background-size: 100% 2px; } }
+@keyframes v-dim { to { color: var(--color-hero-ink-2); } }
+.v-claim .v-text { color: var(--color-hero-ink-2); }
+.verify-run .v-claim .v-text { color: var(--color-hero-ink); }
+
+/* plan 앱의 픽셀 별 몇 점 */
+.px-star { position: absolute; width: 4px; height: 4px; background: currentColor; box-shadow: 4px 0 currentColor, -4px 0 currentColor, 0 4px currentColor, 0 -4px currentColor; opacity: .55; pointer-events: none; }
+.px-dot { position: absolute; width: 3px; height: 3px; background: currentColor; opacity: .45; pointer-events: none; }
+
+@media (prefers-color-scheme: dark) {
+  .frame { background: color-mix(in oklab, var(--tint, var(--color-paper-2)) 14%, var(--color-paper-2)); }
+}
+
+/* 섹션 제목 앞의 픽셀 별 — 첫 화면 별과 같은 모양 */
+.sec-star { position: relative; display: inline-block; width: 4px; height: 4px; margin: 0 14px 0 4px; vertical-align: 0.32em; background: var(--color-accent);
+  box-shadow: 4px 0 var(--color-accent), -4px 0 var(--color-accent), 0 4px var(--color-accent), 0 -4px var(--color-accent); }

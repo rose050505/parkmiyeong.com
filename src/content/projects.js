@@ -5,6 +5,7 @@
 export const projects = [
   {
     slug: 'moimjigi',
+    tint: '#dcece3',
     name: '모임지기',
     period: '2026년 7월 – 8월',
     venue: '삼성 SCPC 2026 AI 챌린지 (1차 예선 → 2차 예선 → 본선)',
@@ -74,6 +75,7 @@ export const projects = [
 
   {
     slug: '362',
+    tint: '#dfe5f3',
     name: '삼육이',
     period: '2026년 8월 – 9월 (9월 7일 제출), 지금도 운영 중',
     venue: '2026 금융 AI Challenge (금융보안원 주최·주관, 금융위원회 후원)',
@@ -144,6 +146,7 @@ export const projects = [
 
   {
     slug: 'plan',
+    tint: '#e7e1fb',
     name: 'plan · focuslock',
     period: '2026년 10월 1일 – 지금도 매일 씀',
     venue: '개인 프로젝트. 할 일 보드 plan.parkmiyeong.com과 세 기기 잠금 시스템 focuslock',
@@ -209,6 +212,7 @@ export const projects = [
 
   {
     slug: 'pricesignal',
+    tint: '#f1e7da',
     name: 'PriceSignal',
     period: '2026년 10월 22일 – 28일',
     venue: 'Open Agent Hackathon 2026 (GenAI.Works) · Track 01 Solving Fragmented Intelligence',
@@ -287,6 +291,7 @@ export const projects = [
 
   {
     slug: 'radar',
+    tint: '#e2def3',
     name: '내 법안 레이더',
     period: '2026년 10월 – (12월 발표까지 진행 중)',
     venue: '인공지능 프로그래밍 수업 기말 팀 프로젝트',
@@ -341,6 +346,7 @@ export const projects = [
 
   {
     slug: 'gieokham',
+    tint: '#f0e5dc',
     name: '기억함',
     period: '2026년 7월 (사흘)',
     venue: '2026 보훈 공공데이터·AI 활용 아이디어 공모전 (국가보훈부·독립기념관)',

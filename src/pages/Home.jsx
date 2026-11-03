@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
 import Stamp from '../components/Stamp.jsx'
+import Nav from '../components/Nav.jsx'
+import VerifyLog from '../components/VerifyLog.jsx'
 import { CraftList, SkillList } from '../components/Craft.jsx'
 import { projects } from '../content/projects.js'
 import { results, strengths, log } from '../content/home.js'
@@ -8,7 +10,7 @@ import { results, strengths, log } from '../content/home.js'
 function SectionHead({ title, children }) {
   return (
     <header className="max-w-read">
-      <h2 className="text-[1.9rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2.2rem]">{title}</h2>
+      <h2 className="text-[1.9rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2.2rem]"><span aria-hidden="true" className="sec-star" />{title}</h2>
       {children && <p className="mt-3 text-[17px] leading-[1.7] text-ink-2">{children}</p>}
     </header>
   )
@@ -17,27 +19,29 @@ function SectionHead({ title, children }) {
 function WorkEntry({ p, index }) {
   const img = p.card.image
   return (
-    <article id={p.slug} className="grid scroll-mt-10 gap-8 border-t border-line py-14 sm:py-16 lg:grid-cols-12 lg:gap-14">
+    <article id={p.slug} className="grid scroll-mt-10 gap-8 border-t border-line py-14 sm:py-16 lg:grid-cols-12 lg:gap-14 first:border-t-0">
       <div className="lg:sticky lg:top-10 lg:col-span-5 lg:self-start">
         <Link to={`/p/${p.slug}`} className="block" aria-label={`${p.name} 자세히 보기`}>
-          {img.kind === 'phone' ? (
-            <div className="mx-auto max-w-[260px]">
-              <div className="phone">
+          <div className="frame" style={p.tint ? { '--tint': p.tint } : undefined}>
+            {img.kind === 'phone' ? (
+              <div className="mx-auto max-w-[250px]">
+                <div className="phone">
+                  <img src={img.src} alt={img.alt} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
+                </div>
+              </div>
+            ) : (
+              <div className="shot">
                 <img src={img.src} alt={img.alt} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
               </div>
-            </div>
-          ) : (
-            <div className="shot">
-              <img src={img.src} alt={img.alt} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" />
-            </div>
-          )}
+            )}
+          </div>
         </Link>
       </div>
 
       <div className="lg:col-span-7">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <h3 className="text-[2rem] font-bold leading-tight tracking-tight sm:text-[2.4rem]">
-            <Link to={`/p/${p.slug}`} className="hover:text-green">
+            <Link to={`/p/${p.slug}`} className="hover:text-accent">
               {p.name}
             </Link>
           </h3>
@@ -68,59 +72,66 @@ export default function Home() {
     <main>
       <Seo />
 
-      <div className="mx-auto max-w-site px-5 sm:px-8">
-        {/* 첫 문장 */}
-        <section className="pt-20 sm:pt-28">
-          <h1 className="text-[2.3rem] font-extrabold leading-[1.15] tracking-[-0.035em] sm:text-[3.3rem] lg:text-[4.1rem]">
-            틀리면 안 되는 숫자는
-            <br className="hidden sm:block" /> 코드가 계산하고,
-            <br /> 말은 AI가 합니다.
-          </h1>
-          <p className="mt-8 max-w-read text-[18px] leading-[1.75] text-ink-2 sm:text-[19px]">
-            소프트웨어 전공 대학교 2학년 박미영입니다. 법 조문, 공식 통계, 모임 기록처럼 틀리면 안 되는 자료를 다루는 AI
-            서비스를 만듭니다. 2026년에 공모전과 대회에 내놓은 것들을 모았고, 기획부터 배포까지 대부분 혼자 했습니다.
-          </p>
-        </section>
+      {/* 첫 화면 — 사이트에서 유일한 짙은 면. 이름, 문장, 바깥에서 확인된 결과까지 */}
+      <div className="hero-band relative overflow-hidden">
+        <span aria-hidden="true" className="px-star left-[8%] top-[64%] text-hero-accent" />
+        <span aria-hidden="true" className="px-star right-[6%] top-[18%] text-[#b9a8ff]" />
+        <span aria-hidden="true" className="px-dot left-[46%] top-[12%] text-hero-ink" />
+        <span aria-hidden="true" className="px-dot left-[30%] top-[86%] text-[#b9a8ff]" />
+        <span aria-hidden="true" className="px-dot right-[22%] top-[90%] text-hero-accent" />
+        <Nav tone="hero" />
+        <div className="relative mx-auto max-w-site px-5 pb-16 sm:px-8 sm:pb-20">
+          <section className="grid items-center gap-12 pt-16 sm:pt-24 lg:grid-cols-12 lg:gap-10">
+            <div className="lg:col-span-7">
+              <p className="text-[15px] font-medium text-hero-accent">소프트웨어 전공 2학년 · AI 서비스 개발</p>
+              <h1 className="mt-5 text-[2.35rem] font-extrabold leading-[1.13] tracking-[-0.04em] sm:text-[3.3rem] lg:text-[3.75rem]">
+                틀리면 안 되는 숫자는
+                <br className="hidden sm:block" /> 코드가 계산하고,
+                <br /> 말은 AI가 합니다.
+              </h1>
+              <p className="mt-8 max-w-[38rem] text-[18px] leading-[1.75] text-hero-ink-2">
+                박미영입니다. 법 조문, 공식 통계, 모임 기록처럼 틀리면 안 되는 자료를 다루는 AI 서비스를 만듭니다. 2026년에
+                공모전과 대회에 내놓은 것들을 모았고, 기획부터 배포까지 대부분 혼자 했습니다.
+              </p>
+            </div>
+            <div className="lg:col-span-5">
+              <VerifyLog />
+            </div>
+          </section>
 
-        {/* 바깥에서 확인된 결과 */}
-        <section aria-label="확인된 결과" className="mt-14 grid border-y border-line sm:grid-cols-3">
-          {results.map((r, i) => (
-            <Link
-              key={i}
-              to={r.to}
-              className={`group block py-6 sm:px-6 sm:py-7 ${i > 0 ? 'border-t border-line sm:border-l sm:border-t-0' : ''} ${i === 0 ? 'sm:pl-0' : ''}`}
-            >
-              <span className="block text-[1.5rem] font-bold leading-tight tracking-[-0.02em] group-hover:text-green sm:text-[1.65rem]">
-                {r.value}
-              </span>
-              <span className="mt-2 block max-w-[30ch] text-[15px] leading-[1.6] text-ink-2">{r.caption}</span>
-            </Link>
-          ))}
-        </section>
+          {/* 바깥에서 확인된 결과 */}
+          <section aria-label="확인된 결과" className="mt-14 grid gap-3 sm:grid-cols-3 sm:gap-4">
+            {results.map((r, i) => (
+              <Link
+                key={i}
+                to={r.to}
+                className="group block rounded-2xl border border-hero-line bg-white/[0.04] px-5 py-5 backdrop-blur-[2px] transition-colors hover:border-hero-accent/60 hover:bg-white/[0.07] sm:px-6 sm:py-6"
+              >
+                <span className="block text-[1.45rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.6rem]">{r.value}</span>
+                <span className="mt-2 block text-[15px] leading-[1.6] text-hero-ink-2">{r.caption}</span>
+              </Link>
+            ))}
+          </section>
+        </div>
       </div>
 
-      {/* 강점 — 이 사이트에서 유일한 짙은 면 */}
-      <section id="strengths" className="mt-24 scroll-mt-0 bg-panel text-panel-ink sm:mt-32">
-        <div className="mx-auto max-w-site px-5 py-20 sm:px-8 sm:py-24">
-          <header className="max-w-read">
-            <h2 className="text-[1.9rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2.2rem]">강점</h2>
-            <p className="mt-3 text-[17px] leading-[1.7] text-panel-ink-2">
-              올해 만든 것들에서 반복해서 드러난 네 가지입니다. 각각 아래 프로젝트에서 실제로 한 일을 근거로 붙였습니다.
-            </p>
-          </header>
-          <div className="mt-14 grid gap-x-16 gap-y-14 lg:grid-cols-2">
+      {/* 강점 */}
+      <div className="mx-auto max-w-site px-5 sm:px-8">
+        <section id="strengths" className="mt-20 scroll-mt-10 sm:mt-28">
+          <SectionHead title="강점">
+            올해 만든 것들에서 반복해서 드러난 네 가지입니다. 각각 아래 프로젝트에서 실제로 한 일을 근거로 붙였습니다.
+          </SectionHead>
+          <div className="mt-10 grid gap-4 sm:gap-5 lg:grid-cols-2">
             {strengths.map((s, i) => (
-              <article key={i} className="border-t border-panel-line pt-7">
-                <h3 className="text-[1.4rem] font-bold leading-snug tracking-[-0.015em] sm:text-[1.55rem]">{s.title}</h3>
-                <p className="mt-3 text-[16.5px] leading-[1.75] text-panel-ink-2">{s.text}</p>
-                <ul className="mt-6 space-y-4">
+              <article key={i} className="rounded-[22px] border border-line bg-surface p-6 sm:p-8">
+                <h3 className="text-[1.35rem] font-bold leading-snug tracking-[-0.02em] sm:text-[1.5rem]">{s.title}</h3>
+                <p className="mt-3 text-[16px] leading-[1.75] text-ink-2">{s.text}</p>
+                <ul className="mt-6 space-y-3 border-t border-line pt-5">
                   {s.proof.map((pr, j) => (
                     <li key={j}>
-                      <Link to={pr.to} className="group grid gap-x-4 gap-y-0.5 sm:grid-cols-[7.5rem_1fr]">
-                        <span className="text-[15px] font-semibold text-panel-accent">{pr.project}</span>
-                        <span className="text-[15.5px] leading-[1.65] group-hover:underline group-hover:underline-offset-4">
-                          {pr.text}
-                        </span>
+                      <Link to={pr.to} className="group grid gap-x-4 gap-y-0.5 sm:grid-cols-[6.5rem_1fr]">
+                        <span className="text-[14.5px] font-semibold text-accent">{pr.project}</span>
+                        <span className="text-[15px] leading-[1.65] text-ink-2 group-hover:text-ink">{pr.text}</span>
                       </Link>
                     </li>
                   ))}
@@ -128,8 +139,8 @@ export default function Home() {
               </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <div className="mx-auto max-w-site px-5 sm:px-8">
         {/* 만든 것들 */}
@@ -156,7 +167,7 @@ export default function Home() {
                 <span className="text-[15px] tabular-nums text-ink-3">{e.when}</span>
                 <span className="text-[16px] leading-[1.7]">
                   {e.to ? (
-                    <Link to={e.to} className="hover:text-green">
+                    <Link to={e.to} className="hover:text-accent">
                       {e.text}
                     </Link>
                   ) : (
@@ -182,7 +193,7 @@ export default function Home() {
         <section className="mt-20 border-t border-line pt-14 sm:mt-28">
           <div className="grid gap-10 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <h2 className="text-[1.9rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2.2rem]">일하는 방식</h2>
+              <h2 className="text-[1.9rem] font-bold leading-tight tracking-[-0.02em] sm:text-[2.2rem]"><span aria-hidden="true" className="sec-star" />일하는 방식</h2>
               <p className="mt-4 text-[17px] leading-[1.75] text-ink-2">
                 혼자 하지만 혼자 하지 않습니다. 노트북의 Claude Code, 클라우드의 총괄 세션, 검토와 야간 실행을 맡는 Codex가 한
                 팀이고, 저는 성공 기준과 검증 세트와 최종 선택을 쥡니다. 10월에는 에이전트와 일해 온 제 방식을 작업 로그로

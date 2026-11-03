@@ -8,8 +8,11 @@ const items = [
   { label: '연락', to: '/#contact' },
 ]
 
-export default function Nav() {
+// tone="hero": 첫 화면의 남색 띠 위에 얹힐 때
+export default function Nav({ tone = 'paper' }) {
   const { pathname } = useLocation()
+  const hero = tone === 'hero'
+  const idle = hero ? 'text-hero-ink-2 hover:text-hero-ink' : 'text-ink-2 hover:text-ink'
   return (
     <header className="mx-auto flex max-w-site items-baseline justify-between gap-6 px-5 pt-6 sm:px-8 sm:pt-8">
       <Link to="/" className="shrink-0 whitespace-nowrap text-[17px] font-bold tracking-tight">
@@ -22,7 +25,7 @@ export default function Nav() {
             <Link
               key={it.to}
               to={it.to}
-              className={active ? 'font-semibold' : 'text-ink-2 hover:text-ink'}
+              className={active ? 'font-semibold' : idle}
               aria-current={active ? 'page' : undefined}
             >
               {it.label}

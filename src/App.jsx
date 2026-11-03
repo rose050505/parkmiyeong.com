@@ -22,11 +22,16 @@ function ScrollManager() {
   return null
 }
 
+function TopNav() {
+  const { pathname } = useLocation()
+  return pathname === '/' ? null : <Nav />
+}
+
 export default function App() {
   return (
     <div className="min-h-screen">
       <ScrollManager />
-      <Nav />
+      <TopNav />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/how" element={<How />} />

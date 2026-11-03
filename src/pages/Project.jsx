@@ -54,7 +54,9 @@ export default function Project() {
         </dl>
       </header>
 
-      <Figure kind={p.hero.kind} images={p.hero.images} caption={p.hero.caption} className="mt-14" />
+      <div style={p.tint ? { '--tint': p.tint } : undefined}>
+        <Figure kind={p.hero.kind} images={p.hero.images} caption={p.hero.caption} className="mt-14" />
+      </div>
 
       <section className="mt-16 grid gap-12 lg:grid-cols-12 lg:gap-14">
         <div className="lg:col-span-7">
@@ -82,7 +84,7 @@ export default function Project() {
           {prev && (
             <Link to={`/p/${prev.slug}`} className="group block">
               <span className="block text-[14px] text-ink-3">이전</span>
-              <span className="block text-[20px] font-semibold group-hover:text-green">{prev.name}</span>
+              <span className="block text-[20px] font-semibold group-hover:text-accent">{prev.name}</span>
             </Link>
           )}
         </div>
@@ -90,7 +92,7 @@ export default function Project() {
           {next && (
             <Link to={`/p/${next.slug}`} className="group block">
               <span className="block text-[14px] text-ink-3">다음</span>
-              <span className="block text-[20px] font-semibold group-hover:text-green">{next.name}</span>
+              <span className="block text-[20px] font-semibold group-hover:text-accent">{next.name}</span>
             </Link>
           )}
         </div>
