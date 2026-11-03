@@ -19,6 +19,13 @@
   --color-gold: #8d6d12;
   --color-rust: #a03f2b;
 
+  /* 강점 구간만 쓰는 짙은 초록 면 */
+  --color-panel: #1c4432;
+  --color-panel-ink: #f3efe5;
+  --color-panel-ink-2: #c9d6cc;
+  --color-panel-line: #3b6450;
+  --color-panel-accent: #a9dcbd;
+
   --container-site: 72rem;
   --container-read: 44rem;
 }
@@ -36,7 +43,34 @@
     --color-leaf: #2f6a4e;
     --color-gold: #d9b24a;
     --color-rust: #e0866e;
+    --color-panel: #1a3d2e;
+    --color-panel-ink: #ece6d8;
+    --color-panel-ink-2: #b9c7bd;
+    --color-panel-line: #2f5443;
+    --color-panel-accent: #9bd4b4;
   }
+}
+
+/* 공들인 부분: 굵은 첫 문장만 진하게 */
+.craft strong { font-weight: 650; color: var(--color-ink); }
+
+/* 키운 능력: 짧은 초록 막대 표시 */
+.skill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.8em;
+  width: 0.65rem;
+  height: 2px;
+  background: var(--color-green);
+}
+
+/* 작은 제목. 섹션 안에서 내용 덩어리를 가른다. */
+.subhead {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--color-ink-3);
+  letter-spacing: -0.01em;
 }
 
 html {

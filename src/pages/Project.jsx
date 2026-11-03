@@ -4,6 +4,7 @@ import Stamp from '../components/Stamp.jsx'
 import Receipt from '../components/Receipt.jsx'
 import Figure from '../components/Figure.jsx'
 import Blocks from '../components/Blocks.jsx'
+import { CraftList, SkillList } from '../components/Craft.jsx'
 import NotFound from './NotFound.jsx'
 import { projects, bySlug } from '../content/projects.js'
 
@@ -55,13 +56,24 @@ export default function Project() {
 
       <Figure kind={p.hero.kind} images={p.hero.images} caption={p.hero.caption} className="mt-14" />
 
-      <section aria-label="실측값" className="mt-16 grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-6">
-        {p.receipts.map((r, i) => (
-          <Receipt key={i} value={r.value} caption={r.caption} size="sm" />
-        ))}
+      <section className="mt-16 grid gap-12 lg:grid-cols-12 lg:gap-14">
+        <div className="lg:col-span-7">
+          <h2 className="text-[1.55rem] font-bold tracking-tight">공들인 부분</h2>
+          <CraftList items={p.craft} size="lg" className="mt-6" />
+        </div>
+        <aside className="lg:col-span-5 lg:border-l lg:border-line lg:pl-12">
+          <h2 className="text-[1.55rem] font-bold tracking-tight">이 프로젝트로 키운 능력</h2>
+          <SkillList items={p.skills} cols={1} className="mt-6" />
+          <h3 className="subhead mt-12">숫자로 보면</h3>
+          <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-8">
+            {p.receipts.map((r, i) => (
+              <Receipt key={i} value={r.value} caption={r.caption} size="sm" />
+            ))}
+          </div>
+        </aside>
       </section>
 
-      <article className="mt-16 max-w-read">
+      <article className="mt-20 max-w-read border-t border-line pt-14">
         <Blocks blocks={p.body} />
       </article>
 
