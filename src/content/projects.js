@@ -157,7 +157,7 @@ export const projects = [
     oneLiner:
       '저와 코딩 에이전트들이 같이 쓰는 할 일 보드, 그리고 그 보드와 묶인 세 기기 잠금 시스템. 공부 시간에는 휴대폰, 노트북, 데스크탑에서 허용한 앱과 사이트만 열리고, 그 시간의 할 일을 끝내면 풀립니다.',
     card: {
-      image: { src: '/img/plan-focuslock-home.webp', alt: 'focuslock 앱 첫 화면. 공부 모드 잠금 중, 21:00 자동 해제까지 29분, 코드로 해제 가능, 잠금 사유에 그 시간의 공부 항목', kind: 'phone' },
+      image: { src: '/img/plan-board-main.webp', alt: 'plan 보드. 맨 위에 Cowork와 CC가 마지막으로 확인한 시각, 나·Cowork·CC 탭, 오늘 수업과 할 일. 알고리즘 과제에는 CC가 남긴 기록과 내 답, KIC 항목에는 Cowork의 답 필요 질문', kind: 'wide' },
     },
     craft: [
       '**한 가지 판정을 네 언어로, 하나의 계약으로 묶었습니다.** 지금 잠글지, 무엇을 허용할지 정하는 규칙을 서버(JS), 휴대폰(Kotlin), 노트북(Python), 데스크탑(PowerShell)이 각자 구현합니다. 네 구현 모두 같은 사례 파일(cases.json, 84개)을 그대로 읽어 통과해야 해서 기기마다 판정이 갈라지지 않습니다. PowerShell 기본 정렬이 대소문자를 무시해 결과 순서가 달라지는 것까지 계약에 적어 막았습니다.',
@@ -167,10 +167,7 @@ export const projects = [
     ],
     skills: ['한 규칙을 여러 플랫폼에서 똑같이 지키게 하는 계약 테스트 설계', 'Android 접근성 서비스와 기기 관리자를 쓰는 네이티브 앱', '우회 경로부터 생각하는 보안 설계(서버 시각 해제, 1회용 코드)', 'git을 저장소로 쓰는 가벼운 백엔드와 사람·에이전트 공용 상태 설계'],
     links: [],
-    hero: { kind: 'phones', images: [
-      { src: '/img/plan-focuslock-home.webp', alt: 'focuslock 첫 화면. 공부 모드 잠금 중, 자동 해제 시각과 남은 시간, 다음 잠금, 허용 코드 입력 칸' },
-      { src: '/img/plan-focuslock-block.webp', alt: '공부 모드에서 m.youtube.com을 열었을 때 뜨는 차단 화면. 잠금 사유와 자동 해제 시각, 허용 코드 칸' },
-    ], caption: '휴대폰 앱(에뮬레이터, 11월 3일 실제 잠금 데이터). 오른쪽은 크롬에서 막힌 사이트를 열었을 때 뜨는 화면이다. 앱만이 아니라 주소창의 사이트도 막는다.' },
+    hero: { kind: 'wide', maxW: 680, images: [{ src: '/img/plan-board-main.webp', alt: 'plan 보드. Cowork와 CC의 마지막 확인 시각, 주인별 탭, 오늘 수업, CC가 남긴 기록에 내가 답한 할 일, Cowork가 올린 답 필요 질문' }], caption: '보드 한 화면에서 셋이 일한다. CC가 테스트 입력을 만들다 걸린 조건을 남기면 내가 답하고, Cowork는 내가 골라야 할 것을 「답 필요」로 올린다. 맨 위에는 각 세션이 마지막으로 확인한 시각이 보인다(포트폴리오용 가짜 데이터, 같은 코드).' },
     receipts: [
       { value: '4개 언어', caption: '같은 판정을 따로 구현. JS, Kotlin, Python, PowerShell' },
       { value: 84, caption: '네 구현이 모두 통과해야 하는 공용 판정 사례' },
@@ -189,10 +186,13 @@ export const projects = [
         '**시험 범위를 얼마나 봤는지 보여 줍니다.** 과목마다 시험 범위의 복습 카드 중 실제로 푼 비율을 막대로 그리고, 시험까지 남은 날로 나눠 하루에 몇 분을 더 봐야 하는지 알려 줍니다.',
       ] },
       { type: 'figure', kind: 'wide', images: [{ src: '/img/plan-balance.webp', alt: '과목 균형 카드. 시스SW 100%, 알고 87%, 확통 80%, 컴시개 75%, OSS 65%, 프언론 52%, AIP 22%, 과목마다 끝남 표시' }], caption: '11월 3일 실제 화면. 시험이 지난 과목에는 「끝남」이, 시험 전에는 D-숫자가 붙는다. 비율은 복습 카드 기록에서 계산한다.' },
-      { type: 'figure', kind: 'wide', images: [{ src: '/img/plan-board-tasks.webp', alt: 'plan 보드의 날짜별 할 일 목록. 나, Cowork, CC로 주인이 나뉘고, 에이전트가 올린 질문에는 답 필요 표시' }], caption: '날짜별 할 일. 색이 주인을 뜻한다. 포트폴리오용으로 같은 코드에 가짜 데이터를 넣어 찍었다.' },
 
       { type: 'h', text: '잠금' },
       { type: 'p', text: '설계 원칙은 시작하기 전에 문서로 확정했습니다. 허용 목록 방식이라 잠금 중에는 그 모드의 목록에 있는 앱과 사이트만 열립니다. 모든 잠금은 시작 시각과 자동 해제 시각을 함께 가지고, 자동 해제가 없는 잠금은 만들 수 없습니다. 기기는 일정을 미리 받아 두고 자기 시계로 잠그지만, 풀 때는 반드시 서버 시각으로 확인합니다. 기기는 서버를 계속 묻지 않고 켤 때, 네트워크가 바뀔 때, 여섯 시간마다, 코드를 넣을 때만 확인합니다.' },
+      { type: 'figure', kind: 'phones', images: [
+        { src: '/img/plan-focuslock-home.webp', alt: 'focuslock 첫 화면. 공부 모드 잠금 중, 자동 해제 시각과 남은 시간, 다음 잠금, 허용 코드 입력 칸' },
+        { src: '/img/plan-focuslock-block.webp', alt: '공부 모드에서 m.youtube.com을 열었을 때 뜨는 차단 화면. 잠금 사유와 자동 해제 시각, 허용 코드 칸' },
+      ], caption: '휴대폰 앱 focuslock(에뮬레이터, 11월 3일 실제 잠금 데이터). 잠금 사유에 그 시간의 공부 항목이 그대로 뜬다. 오른쪽은 크롬에서 막힌 사이트를 열었을 때의 화면으로, 앱만이 아니라 주소창의 사이트도 막는다.' },
       { type: 'figure', kind: 'wide', images: [{ src: '/img/plan-board-lock.webp', alt: 'plan 보드 맨 위의 잠금 카드. 지금 공부 잠금 중, 이 구간 할 일을 다 끝내 해제 코드가 나와 있다' }], caption: '보드 맨 위의 잠금 카드. 그 구간 할 일을 다 끝내면 해제 코드가 나온다(가짜 데이터).' },
 
       { type: 'h', text: '공용 판정 계약' },

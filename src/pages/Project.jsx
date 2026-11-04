@@ -55,7 +55,7 @@ export default function Project() {
       </header>
 
       <div style={p.tint ? { '--tint': p.tint } : undefined}>
-        <Figure kind={p.hero.kind} images={p.hero.images} caption={p.hero.caption} className="mt-14" />
+        <Figure kind={p.hero.kind} images={p.hero.images} caption={p.hero.caption} maxW={p.hero.maxW} className="mt-14" />
       </div>
 
       <section className="mt-16 grid gap-12 lg:grid-cols-12 lg:gap-14">

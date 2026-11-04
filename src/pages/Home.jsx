@@ -1,8 +1,10 @@
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import Seo from '../components/Seo.jsx'
 import Stamp from '../components/Stamp.jsx'
 import Nav from '../components/Nav.jsx'
 import VerifyLog from '../components/VerifyLog.jsx'
+import Reveal from '../components/Reveal.jsx'
 import { CraftList, SkillList } from '../components/Craft.jsx'
 import { projects } from '../content/projects.js'
 import { results, strengths, log } from '../content/home.js'
@@ -19,7 +21,7 @@ function SectionHead({ title, children }) {
 function WorkEntry({ p, index }) {
   const img = p.card.image
   return (
-    <article id={p.slug} className="grid scroll-mt-10 gap-8 border-t border-line py-14 sm:py-16 lg:grid-cols-12 lg:gap-14 first:border-t-0">
+    <Reveal as="article" id={p.slug} className="grid scroll-mt-10 gap-8 border-t border-line py-14 sm:py-16 lg:grid-cols-12 lg:gap-14 first:border-t-0">
       <div className="lg:sticky lg:top-10 lg:col-span-5 lg:self-start">
         <Link to={`/p/${p.slug}`} className="block" aria-label={`${p.name} 자세히 보기`}>
           <div className="frame" style={p.tint ? { '--tint': p.tint } : undefined}>
@@ -63,25 +65,60 @@ function WorkEntry({ p, index }) {
           </Link>
         </p>
       </div>
-    </article>
+    </Reveal>
   )
 }
 
+// 첫 장면 고정 + 커튼: 첫 화면은 붙어 있고, 아래 내용이 위로 덮어 오면 첫 장면이 작아지며 물러난다.
+// 첫 화면이 화면보다 길면(휴대폰) 끝까지 읽은 뒤에 붙는다.
+function useStage() {
+  const stage = useRef(null)
+  const inner = useRef(null)
+  const curtain = useRef(null)
+  useEffect(() => {
+    const st = stage.current, inn = inner.current, cur = curtain.current
+    if (!st || !inn || !cur) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let raf = 0
+    const fit = () => { st.style.top = `${Math.min(0, window.innerHeight - st.offsetHeight)}px` }
+    const tick = () => {
+      raf = 0
+      const vh = window.innerHeight
+      const p = Math.min(1, Math.max(0, (vh - cur.getBoundingClientRect().top) / vh))
+      st.style.setProperty('--p', p.toFixed(3))
+      if (!reduce) {
+        inn.style.transform = `translate3d(0, ${(-p * 7).toFixed(2)}%, 0) scale(${(1 - p * 0.07).toFixed(4)})`
+        inn.style.opacity = String((1 - p * 0.8).toFixed(3))
+      }
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick) }
+    const onResize = () => { fit(); onScroll() }
+    fit(); tick()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize)
+    const ro = new ResizeObserver(onResize)
+    ro.observe(st)
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ro.disconnect(); cancelAnimationFrame(raf) }
+  }, [])
+  return { stage, inner, curtain }
+}
+
 export default function Home() {
+  const { stage, inner, curtain } = useStage()
   return (
     <main>
       <Seo />
 
       {/* 첫 화면 — 사이트에서 유일한 짙은 면. 이름, 문장, 바깥에서 확인된 결과까지 */}
-      <div className="hero-band relative overflow-hidden">
+      <div ref={stage} className="hero-band sticky z-0 flex min-h-[100svh] flex-col overflow-hidden">
         <span aria-hidden="true" className="px-star left-[8%] top-[64%] text-hero-accent" />
         <span aria-hidden="true" className="px-star right-[6%] top-[18%] text-[#b9a8ff]" />
         <span aria-hidden="true" className="px-dot left-[46%] top-[12%] text-hero-ink" />
         <span aria-hidden="true" className="px-dot left-[30%] top-[86%] text-[#b9a8ff]" />
         <span aria-hidden="true" className="px-dot right-[22%] top-[90%] text-hero-accent" />
         <Nav tone="hero" />
-        <div className="relative mx-auto max-w-site px-5 pb-16 sm:px-8 sm:pb-20">
-          <section className="grid items-center gap-12 pt-16 sm:pt-24 lg:grid-cols-12 lg:gap-10">
+        <div ref={inner} className="relative mx-auto flex w-full max-w-site flex-1 flex-col justify-center px-5 pb-8 pt-12 will-change-transform sm:px-8 sm:pt-14">
+          <section className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
             <div className="lg:col-span-7">
               <p className="text-[15px] font-medium text-hero-accent">소프트웨어 전공 2학년 · AI 서비스 개발</p>
               <h1 className="mt-5 text-[2.35rem] font-extrabold leading-[1.13] tracking-[-0.04em] sm:text-[3.3rem] lg:text-[3.75rem]">
@@ -100,7 +137,7 @@ export default function Home() {
           </section>
 
           {/* 바깥에서 확인된 결과 */}
-          <section aria-label="확인된 결과" className="mt-14 grid gap-3 sm:grid-cols-3 sm:gap-4">
+          <section aria-label="확인된 결과" className="mt-12 grid gap-3 sm:grid-cols-3 sm:gap-4 lg:mt-14">
             {results.map((r, i) => (
               <Link
                 key={i}
@@ -113,17 +150,22 @@ export default function Home() {
             ))}
           </section>
         </div>
+        <a href="#strengths" className="scroll-cue mx-auto mb-6 mt-2 flex items-center gap-2 text-[13px] text-hero-ink-2 hover:text-hero-ink" aria-label="아래로 내려 보기">
+          <span aria-hidden="true" className="cue-px" />
+          내려서 보기
+        </a>
       </div>
 
-      {/* 강점 */}
+      {/* 커튼 — 첫 장면 위로 덮어 올라오는 나머지 전부 */}
+      <div ref={curtain} className="curtain relative z-10">
       <div className="mx-auto max-w-site px-5 sm:px-8">
-        <section id="strengths" className="mt-20 scroll-mt-10 sm:mt-28">
+        <section id="strengths" className="scroll-mt-10 pt-16 sm:pt-24">
           <SectionHead title="강점">
             올해 만든 것들에서 반복해서 드러난 네 가지입니다. 각각 아래 프로젝트에서 실제로 한 일을 근거로 붙였습니다.
           </SectionHead>
           <div className="mt-10 grid gap-4 sm:gap-5 lg:grid-cols-2">
             {strengths.map((s, i) => (
-              <article key={i} className="rounded-[22px] border border-line bg-surface p-6 sm:p-8">
+              <Reveal as="article" key={i} delay={(i % 2) * 90} className="rounded-[22px] border border-line bg-surface p-6 sm:p-8">
                 <h3 className="text-[1.35rem] font-bold leading-snug tracking-[-0.02em] sm:text-[1.5rem]">{s.title}</h3>
                 <p className="mt-3 text-[16px] leading-[1.75] text-ink-2">{s.text}</p>
                 <ul className="mt-6 space-y-3 border-t border-line pt-5">
@@ -136,7 +178,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-              </article>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -213,6 +255,7 @@ export default function Home() {
             </blockquote>
           </div>
         </section>
+      </div>
       </div>
     </main>
   )

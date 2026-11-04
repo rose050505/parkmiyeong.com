@@ -1,7 +1,7 @@
 // 첫 화면 맨 위에 두는 결과. 바깥에서 확인된 것만 둔다.
 export const results = [
-  { value: 'AI 트랙 4등상', caption: '삼성 SCPC 2026 본선. 처음 써 본 Android로 7일 만에 만든 앱 모임지기', to: '/p/moimjigi' },
-  { value: '비공개 평가 21위', caption: '같은 대회 1차 예선. 공개 순위는 120~170위였고, 상위 40명이 다음 단계로 갔습니다', to: '/p/moimjigi' },
+  { value: '최우수상', caption: '반도체 인라인 공정 해커톤. 2026 강원LRS·충북PRIDE 공유대학 Deep-Dive 캠프, 팀 pluto', to: '/#log' },
+  { value: 'AI 트랙 4등상', caption: '삼성 SCPC 2026 본선. 1차 예선 비공개 평가 21위로 올라가, 처음 써 본 Android로 7일 만에 만든 앱 모임지기', to: '/p/moimjigi' },
   { value: '지금도 운영 중', caption: '삼육이. 금융 AI Challenge에 낸 뒤 362.parkmiyeong.com에서 계속 운영합니다', to: '/p/362' },
 ]
 
@@ -44,6 +44,7 @@ export const strengths = [
 
 // 2026년 기록. 넣을 만한 것만, 짧게.
 export const log = [
+  { when: '7월 23일', text: '2026 강원LRS·충북PRIDE 공유대학 초광역 융합인재 Deep-Dive 캠프, 반도체 인라인 공정 해커톤 최우수상 (팀 pluto).', stamp: 'award' },
   { when: '7월', text: '삼성 SCPC 2026 1차 예선. 에이전트 하네스를 설계해 비공개 평가 21위로 2차 진출.', to: '/p/moimjigi' },
   { when: '7월', text: '기억함. 보훈 공공데이터·AI 공모전에 사흘 만에 시연 MVP를 만들어 출품.', to: '/p/gieokham' },
   { when: '7월 29일 – 8월 5일', text: '2차 예선. 처음 하는 Android로 7일 안에 설치 가능한 앱 "모임지기" 제출.', to: '/p/moimjigi' },
