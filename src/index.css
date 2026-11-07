@@ -216,17 +216,18 @@ body {
 }
 @media (min-width: 640px) { .motion { --mv-d: 64px; } }
 
-[data-dir="left"] { --dx: -1; --dy: 0; }
-[data-dir="right"] { --dx: 1; --dy: 0; }
+[data-dir="left"], [data-slide="left"] { --dx: -1; --dy: 0; }
+[data-dir="right"], [data-slide="right"] { --dx: 1; --dy: 0; }
 [data-dir="up"] { --dx: 0; --dy: -1; }
+[data-slide="up"] { --dx: 0; --dy: 1; } /* 들어올 때 "위로" = 아래에서 올라옴 */
 @media (min-width: 640px) {
-  [data-dir-sm="left"] { --dx: -1; --dy: 0; }
-  [data-dir-sm="right"] { --dx: 1; --dy: 0; }
+  [data-dir-sm="left"], [data-slide-sm="left"] { --dx: -1; --dy: 0; }
+  [data-dir-sm="right"], [data-slide-sm="right"] { --dx: 1; --dy: 0; }
   [data-dir-sm="up"] { --dx: 0; --dy: -1; }
 }
 @media (min-width: 1024px) {
-  [data-dir-lg="left"] { --dx: -1; --dy: 0; }
-  [data-dir-lg="right"] { --dx: 1; --dy: 0; }
+  [data-dir-lg="left"], [data-slide-lg="left"] { --dx: -1; --dy: 0; }
+  [data-dir-lg="right"], [data-slide-lg="right"] { --dx: 1; --dy: 0; }
   [data-dir-lg="up"] { --dx: 0; --dy: -1; }
 }
 
@@ -261,10 +262,14 @@ body {
 .motion .hero-bg[data-out].out { transform: none; transition: opacity 340ms ease-in; }
 .motion .scene-jump [data-out] { transition: none !important; }
 
-[data-reveal] { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.985); transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 900ms cubic-bezier(.2,.7,.2,1); }
-[data-reveal].in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) {
-  [data-reveal] { opacity: 1; transform: none; transition: none; }
+/* 들어오는 카드 (Slide) */
+.motion [data-slide] {
+  transition: transform 420ms var(--mv-in) var(--slide-delay, 0ms), opacity 300ms var(--mv-in) var(--slide-delay, 0ms);
+}
+.motion [data-slide]:not(.in) {
+  opacity: 0;
+  transform: translate3d(calc(var(--dx, 0) * var(--mv-d)), calc(var(--dy, 0) * var(--mv-d) * .6), 0);
+  transition: transform 260ms var(--mv-out), opacity 220ms var(--mv-out);
 }
 
 /* 내려서 보기: 픽셀 화살표 */

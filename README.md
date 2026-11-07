@@ -26,3 +26,10 @@ npm run build    # dist/
   언어는 주소로만 정하고 자동 이동은 없다. content의 내부 링크는 한국어 경로로 적고 `L` 컴포넌트가 `/en`을 붙인다.
 - SPA라 `vercel.json`이 모든 경로를 `index.html`로 보낸다.
 - 글꼴은 Pretendard Variable을 npm 패키지에서 가져와 번들에 포함한다. 외부 폰트 요청이 없다.
+
+## 움직임
+
+- 규칙은 `src/index.css`의 "움직임" 주석에 있다. 카드(테두리 있는 상자)만 옆으로 움직이고, 가까운 가장자리로 나가고 들어온다. 글은 옆으로 움직이지 않는다.
+- 첫 화면 → 강점: `Home.jsx`의 `useScene`. 첫 화면 요소의 `data-out` 값(붙은 뒤 내린 거리, 화면 높이 단위)이 문턱이고, `data-dir`/`data-dir-sm`이 빠지는 쪽.
+- 들어오는 카드: `src/components/Slide.jsx`. `from`/`fromSm`/`fromLg`로 폭마다 방향을 준다. 지금은 강점 카드와 만든 것들의 그림에만 쓴다. 글, 2026 기록, 일하는 방식은 일부러 가만히 둔다.
+- 움직임 줄이기 설정이면 `main.jsx`가 `<html class="motion">`을 붙이지 않고, 모든 움직임 규칙이 그 클래스 아래에만 있다.

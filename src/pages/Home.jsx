@@ -5,7 +5,7 @@ import Seo from '../components/Seo.jsx'
 import Stamp from '../components/Stamp.jsx'
 import Nav from '../components/Nav.jsx'
 import VerifyLog from '../components/VerifyLog.jsx'
-import Reveal from '../components/Reveal.jsx'
+import Slide from '../components/Slide.jsx'
 import { CraftList, SkillList } from '../components/Craft.jsx'
 
 function SectionHead({ title, children }) {
@@ -21,8 +21,9 @@ function WorkEntry({ p, index }) {
   const t = useUi()
   const img = p.card.image
   return (
-    <Reveal as="article" id={p.slug} className="grid scroll-mt-10 gap-8 border-t border-line py-14 sm:py-16 lg:grid-cols-12 lg:gap-14 first:border-t-0">
+    <article id={p.slug} className="grid scroll-mt-10 gap-8 border-t border-line py-14 sm:py-16 lg:grid-cols-12 lg:gap-14 first:border-t-0">
       <div className="lg:sticky lg:top-10 lg:col-span-5 lg:self-start">
+        <Slide from="left">
         <L to={`/p/${p.slug}`} className="block" aria-label={t.seeMore(p.name)}>
           <div className="frame" style={p.tint ? { '--tint': p.tint } : undefined}>
             {img.kind === 'phone' ? (
@@ -38,6 +39,7 @@ function WorkEntry({ p, index }) {
             )}
           </div>
         </L>
+        </Slide>
       </div>
 
       <div className="lg:col-span-7">
@@ -65,7 +67,7 @@ function WorkEntry({ p, index }) {
           </L>
         </p>
       </div>
-    </Reveal>
+    </article>
   )
 }
 
@@ -228,7 +230,14 @@ export default function Home() {
           <SectionHead title={t.strengthsTitle}>{t.strengthsLead}</SectionHead>
           <div className="mt-10 grid gap-4 sm:gap-5 lg:grid-cols-2">
             {strengths.map((s, i) => (
-              <Reveal as="article" key={i} delay={(i % 2) * 90} className="border border-line bg-surface p-6 sm:p-8">
+              <Slide
+                as="article"
+                key={i}
+                from={i % 2 ? 'left' : 'right'}
+                fromLg={i % 2 ? 'right' : 'left'}
+                delay={i % 2 ? 70 : 0}
+                className="border border-line bg-surface p-6 sm:p-8"
+              >
                 <h3 className="text-[1.35rem] font-bold leading-snug tracking-[-0.02em] sm:text-[1.5rem]">{s.title}</h3>
                 <p className="mt-3 text-[16px] leading-[1.75] text-ink-2">{s.text}</p>
                 <ul className="mt-6 space-y-3 border-t border-line pt-5">
@@ -241,7 +250,7 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-              </Reveal>
+              </Slide>
             ))}
           </div>
         </section>
