@@ -79,14 +79,8 @@ body {
   outline-offset: 3px;
 }
 
-/* 첫 화면 띠: 아주 옅은 별점 격자 + 오른쪽 위 보랏빛 번짐 */
+/* 첫 화면 띠: 바탕(별점 격자 + 번짐)은 .hero-bg 층에 따로 둔다 — 장면이 바뀔 때 바탕만 꺼지게 */
 .hero-band {
-  background-color: var(--color-hero);
-  background-image:
-    radial-gradient(60rem 28rem at 85% -10%, color-mix(in oklab, #6f52ff 34%, transparent), transparent 70%),
-    radial-gradient(40rem 22rem at 0% 110%, color-mix(in oklab, #2bb9a3 16%, transparent), transparent 70%),
-    radial-gradient(circle at center, rgb(255 255 255 / 0.11) 1px, transparent 1.3px);
-  background-size: auto, auto, 24px 24px;
   color: var(--color-hero-ink);
 }
 .hero-band ::selection { background: rgb(143 227 212 / 0.35); }
@@ -208,27 +202,64 @@ body {
 .sec-star { position: relative; display: inline-block; width: 4px; height: 4px; margin: 0 14px 0 4px; vertical-align: 0.32em; background: var(--color-accent);
   box-shadow: 4px 0 var(--color-accent), -4px 0 var(--color-accent), 0 4px var(--color-accent), 0 -4px var(--color-accent); }
 
-/* ---------- 장면 전환 ---------- */
-.curtain {
-  background: var(--color-paper);
-  padding-bottom: 1px;
+/* ---------- 움직임 ----------
+  규칙 두 개.
+  1) 카드(테두리 있는 상자)만 옆으로 움직인다. 가까운 가장자리로 나가고, 놓일 자리에서 가까운 가장자리로 들어온다.
+     글(제목·문단)은 옆으로 움직이지 않는다. 첫 화면을 떠날 때만 위로 조금 물러난다.
+  2) 스크롤 위치가 "언제"를 정하고, 움직임 자체는 짧은 시간으로 끝난다(나갈 때 0.3초 가속, 들어올 때 0.42초 감속).
+     스크롤을 질질 따라가지 않아서 단단하고, 되감으면 같은 자리에서 거꾸로 돌아온다.
+  html.motion 이 없으면(움직임 줄이기) 아래 규칙은 하나도 걸리지 않는다. */
+.motion {
+  --mv-d: 36px;
+  --mv-out: cubic-bezier(.55, 0, .8, .2);
+  --mv-in: cubic-bezier(.16, .84, .3, 1);
 }
-/* 장면 전환 (PixelShift): 투명한 빈 구간이 지나는 동안 고정 캔버스가 화면을 픽셀로 뒤집는다 */
-.curtain { position: relative; z-index: 2; }
-.shift-spacer { height: 85svh; }
-.shift-canvas {
-  position: fixed;
+@media (min-width: 640px) { .motion { --mv-d: 64px; } }
+
+[data-dir="left"] { --dx: -1; --dy: 0; }
+[data-dir="right"] { --dx: 1; --dy: 0; }
+[data-dir="up"] { --dx: 0; --dy: -1; }
+@media (min-width: 640px) {
+  [data-dir-sm="left"] { --dx: -1; --dy: 0; }
+  [data-dir-sm="right"] { --dx: 1; --dy: 0; }
+  [data-dir-sm="up"] { --dx: 0; --dy: -1; }
+}
+@media (min-width: 1024px) {
+  [data-dir-lg="left"] { --dx: -1; --dy: 0; }
+  [data-dir-lg="right"] { --dx: 1; --dy: 0; }
+  [data-dir-lg="up"] { --dx: 0; --dy: -1; }
+}
+
+/* 첫 화면 장면: 카드가 다 빠진 다음 남색 바탕이 꺼지고, 아래 섹션이 같은 바탕 위로 이어진다 */
+.hero-bg {
+  position: absolute;
   inset: 0;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  height: 100%;
+  background-color: var(--color-hero);
+  background-image:
+    radial-gradient(60rem 28rem at 85% -10%, color-mix(in oklab, #6f52ff 34%, transparent), transparent 70%),
+    radial-gradient(40rem 22rem at 0% 110%, color-mix(in oklab, #2bb9a3 16%, transparent), transparent 70%),
+    radial-gradient(circle at center, rgb(255 255 255 / 0.11) 1px, transparent 1.3px);
+  background-size: auto, auto, 24px 24px;
   pointer-events: none;
-  visibility: hidden;
 }
-@media (prefers-reduced-motion: reduce) {
-  .shift-spacer, .shift-canvas { display: none; }
+/* 붙어 있을 구간. padding은 sticky가 붙는 범위(content box)에 안 들어가서 빈 블록으로 만든다 */
+.motion .scene::after { content: ""; display: block; height: 40svh; }
+.motion .scene > .hero-band { position: sticky; }
+.motion .after-scene { margin-top: -22svh; }
+@media (min-width: 640px) { .motion .after-scene { margin-top: -28svh; } }
+
+.motion [data-out] {
+  transition: transform 420ms var(--mv-in), opacity 360ms var(--mv-in);
 }
+.motion [data-out].out {
+  opacity: 0;
+  transform: translate3d(calc(var(--dx, 0) * var(--mv-d)), calc(var(--dy, 0) * var(--mv-d) * .6), 0);
+  transition: transform 300ms var(--mv-out), opacity 260ms var(--mv-out);
+  pointer-events: none;
+}
+.motion .hero-bg[data-out] { transition: opacity 380ms ease-out; }
+.motion .hero-bg[data-out].out { transform: none; transition: opacity 340ms ease-in; }
+.motion .scene-jump [data-out] { transition: none !important; }
 
 [data-reveal] { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.985); transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 900ms cubic-bezier(.2,.7,.2,1); }
 [data-reveal].in { opacity: 1; transform: none; }

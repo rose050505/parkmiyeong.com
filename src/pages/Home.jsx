@@ -6,7 +6,6 @@ import Stamp from '../components/Stamp.jsx'
 import Nav from '../components/Nav.jsx'
 import VerifyLog from '../components/VerifyLog.jsx'
 import Reveal from '../components/Reveal.jsx'
-import PixelShift from '../components/PixelShift.jsx'
 import { CraftList, SkillList } from '../components/Craft.jsx'
 
 function SectionHead({ title, children }) {
@@ -70,61 +69,118 @@ function WorkEntry({ p, index }) {
   )
 }
 
-// 첫 장면 고정 + 커튼: 첫 화면은 붙어 있고, 아래 내용이 위로 덮어 오면 첫 장면이 작아지며 물러난다.
-// 첫 화면이 화면보다 길면(휴대폰) 끝까지 읽은 뒤에 붙는다.
-function useStage() {
+// 첫 화면 → 강점 장면 전환.
+// 첫 화면은 .scene 안에서 붙어 있고(휴대폰처럼 화면보다 길면 끝까지 읽은 뒤에 붙는다),
+// 붙은 뒤 더 내린 거리(화면 높이 단위)가 각 요소의 data-out 값을 넘으면 그 요소가 정해진 쪽으로 빠진다.
+// 값이 작은 것부터: 내려서 보기 → 결과 카드(왼쪽부터) → 검산 기록 → 글과 메뉴 → 남색 바탕(auto, 아래 fit 참고).
+// 되감아서 값보다 0.03 이상 올라오면 돌아온다(경계에서 떨리지 않게 조금 겹친다).
+function useScene() {
+  const scene = useRef(null)
   const stage = useRef(null)
-  const inner = useRef(null)
-  const curtain = useRef(null)
   useEffect(() => {
-    const st = stage.current, inn = inner.current, cur = curtain.current
-    if (!st || !inn || !cur) return
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const sc = scene.current, st = stage.current
+    if (!sc || !st) return
+    const motion = document.documentElement.classList.contains('motion')
+    const parts = [...st.querySelectorAll('[data-out]')].map((el) => ({ el, at: parseFloat(el.dataset.out) || 0, auto: el.dataset.out === 'auto', out: false }))
     let raf = 0
-    const fit = () => { st.style.top = `${Math.min(0, window.innerHeight - st.offsetHeight)}px` }
+    let top = 0
+    const fit = () => {
+      top = Math.min(0, window.innerHeight - st.offsetHeight)
+      st.style.top = `${top}px`
+      // 바탕(data-out="auto")은 붙은 화면에 실제로 보이는 마지막 요소가 빠진 직후에 꺼진다.
+      // 휴대폰은 첫 화면이 길어서 붙었을 때 제목이 이미 위로 지나가 있다 — 그만큼 빈 남색 구간을 줄인다.
+      const base = st.getBoundingClientRect().top
+      let last = 0
+      for (const pt of parts) {
+        if (pt.auto) continue
+        const r = pt.el.getBoundingClientRect()
+        if (r.bottom - base > -top + 40) last = Math.max(last, pt.at)
+      }
+      for (const pt of parts) if (pt.auto) pt.at = last + 0.05
+    }
     const tick = () => {
       raf = 0
-      const vh = window.innerHeight
-      // 전환 구간(커튼 맨 앞 빈 구간)의 앞 60% 동안 첫 장면이 물러난다
-      const span = (cur.firstElementChild?.offsetHeight || 0) * 0.6 || vh
-      const p = Math.min(1, Math.max(0, (vh - cur.getBoundingClientRect().top) / span))
-      st.style.setProperty('--p', p.toFixed(3))
-      if (!reduce) {
-        inn.style.transform = `translate3d(0, ${(-p * 7).toFixed(2)}%, 0) scale(${(1 - p * 0.07).toFixed(4)})`
-        inn.style.opacity = String((1 - p * 0.8).toFixed(3))
+      const d = (top - sc.getBoundingClientRect().top) / window.innerHeight
+      const changed = []
+      for (const pt of parts) {
+        const out = d > pt.at ? true : d <= Math.max(0, pt.at - 0.03) ? false : pt.out
+        if (out !== pt.out) changed.push(pt)
       }
+      if (!changed.length) return
+      // 한 번에 여러 문턱을 넘으면(빠른 스크롤, 메뉴 클릭) 동시에 움직이지 않고 순서대로 70ms씩 늦게 출발한다.
+      // 나갈 때는 문턱이 작은 것부터, 돌아올 때는 큰 것부터(바탕이 먼저 켜지고 카드가 들어온다).
+      const goingOut = !changed[0].out
+      changed.sort((a, b) => (goingOut ? a.at - b.at : b.at - a.at))
+      changed.forEach((pt, k) => {
+        pt.out = goingOut
+        pt.el.style.transitionDelay = changed.length > 1 ? `${k * 70 + (goingOut && pt.auto ? 120 : 0)}ms` : ''
+        pt.el.classList.toggle('out', goingOut)
+      })
     }
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(tick) }
     const onResize = () => { fit(); onScroll() }
-    fit(); tick()
+    // 빠진 요소에 키보드 초점이 들어오면 장면을 처음으로 되돌려 보이게 한다
+    const onFocus = (e) => {
+      if (!e.target.closest('.out')) return
+      st.classList.add('scene-jump')
+      window.scrollTo({ top: window.scrollY + sc.getBoundingClientRect().top - top, behavior: 'instant' })
+      tick()
+      requestAnimationFrame(() => st.classList.remove('scene-jump'))
+    }
+    // 움직임 줄이기: 붙이지도 빼지도 않는다. 첫 화면은 그냥 흘러가는 첫 블록이다.
+    if (!motion) return
+    fit()
+    // 주소의 #으로 중간에서 열렸을 때는 움직임 없이 그 상태로 시작한다
+    st.classList.add('scene-jump')
+    tick()
+    const unjump = requestAnimationFrame(() => requestAnimationFrame(() => st.classList.remove('scene-jump')))
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onResize)
+    st.addEventListener('focusin', onFocus)
     const ro = new ResizeObserver(onResize)
     ro.observe(st)
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize); ro.disconnect(); cancelAnimationFrame(raf) }
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+      st.removeEventListener('focusin', onFocus)
+      ro.disconnect()
+      cancelAnimationFrame(raf)
+      cancelAnimationFrame(unjump)
+    }
   }, [])
-  return { stage, inner, curtain }
+  return { scene, stage }
 }
 
 export default function Home() {
-  const { stage, inner, curtain } = useStage()
+  const { scene, stage } = useScene()
   const t = useUi()
   const { projects, results, strengths, log } = useContent()
+  // 결과 카드가 빠지는 쪽: 한 줄 세 칸(640px 이상)이면 왼쪽·위·오른쪽으로 갈라지고, 세로로 쌓이면 번갈아 좌우로
+  const resultOut = [
+    { dir: 'left', sm: 'left', at: 0.04 },
+    { dir: 'right', sm: 'up', at: 0.08 },
+    { dir: 'left', sm: 'right', at: 0.12 },
+  ]
   return (
-    <main>
+    <main className="overflow-x-clip">
       <Seo />
 
       {/* 첫 화면 — 사이트에서 유일한 짙은 면. 이름, 문장, 바깥에서 확인된 결과까지 */}
-      <div ref={stage} className="hero-band sticky z-0 flex min-h-[100svh] flex-col overflow-hidden">
-        <span aria-hidden="true" className="px-star left-[8%] top-[64%] text-hero-accent" />
-        <span aria-hidden="true" className="px-star right-[6%] top-[18%] text-[#b9a8ff]" />
-        <span aria-hidden="true" className="px-dot left-[46%] top-[12%] text-hero-ink" />
-        <span aria-hidden="true" className="px-dot left-[30%] top-[86%] text-[#b9a8ff]" />
-        <span aria-hidden="true" className="px-dot right-[22%] top-[90%] text-hero-accent" />
-        <Nav tone="hero" />
-        <div ref={inner} className="relative mx-auto flex w-full max-w-site flex-1 flex-col justify-center px-5 pb-8 pt-12 will-change-transform sm:px-8 sm:pt-14">
+      <div ref={scene} className="scene">
+      <div ref={stage} className="hero-band relative z-0 flex min-h-[100svh] flex-col overflow-hidden">
+        <div aria-hidden="true" className="hero-bg" data-out="auto">
+          <span className="px-star left-[8%] top-[64%] text-hero-accent" />
+          <span className="px-star right-[6%] top-[18%] text-[#b9a8ff]" />
+          <span className="px-dot left-[46%] top-[12%] text-hero-ink" />
+          <span className="px-dot left-[30%] top-[86%] text-[#b9a8ff]" />
+          <span className="px-dot right-[22%] top-[90%] text-hero-accent" />
+        </div>
+        <div className="relative" data-out="0.21" data-dir="up">
+          <Nav tone="hero" />
+        </div>
+        <div className="relative mx-auto flex w-full max-w-site flex-1 flex-col justify-center px-5 pb-8 pt-12 sm:px-8 sm:pt-14">
           <section className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
-            <div className="lg:col-span-7">
+            <div className="lg:col-span-7" data-out="0.21" data-dir="up">
               <p className="text-[15px] font-medium text-hero-accent">{t.eyebrow}</p>
               <h1 className="mt-5 text-[2.35rem] font-extrabold leading-[1.13] tracking-[-0.04em] sm:text-[3.3rem] lg:text-[3.75rem]">
                 {t.headline[0][0]}
@@ -136,7 +192,7 @@ export default function Home() {
                 {t.intro}
               </p>
             </div>
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-5" data-out="0.16" data-dir="right">
               <VerifyLog />
             </div>
           </section>
@@ -144,27 +200,29 @@ export default function Home() {
           {/* 바깥에서 확인된 결과 */}
           <section aria-label={t.resultsLabel} className="mt-12 grid gap-3 sm:grid-cols-3 sm:gap-4 lg:mt-14">
             {results.map((r, i) => (
-              <L
-                key={i}
-                to={r.to}
-                className="group block border border-hero-line bg-white/[0.04] px-5 py-5 backdrop-blur-[2px] transition-colors hover:border-hero-accent/60 hover:bg-white/[0.07] sm:px-6 sm:py-6"
-              >
-                <span className="block text-[1.45rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.6rem]">{r.value}</span>
-                <span className="mt-2 block text-[15px] leading-[1.6] text-hero-ink-2">{r.caption}</span>
-              </L>
+              <div key={i} className="grid" data-out={resultOut[i % 3].at} data-dir={resultOut[i % 3].dir} data-dir-sm={resultOut[i % 3].sm}>
+                <L
+                  to={r.to}
+                  className="group block border border-hero-line bg-white/[0.04] px-5 py-5 backdrop-blur-[2px] transition-colors hover:border-hero-accent/60 hover:bg-white/[0.07] sm:px-6 sm:py-6"
+                >
+                  <span className="block text-[1.45rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.6rem]">{r.value}</span>
+                  <span className="mt-2 block text-[15px] leading-[1.6] text-hero-ink-2">{r.caption}</span>
+                </L>
+              </div>
             ))}
           </section>
         </div>
-        <a href="#strengths" className="scroll-cue mx-auto mb-6 mt-2 flex items-center gap-2 text-[13px] text-hero-ink-2 hover:text-hero-ink" aria-label={t.scrollCueAria}>
-          <span aria-hidden="true" className="cue-px" />
-          {t.scrollCue}
-        </a>
+        <div className="relative" data-out="0.02">
+          <a href="#strengths" className="scroll-cue mx-auto mb-6 mt-2 flex w-fit items-center gap-2 text-[13px] text-hero-ink-2 hover:text-hero-ink" aria-label={t.scrollCueAria}>
+            <span aria-hidden="true" className="cue-px" />
+            {t.scrollCue}
+          </a>
+        </div>
+      </div>
       </div>
 
-      {/* 장면 전환 — 빈 구간이 지나는 동안 화면 전체가 픽셀로 뒤집히고, 이어서 본문이 붙는다 */}
-      <div ref={curtain} className="relative z-10">
-      <PixelShift />
-      <div className="curtain">
+      {/* 첫 화면이 비워진 자리로 이어지는 본문. 바탕이 같아서 이음매가 없다 */}
+      <div className="after-scene relative z-10">
       <div className="mx-auto max-w-site px-5 sm:px-8">
         <section id="strengths" className="scroll-mt-10 pt-16 sm:pt-24">
           <SectionHead title={t.strengthsTitle}>{t.strengthsLead}</SectionHead>
@@ -249,7 +307,6 @@ export default function Home() {
             </blockquote>
           </div>
         </section>
-      </div>
       </div>
       </div>
     </main>
