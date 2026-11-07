@@ -6,6 +6,7 @@ import Stamp from '../components/Stamp.jsx'
 import Nav from '../components/Nav.jsx'
 import VerifyLog from '../components/VerifyLog.jsx'
 import Reveal from '../components/Reveal.jsx'
+import PixelShift from '../components/PixelShift.jsx'
 import { CraftList, SkillList } from '../components/Craft.jsx'
 
 function SectionHead({ title, children }) {
@@ -84,7 +85,9 @@ function useStage() {
     const tick = () => {
       raf = 0
       const vh = window.innerHeight
-      const p = Math.min(1, Math.max(0, (vh - cur.getBoundingClientRect().top) / vh))
+      // 전환 구간(커튼 맨 앞 빈 구간)의 앞 60% 동안 첫 장면이 물러난다
+      const span = (cur.firstElementChild?.offsetHeight || 0) * 0.6 || vh
+      const p = Math.min(1, Math.max(0, (vh - cur.getBoundingClientRect().top) / span))
       st.style.setProperty('--p', p.toFixed(3))
       if (!reduce) {
         inn.style.transform = `translate3d(0, ${(-p * 7).toFixed(2)}%, 0) scale(${(1 - p * 0.07).toFixed(4)})`
@@ -125,7 +128,8 @@ export default function Home() {
               <p className="text-[15px] font-medium text-hero-accent">{t.eyebrow}</p>
               <h1 className="mt-5 text-[2.35rem] font-extrabold leading-[1.13] tracking-[-0.04em] sm:text-[3.3rem] lg:text-[3.75rem]">
                 {t.headline[0][0]}
-                <br className="hidden sm:block" />{t.headline[0][1]}
+                {t.headline[0][1] && <br className="hidden sm:block" />}
+                {t.headline[0][1]}
                 <br /> {t.headline[1][0]}
               </h1>
               <p className="mt-8 max-w-[38rem] text-[18px] leading-[1.75] text-hero-ink-2">
@@ -157,8 +161,10 @@ export default function Home() {
         </a>
       </div>
 
-      {/* 커튼 — 첫 장면 위로 덮어 올라오는 나머지 전부 */}
-      <div ref={curtain} className="curtain relative z-10">
+      {/* 장면 전환 — 빈 구간이 지나는 동안 화면 전체가 픽셀로 뒤집히고, 이어서 본문이 붙는다 */}
+      <div ref={curtain} className="relative z-10">
+      <PixelShift />
+      <div className="curtain">
       <div className="mx-auto max-w-site px-5 sm:px-8">
         <section id="strengths" className="scroll-mt-10 pt-16 sm:pt-24">
           <SectionHead title={t.strengthsTitle}>{t.strengthsLead}</SectionHead>
@@ -243,6 +249,7 @@ export default function Home() {
             </blockquote>
           </div>
         </section>
+      </div>
       </div>
       </div>
     </main>
