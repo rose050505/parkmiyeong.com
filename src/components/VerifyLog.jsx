@@ -81,7 +81,7 @@ export default function VerifyLog() {
   const s = scenes[i]
   return (
     <div className="relative">
-      <div className="verify rounded-[22px] border border-hero-line bg-[#0d0b22]/80 p-5 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] sm:p-6">
+      <div className="verify border border-hero-line bg-[#0d0b22]/80 p-5 shadow-[0_30px_80px_-30px_rgb(0_0_0/0.7)] sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[13px] font-semibold text-hero-ink-2">{t.verifyTitle}</p>
           <div className="flex gap-1.5" role="tablist" aria-label={t.verifyPick}>
@@ -110,8 +110,8 @@ export default function VerifyLog() {
             <span className="v-who text-hero-accent">{s.checkBy}</span>
             <p className="v-text text-hero-ink">{s.check}</p>
           </div>
-          <div className="v-line v-verdict mt-4 flex items-start gap-2.5 rounded-xl bg-hero-accent/10 px-3.5 py-3">
-            <span aria-hidden="true" className="mt-[3px] grid h-4 w-4 shrink-0 place-items-center rounded-[4px] bg-hero-accent text-[11px] font-black text-[#0d0b22]">✓</span>
+          <div className="v-line v-verdict mt-4 flex items-start gap-2.5 bg-hero-accent/10 px-3.5 py-3">
+            <span aria-hidden="true" className="mt-[3px] grid h-4 w-4 shrink-0 place-items-center bg-hero-accent text-[11px] font-black text-[#0d0b22]">✓</span>
             <p className="text-[14.5px] leading-[1.55] text-hero-ink">{s.verdict}</p>
           </div>
         </div>

@@ -77,7 +77,6 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
-  border-radius: 4px;
 }
 
 /* 첫 화면 띠: 아주 옅은 별점 격자 + 오른쪽 위 보랏빛 번짐 */
@@ -130,14 +129,15 @@ body {
   .facts > div { grid-template-columns: 1fr; gap: 0.15rem; }
 }
 
+/* 모서리 규칙: 기본은 직각. 둥근 것은 실제로 둥근 것만 — 휴대폰 화면(기기 모서리)과 장면 점(진행 표시).
+   판·카드·띠·화면 캡처는 모두 직각으로 맞춘다. */
+
 /* 이미지 틀 — 연보라 판 위에 얹는다. 휴대폰은 판 가운데, 넓은 화면은 판 안쪽 여백 */
 .frame {
   background: var(--tint, var(--color-paper-2));
-  border-radius: 20px;
   padding: clamp(14px, 3vw, 28px);
 }
 .shot {
-  border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgb(23 21 44 / 0.08), 0 12px 32px -12px rgb(23 21 44 / 0.25);
 }
@@ -162,7 +162,6 @@ body {
   top: 0.8em;
   width: 0.65rem;
   height: 2px;
-  border-radius: 2px;
   background: var(--color-accent);
 }
 
@@ -212,11 +211,9 @@ body {
 /* ---------- 장면 전환 ---------- */
 .curtain {
   background: var(--color-paper);
-  border-radius: 28px 28px 0 0;
   box-shadow: 0 -28px 70px -24px rgb(5 4 20 / 0.55);
   padding-bottom: 1px;
 }
-@media (min-width: 640px) { .curtain { border-radius: 40px 40px 0 0; } }
 
 [data-reveal] { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.985); transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 900ms cubic-bezier(.2,.7,.2,1); }
 [data-reveal].in { opacity: 1; transform: none; }

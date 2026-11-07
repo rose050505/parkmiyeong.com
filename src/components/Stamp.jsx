@@ -11,7 +11,7 @@ const tone = {
 export default function Stamp({ kind = 'done', children, className = '' }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold leading-5 ring-1 ring-inset ${tone[kind] || tone.done} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 text-[13px] font-semibold leading-5 ring-1 ring-inset ${tone[kind] || tone.done} ${className}`}
     >
       {children}
     </span>

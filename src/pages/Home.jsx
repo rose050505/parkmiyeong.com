@@ -143,7 +143,7 @@ export default function Home() {
               <L
                 key={i}
                 to={r.to}
-                className="group block rounded-2xl border border-hero-line bg-white/[0.04] px-5 py-5 backdrop-blur-[2px] transition-colors hover:border-hero-accent/60 hover:bg-white/[0.07] sm:px-6 sm:py-6"
+                className="group block border border-hero-line bg-white/[0.04] px-5 py-5 backdrop-blur-[2px] transition-colors hover:border-hero-accent/60 hover:bg-white/[0.07] sm:px-6 sm:py-6"
               >
                 <span className="block text-[1.45rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.6rem]">{r.value}</span>
                 <span className="mt-2 block text-[15px] leading-[1.6] text-hero-ink-2">{r.caption}</span>
@@ -164,7 +164,7 @@ export default function Home() {
           <SectionHead title={t.strengthsTitle}>{t.strengthsLead}</SectionHead>
           <div className="mt-10 grid gap-4 sm:gap-5 lg:grid-cols-2">
             {strengths.map((s, i) => (
-              <Reveal as="article" key={i} delay={(i % 2) * 90} className="rounded-[22px] border border-line bg-surface p-6 sm:p-8">
+              <Reveal as="article" key={i} delay={(i % 2) * 90} className="border border-line bg-surface p-6 sm:p-8">
                 <h3 className="text-[1.35rem] font-bold leading-snug tracking-[-0.02em] sm:text-[1.5rem]">{s.title}</h3>
                 <p className="mt-3 text-[16px] leading-[1.75] text-ink-2">{s.text}</p>
                 <ul className="mt-6 space-y-3 border-t border-line pt-5">

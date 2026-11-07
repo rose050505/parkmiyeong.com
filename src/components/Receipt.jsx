@@ -67,7 +67,7 @@ export default function Receipt({ value, caption, to, size = 'lg' }) {
 
   if (to) {
     return (
-      <L to={to} className="group block rounded-sm" aria-label={`${value}, ${caption}`}>
+      <L to={to} className="group block" aria-label={`${value}, ${caption}`}>
         <span className="block transition-colors group-hover:text-green">{body}</span>
       </L>
     )
