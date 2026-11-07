@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { L, useUi } from '../i18n.jsx'
 
 // 숫자 하나와 그 숫자가 뜻하는 것. 사이트 전체에서 가장 큰 글자다.
 // value가 순수 숫자면 처음 보일 때 한 번 세어 올라간다. (움직임 줄이기 설정이면 바로 보여준다)
@@ -42,7 +42,8 @@ export default function Receipt({ value, caption, to, size = 'lg' }) {
   const reduce =
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [shown, ref] = useCountUp(numeric ? value : 0, numeric && !reduce)
-  const text = numeric ? shown.toLocaleString('ko-KR') : value
+  const t = useUi()
+  const text = numeric ? shown.toLocaleString(t.numLocale) : value
 
   // 긴 문자열(7→4→3→2, 233 / 437)은 한 줄에 들어가도록 조금 작게
   const long = String(value).length >= 7
@@ -66,9 +67,9 @@ export default function Receipt({ value, caption, to, size = 'lg' }) {
 
   if (to) {
     return (
-      <Link to={to} className="group block rounded-sm" aria-label={`${value}, ${caption}`}>
+      <L to={to} className="group block rounded-sm" aria-label={`${value}, ${caption}`}>
         <span className="block transition-colors group-hover:text-green">{body}</span>
-      </Link>
+      </L>
     )
   }
   return <div>{body}</div>

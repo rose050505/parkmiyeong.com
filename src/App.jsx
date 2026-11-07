@@ -6,6 +6,7 @@ import Home from './pages/Home.jsx'
 import How from './pages/How.jsx'
 import Project from './pages/Project.jsx'
 import NotFound from './pages/NotFound.jsx'
+import { langOf } from './i18n.jsx'
 
 function ScrollManager() {
   const { pathname, hash } = useLocation()
@@ -22,20 +23,34 @@ function ScrollManager() {
   return null
 }
 
+// <html lang> 을 주소의 언어에 맞춘다 (화면 낭독기, 번역 제안, 글꼴 대체에 쓰인다)
+function LangManager() {
+  const { pathname } = useLocation()
+  const lang = langOf(pathname)
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
+  return null
+}
+
 function TopNav() {
   const { pathname } = useLocation()
-  return pathname === '/' ? null : <Nav />
+  return pathname === '/' || pathname === '/en' || pathname === '/en/' ? null : <Nav />
 }
 
 export default function App() {
   return (
     <div className="min-h-screen">
       <ScrollManager />
+      <LangManager />
       <TopNav />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/how" element={<How />} />
         <Route path="/p/:slug" element={<Project />} />
+        <Route path="/en" element={<Home />} />
+        <Route path="/en/how" element={<How />} />
+        <Route path="/en/p/:slug" element={<Project />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
