@@ -46,7 +46,6 @@ export const strengths = [
 export const log = [
   { when: '7월 23일', text: '2026 강원LRS·충북PRIDE 공유대학 초광역 융합인재 Deep-Dive 캠프, 반도체 인라인 공정 해커톤 최우수상 (팀 pluto).', stamp: 'award' },
   { when: '7월', text: '삼성 SCPC 2026 1차 예선. 에이전트 하네스를 설계해 비공개 평가 21위로 2차 진출.', to: '/p/moimjigi' },
-  { when: '7월', text: '기억함. 보훈 공공데이터·AI 공모전에 사흘 만에 시연 MVP를 만들어 출품.', to: '/p/gieokham' },
   { when: '7월 29일 – 8월 5일', text: '2차 예선. 처음 하는 Android로 7일 안에 설치 가능한 앱 "모임지기" 제출.', to: '/p/moimjigi' },
   { when: '8월', text: '본선 발표. AI 트랙 4등상.', to: '/p/moimjigi', stamp: 'award' },
   { when: '8월 – 9월', text: '삼육이. 금융 AI Challenge에 출품하고 지금까지 운영 중.', to: '/p/362' },
