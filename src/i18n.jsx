@@ -60,12 +60,12 @@ export const ui = {
     strengthsLead: '올해 만든 것들에서 반복해서 드러난 네 가지입니다. 각각 아래 프로젝트에서 실제로 한 일을 근거로 붙였습니다.',
     workTitle: '만든 것들',
     workLead:
-      '제대로 만들어 내놓은 여섯입니다. 상을 받았거나 지금도 쓰이는 것부터 놓았고, 프로젝트마다 공들인 부분과 그 과정에서 키운 능력을 적었습니다.',
+      '제대로 만들어 내놓은 다섯입니다. 상을 받았거나 지금도 쓰이는 것부터 놓았고, 프로젝트마다 공들인 부분과 그 과정에서 키운 능력을 적었습니다.',
     logTitle: '2026년 기록',
-    logLead: '위 여섯을 포함해 올해 한 일입니다. 끝난 것, 안 된 것, 하는 중인 것을 함께 적었습니다.',
+    logLead: '위 다섯을 포함해 올해 한 일입니다. 끝난 것, 안 된 것, 하는 중인 것을 함께 적었습니다.',
     howTitle: '일하는 방식',
     howTeaser:
-      '혼자 하지만 혼자 하지 않습니다. 노트북의 Claude Code, 클라우드의 총괄 세션, 검토와 야간 실행을 맡는 Codex가 한 팀이고, 저는 성공 기준과 검증 세트와 최종 선택을 쥡니다. 10월에는 에이전트와 일해 온 제 방식을 작업 로그로 진단해서 운영 방식을 바꿨습니다. 할 일 보드와 GPU 과금 감시기처럼 그 과정에서 직접 만든 도구도 있습니다.',
+      '혼자 하지만 혼자 하지 않습니다. 노트북의 Claude Code와 클라우드의 총괄 세션이 한 팀이고, 저는 성공 기준과 검증 세트와 최종 선택을 쥡니다. 10월에는 에이전트와 일해 온 제 방식을 작업 로그로 진단해서 운영 방식을 바꿨습니다. 할 일 보드와 GPU 과금 감시기처럼 그 과정에서 직접 만든 도구도 있습니다.',
     howRead: '어떻게 일하는지 읽기',
     howDescription: '박미영이 AI 코딩 에이전트와 일하는 방식, 거기서 배운 것, 직접 만든 도구.',
     pullQuote: '문장으로 남긴 교훈은 지켜지지 않았고, 훅·관문 스크립트로 막은 것만 지켜졌다.',
@@ -123,12 +123,12 @@ export const ui = {
       'Four things that kept showing up in what I built this year. Each one is backed by something I actually did in the projects below.',
     workTitle: 'Work',
     workLead:
-      'Six projects I finished and put out. Awards and things still in use come first. For each, I wrote down the parts I worked hardest on and what I learned. Most were built for Korean users, so the screenshots are in Korean.',
+      'Five projects I finished and put out. Awards and things still in use come first. For each, I wrote down the parts I worked hardest on and what I learned. Most were built for Korean users, so the screenshots are in Korean.',
     logTitle: '2026 log',
-    logLead: "Everything I did this year, including the six above — what finished, what didn't work, and what's still going.",
+    logLead: "Everything I did this year, including the five above — what finished, what didn't work, and what's still going.",
     howTitle: 'How I work',
     howTeaser:
-      "I work alone, but not by myself. Claude Code on my laptop, a coordinating session in the cloud, and Codex for reviews and overnight runs form one team; I own the success criteria, the validation sets, and the final call. In October I audited how I'd been working with agents using my own logs, and changed how I run things. Along the way I built a few tools of my own, like a shared task board and a GPU billing watchdog.",
+      "I work alone, but not by myself. Claude Code on my laptop and a coordinating session in the cloud form one team; I own the success criteria, the validation sets, and the final call. In October I audited how I'd been working with agents using my own logs, and changed how I run things. Along the way I built a few tools of my own, like a shared task board and a GPU billing watchdog.",
     howRead: 'Read how I work',
     howDescription: 'How Mi Yeong Park works with AI coding agents, what she learned, and the tools she built for it.',
     pullQuote: 'Lessons written down as sentences were not followed. Only the ones enforced by hooks and gate scripts held.',
