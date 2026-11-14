@@ -45,7 +45,6 @@ export const strengths = [
 export const log = [
   { when: 'Jul 23', text: 'Top Excellence Award, semiconductor inline-process hackathon, 2026 Gangwon LRS · Chungbuk PRIDE Shared University Deep-Dive Camp (team pluto).', stamp: 'award' },
   { when: 'Jul', text: 'Samsung SCPC 2026 round 1. Designed an agent harness, placed 21st on the hidden test set and advanced to round 2.', to: '/p/moimjigi' },
-  { when: 'Jul', text: 'Gieokham. Built a working demo MVP in three days for a veterans’ public data and AI contest.', to: '/p/gieokham' },
   { when: 'Jul 29 – Aug 5', text: 'SCPC round 2. Submitted “Moimjigi,” an installable Android app built in 7 days on my first Android project.', to: '/p/moimjigi' },
   { when: 'Aug', text: 'Presented at the finals. 4th place, AI track.', to: '/p/moimjigi', stamp: 'award' },
   { when: 'Aug – Sep', text: 'Samyuk-i. Entered in the Financial AI Challenge and still running.', to: '/p/362' },
