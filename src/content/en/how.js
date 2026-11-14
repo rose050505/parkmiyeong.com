@@ -3,10 +3,10 @@
 export const how = {
   title: 'How I work',
   lead:
-    'I work alone, but not by myself. Claude Code on my laptop, a coordinating session in the cloud, and Codex for reviews and overnight runs form one team. I own the success criteria, the validation sets, changes of direction, and the final call. This page describes how that setup looks, where it broke down, and what I changed because of it.',
+    'I work alone, but not by myself. Claude Code on my laptop and a coordinating session in the cloud form one team (until early November, Codex handled reviews and overnight runs). I own the success criteria, the validation sets, changes of direction, and the final call. This page describes how that setup looks, where it broke down, and what I changed because of it.',
   blocks: [
     { type: 'h', text: 'Splitting the roles' },
-    { type: 'p', text: 'Each session can do different things. Claude Code on my laptop touches local files and GPU pods. The cloud session reads competition pages and forums in a browser and designs strategy. I use Codex as reviewer and overnight runner, not because it comes from a different company but because it has a separate token budget and is good at reviewing documents. I press the submit button myself. Only decisions that are hard to undo come up to me — a DACON submission, topping up RunPod credit, interpreting a rule, a large expense — and the agents decide the rest.' },
+    { type: 'p', text: 'Each session can do different things. Claude Code on my laptop touches local files and GPU pods. The cloud session reads competition pages and forums in a browser and designs strategy. Until early November I used Codex as reviewer and overnight runner, not because it comes from a different company but because it had a separate token budget and was good at reviewing documents. I press the submit button myself. Only decisions that are hard to undo come up to me — a DACON submission, topping up RunPod credit, interpreting a rule, a large expense — and the agents decide the rest.' },
     { type: 'p', text: 'At night I send a job file (JOB.md) that states the success condition as a command, the limits in hours, turns and dollars, and the line “report what you find; don’t act on new directions.” Results land in a handoff file (HANDOFF.md), and my phone gets a DONE, FAIL or STUCK push. In the morning I look only at the push and the result file, and there are one or two decisions to make per day.' },
 
     { type: 'h', text: 'Oct 14, 2026: I audited myself' },
@@ -17,7 +17,7 @@ export const how = {
       ['Why I trusted the reports', 'I had no way not to. The competition projects had no tests, no hooks and no git; verification was the agent’s own claim that the “checklist passed.” The product projects had tests, and there Codex stopped on its own: “didn’t pass, so not pushing”'],
       ['Four patterns', 'State had no owner. Verification was prose. Rules grew as agents wrote them for other agents. The watcher and the worker were the same kind of session, run in a loop'],
     ] },
-    { type: 'p', text: 'What I changed is simple. One session per task modifies files. A machine decides when work is done (tests, lint, build). State lives in the repository. People write the rules and hooks enforce them. Waiting happens outside the model. The reviewer (Codex) is third in line, not first: mechanical checks, then re-measuring the outputs, then model review. And I don’t record mistakes as sentences.' },
+    { type: 'p', text: 'What I changed is simple. One session per task modifies files. A machine decides when work is done (tests, lint, build). State lives in the repository. People write the rules and hooks enforce them. Waiting happens outside the model. Model review is third in line, not first: mechanical checks, then re-measuring the outputs, then model review. And I don’t record mistakes as sentences.' },
     { type: 'quote', text: 'Lessons written down as sentences were not followed. Only the ones enforced by hooks and gate scripts held.', cite: 'Lesson from the port-matching competition, Oct 29, 2026' },
 
     { type: 'h', text: 'What leaderboard competitions taught me', id: 'leaderboard' },
