@@ -342,55 +342,6 @@ export const projects = [
       { type: 'p', text: 'The presentation is in December. Until then, I’ll connect the model results to the web app and write the report.' },
     ],
   },
-
-  {
-    slug: 'gieokham',
-    tint: '#f0e5dc',
-    name: 'Gieokham',
-    period: 'Jul 2026 (three days)',
-    venue: '2026 Veterans Public Data & AI Idea Contest (Ministry of Patriots and Veterans Affairs, Independence Hall of Korea)',
-    result: 'Proposal and demo MVP submitted',
-    status: { kind: 'done', label: 'Submitted' },
-    role: 'Solo',
-    stack: 'React 18, Vite, Claude API (chat, vision), Korea Public Data Portal API, Web Speech API, Kakao Maps, qrcode',
-    oneLiner:
-      'A family archive where AI records the oral histories and keepsakes of Korea’s war veterans, links them with veterans’ public data, and preserves them as a QR-linked digital memorial page. It connects the nation’s record (decorations) with the family’s memory (stories).',
-    card: {
-      image: { src: '/img/gieokham-home.webp', alt: 'Gieokham home screen: “There are stories we never got to ask about.”', kind: 'phone' },
-    },
-    craft: [
-      '**It starts with a first question made for that person.** Entering a name pulls battle, decoration and unit from the merit records of those buried in national cemeteries, and builds the first question from them. Since most surviving veterans are over ninety, questions are read aloud and shown in large type.',
-      '**Instead of hiding a broken public API, it absorbed the failure.** While preparing the demo I found that all four public data portal API endpoints were down. I downloaded the same data as files, added a layer that indexes 17,874 historical records at build time, and showed the source on screen as-is. One setting switches back when the API returns.',
-      '**Three days in three stages, working at the end of each day.** I deliberately left out login, a database and test code, because this MVP’s goal was to show within five minutes that the idea actually works. I also saved real run outputs so the demo could finish even if the model didn’t respond.',
-    ],
-    skills: ['Cutting scope on a tight schedule', 'Integrating several public datasets', 'Multimodal features with speech and image reading (vision)', 'Screen design for elderly users'],
-    links: [{ label: 'Demo site: gieokham.vercel.app (Korean)', href: 'https://gieokham.vercel.app' }],
-    hero: { kind: 'phone', images: [{ src: '/img/gieokham-home.webp', alt: 'Gieokham home screen: about 25,000 surviving war veterans, 94% of them aged 90 or older' }], caption: 'The home screen opens by saying there isn’t much time left to ask.' },
-    receipts: [
-      { value: '3 days', caption: 'From planning to deployment' },
-      { value: '5', caption: 'Veterans’ public datasets combined' },
-      { value: 17874, caption: 'Historical records indexed at build time for instant search without a server' },
-      { value: '4 / 4', caption: 'Public API endpoints that weren’t responding, replaced by a file index' },
-    ],
-    body: [
-      { type: 'h', text: 'Why' },
-      { type: 'p', text: 'The state records decorations, not stories. The merit records in the national e-archive stop at administrative entries like “served at the Battle of ○○, Hwarang Order of Military Merit,” and what that person saw and felt that day is recorded nowhere. Oral history depends on visits from professional researchers, so very few people are interviewed each year, and as the families also grow old, the people who know what the medals and letters in the house mean are disappearing. The goal was to make recording faster than memory is lost.' },
-
-      { type: 'h', text: 'Recording in three ways' },
-      { type: 'list', items: [
-        '**Asking — AI oral-history interview.** Enter the veteran’s name, and battle, decoration and unit are pulled from the national-cemetery merit records to build a first question for that person: “There’s a record of you at the Battle of ○○. How old were you then?” Questions are read aloud and shown in large type, and answers can be spoken or typed. It keeps answers in memory and follows up for 5–7 turns, then produces an oral-history summary organized into childhood, enlistment, battle, comrades and homecoming.',
-        '**Looking — reading keepsakes.** Photograph a medal, rank insignia, an old photo or a letter, and a vision model identifies its type, estimated period and likely decoration, and transcribes handwriting into modern Korean. Results carry a confidence level and evidence, and are labeled “estimated” rather than stated as fact.',
-        '**Keeping — QR memorial page.** The results are assembled into a memorial page for each veteran: a merit summary, recorded oral history, a keepsake gallery, and the grave location on a map from the cemetery location data. The page address can be downloaded as a QR code PNG to place beside the headstone.',
-      ] },
-      { type: 'figure', kind: 'wide', images: [{ src: '/img/gieokham-architecture.webp', alt: 'System diagram: the user’s browser calls the AI model through a serverless proxy; five public datasets are indexed at build time and searched directly in the browser; Kakao Maps and QR generation attached' }], caption: 'Architecture. The raw public data (CSV) is turned into an index at build time and searched without a server; the AI key lives only in the serverless proxy.' },
-
-      { type: 'h', text: 'Why I didn’t hide what was broken' },
-      { type: 'p', text: 'While preparing the demo I found that all four open API endpoints of the Public Data Portal were down (500, 404, 403, and 500 even at the provider’s root). So I downloaded the same data as files, added an adapter layer that indexes them at build time, and put “API down — using file data” on the screen’s data-source badge as-is. When the API comes back, one flag turns it back on. Rather than hiding the outage, I chose to explain it as a design that absorbs failures at the source. In case the model didn’t respond, I saved the output of a real 5-turn run, so the demo would reach the end whatever failed.' },
-
-      { type: 'h', text: 'How it was made' },
-      { type: 'p', text: 'I split the three days before the deadline into three stages: day one for the skeleton, public data integration and the interview; day two for keepsake reading, the memorial page and QR; day three for recording the demo and evidence. At the end of each stage I ran it in the browser before moving on. I wrote down from the start that building everything at once and debugging at the end would fail on this schedule. I deliberately built no login, no database and no test code, because the only goal of an MVP for demo evidence was to show in three to five minutes that the idea actually works.' },
-    ],
-  },
 ]
 
 export const bySlug = Object.fromEntries(projects.map((p) => [p.slug, p]))
