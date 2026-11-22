@@ -216,7 +216,7 @@ export const projects = [
     name: 'PriceSignal',
     period: '2026년 10월 22일 – 28일',
     venue: 'Open Agent Hackathon 2026 (GenAI.Works) · Track 01 Solving Fragmented Intelligence',
-    result: '제출 완료, 결과 발표 11월 7일',
+    result: '출품, 미입상 (1차 심사 76.3점, 547개 중 122위)',
     status: { kind: 'done', label: '출품' },
     role: '혼자 (기획·설계·구현·영상)',
     stack: 'TypeScript, Node, Zetaris(Lightning SQL), Meterless Nightshift + H-MEM, NVIDIA Nemotron',

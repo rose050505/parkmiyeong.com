@@ -52,5 +52,6 @@ export const log = [
   { when: 'Oct 1 –', text: 'plan and focuslock. A task board I share with my agents, plus a lock across three devices.', to: '/p/plan' },
   { when: 'Oct –', text: 'My Bill Radar. Course team project; I own the web app and deployment.', to: '/p/radar' },
   { when: 'Oct', text: 'DACON port vessel matching. Got to 0.936, then scrapped it. Kept the lesson as tooling.', to: '/how#leaderboard' },
-  { when: 'Oct 22 – 28', text: 'PriceSignal. Submitted to Open Agent Hackathon 2026.', to: '/p/pricesignal' },
+  { when: 'Oct 22 – 28', text: 'PriceSignal. Submitted to Open Agent Hackathon 2026. 122nd of 547, no award.', to: '/p/pricesignal' },
+  { when: 'Nov 15', text: 'Redline. A practice service for checking an AI agent\'s work log against the source documents and finding what it got wrong (redline.parkmiyeong.com). Entered solo in the AI Woowangthon; did not make the finals.' },
 ]

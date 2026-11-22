@@ -53,5 +53,6 @@ export const log = [
   { when: '10월 1일 –', text: 'plan과 focuslock. 에이전트와 같이 쓰는 할 일 보드와 세 기기 잠금.', to: '/p/plan' },
   { when: '10월 –', text: '내 법안 레이더. 수업 팀 프로젝트, 웹과 배포 담당.', to: '/p/radar' },
   { when: '10월', text: 'DACON 항만 선박 매칭. 0.936까지 올리고 폐기. 교훈은 장치로 남김.', to: '/how#leaderboard' },
-  { when: '10월 22일 – 28일', text: 'PriceSignal. Open Agent Hackathon 2026 제출.', to: '/p/pricesignal' },
+  { when: '10월 22일 – 28일', text: 'PriceSignal. Open Agent Hackathon 2026 출품. 547개 중 122위로 미입상.', to: '/p/pricesignal' },
+  { when: '11월 15일', text: 'Redline. AI 우왕톤에 1인 팀으로 출품한, AI 작업 기록을 원자료와 대조해 틀린 곳을 찾는 검수 연습 서비스(redline.parkmiyeong.com). 본선에는 못 감.' },
 ]
