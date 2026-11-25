@@ -9,11 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vercel/og": "^1.0.3",
+    "@resvg/resvg-js": "^2.6.2",
     "pretendard": "^1.3.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.6"
+    "react-router-dom": "^6.30.6",
+    "satori": "^0.63.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",
