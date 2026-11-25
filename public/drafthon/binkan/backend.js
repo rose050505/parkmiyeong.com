@@ -53,13 +53,7 @@
     }
     for (let off = 0; off < 500; off += 100) {
       const list = await call('GET', `/api/buildings?limit=100&offset=${off}`);
-      list.forEach(b => {
-        const match = /^binkan-(V\d{3})$/.exec(b.buildingKey || ''), vacancy = byB[b.id];
-        if (match && vacancy) spaces[match[1]] = {
-          b: b.id, v: vacancy.id, status: vacancy.status,
-          depositKrw: vacancy.depositKrw, monthlyRentKrw: vacancy.monthlyRentKrw, areaM2: vacancy.areaM2,
-        };
-      });
+      list.forEach(b => { const m = /^binkan-(V\d{3})$/.exec(b.buildingKey || ''); if (m && byB[b.id]) spaces[m[1]] = { b: b.id, v: byB[b.id].id, status: byB[b.id].status }; });
       if (list.length < 100) break;
     }
     if (!Object.keys(spaces).length) throw new Error('서버에 빈칸 없음');

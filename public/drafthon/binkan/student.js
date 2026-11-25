@@ -120,7 +120,7 @@
         <p class="was">${esc(p.owner)}${p.wish ? ' · ' + esc(p.wish) : ''}</p></div>
       <div class="sum"><div><b>기간</b>한 학기 16주 · 8주 중간 점검</div><div><b>팀</b>대학생 4명 + 지도교수</div><div><b>받는 것</b>장학금 · 전공 학점(연계 교과) · 경력 카드</div><div><b>사장님</b>${esc(p.ask)}</div></div>
       <h3 style="margin-top:16px">자리 4개 <small>하나를 골라 지원해요</small></h3>
-      <div class="tasks">${p.roles.map((r, i) => `<label class="task${s.role === i ? ' on' : ''}"><input type="radio" name="role" data-s="role" data-v="${i}"${s.role === i ? ' checked' : ''}><div><b>${esc(r.t)}</b><small>필요한 전공: ${esc(r.major)}${r.wk ? ` · ${esc(r.wk)}주` : ''}</small><small>결과물: ${esc(r.out)}</small></div></label>`).join('')}</div>
+      <div class="tasks">${p.roles.map((r, i) => `<label class="task${s.role === i ? ' on' : ''}"><input type="radio" name="role" data-s="role" data-v="${i}"${s.role === i ? ' checked' : ''}><div><b>${esc(r.t)}</b><small>필요한 전공: ${esc(r.major)} · ${r.wk}주</small><small>결과물: ${esc(r.out)}</small></div></label>`).join('')}</div>
       </section>
       <div class="onav"><button class="cta2" data-s="step" data-v="1">← 과제 목록</button><button class="cta" data-s="go3"${s.role == null ? ' disabled' : ''}>이 자리로 지원하기 →</button></div>`;
   }
