@@ -8,7 +8,7 @@
   document.body.insertAdjacentHTML('beforeend', `
     <button class="chatfab" id="chatFab" aria-label="빈칸 도우미 열기"><span class="cf-i">💬</span><span class="cf-t">빈칸 도우미</span></button>
     <section class="chatbox" id="chatBox" hidden role="dialog" aria-label="빈칸 도우미">
-      <header><b>빈칸 도우미</b><button class="caimode" id="chatMode" data-c="mode"></button><button class="cx" data-c="close" aria-label="닫기">×</button></header>
+      <header><b>빈칸 도우미</b><span class="caimode" id="chatMode"></span><button class="cx" data-c="close" aria-label="닫기">×</button></header>
       <div class="clog" id="chatLog" aria-live="polite"></div>
       <div class="cchips" id="chatChips"></div>
       <form class="cform" id="chatForm"><input id="chatIn" type="text" placeholder="편하게 물어보세요" autocomplete="off" aria-label="도우미에게 묻기"><button type="button" class="cmic" id="chatMic" aria-label="말로 묻기" hidden>🎤</button><button class="csend">보내기</button></form>
@@ -16,7 +16,7 @@
 
   // ---------------- 알아듣기 (시연: 규칙) ----------------
   const GROUP_WORDS = [['디자인 · 공간', /디자인|건축|인테리어|공간/], ['마케팅 · 콘텐츠', /마케팅|홍보|광고|미디어|콘텐츠|sns/i], ['데이터 · IT', /데이터|통계|컴퓨터|개발|코딩|it/i], ['식품 · 메뉴', /식품|조리|요리|메뉴|영양/], ['경영 · 기획', /경영|기획|회계|창업/]];
-  const itemOf = t => { const m = t.match(/([가-힣a-zA-Z]{1,10} ?(집|카페|식당|가게|샵|바|주점|베이커리|학원|사진관|스튜디오))/); const it = m ? m[1].replace(/^(우리|제|저희|동성로에?|여기에?)\s*/, '').trim() : ''; return /^(가게|집|카페|식당|샵|바)$/.test(it) ? '' : it; };
+  const itemOf = t => { const m = t.match(/([가-힣a-zA-Z]{1,10} ?(집|카페|식당|가게|샵|바|주점|베이커리|학원|사진관|스튜디오|점|방|관))/); const it = m ? m[1].replace(/^(우리|제|저희|동성로에?|여기에?)\s*/, '').trim() : ''; return /^(가게|집|카페|식당|샵|바)$/.test(it) ? '' : it; };
   function understand(text) {
     const t = text.replace(/\s/g, '');
     if (/^(안녕|하이|hi|hello|도움|도와)/i.test(t)) return { k: 'hello' };
@@ -26,7 +26,7 @@
       const trouble = /손님|단골|재방문|리뷰/.test(t) ? '고객 관리' : /홍보|알리|sns|인스타|모르/i.test(t) ? '홍보' : /매출|안팔|돈/.test(t) ? '매출' : /재고|발주|폐기|남아/.test(t) ? '재고' : '기타';
       return { k: 'open', trouble, item: itemOf(text) };
     }
-    if (/창업|열고|열려|차리|개업|시작하고싶|가게를?내|해볼까|하고싶/.test(t)) return { k: 'pre', item: itemOf(text) };
+    if (/창업|열고|열려|열어|오픈|차리|차려|개업|시작하고싶|시작해|가게를?내|해볼까|하고싶|하려고|할까/.test(t)) return { k: 'pre', item: itemOf(text) };
     if (/어디|찾아|보여/.test(t) && !/남기/.test(t)) return { k: 'find', q: text.trim() };
     if (/바람남|남기|있었으면|있으면좋|생기면좋|원하는가게|이벤트|기프티콘|상품권/.test(t)) return { k: 'wish' };
     if (/로그인|가입|본인인증|인증/.test(t)) return { k: 'auth' };
@@ -92,10 +92,9 @@
     '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 금액 · 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
 
   // ---------------- 그리기 · 동작 ----------------
-  // ---------------- 실시간 AI (팀 코드가 있을 때) ----------------
-  const CODE_KEY = 'dsr_code';   // 옛 시연과 같은 칸: 한 번 넣으면 같이 씀
-  const live = () => !!localStorage.getItem(CODE_KEY);
-  const ENDPOINT = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/drafthon-ai' : 'https://parkmiyeong.com/api/drafthon-ai';
+  // ---------------- 실시간 AI (전용 창구 /api/binkan-assist: 지시문은 서버 고정, 길 안내 JSON만 받음) ----------------
+  const live = () => navigator.onLine !== false;
+  const ENDPOINT = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/binkan-assist' : 'https://parkmiyeong.com/api/binkan-assist';
   function context() {
     const v = A.view(), sp = v.space && SP[v.space];
     const screen = { home: '첫 화면(지도)', space: '빈칸 상세', write: '바람 남기기', owner: '사장님 상담', student: '대학생 동행 프로젝트', howto: '이용 방법', search: '검색 결과', mine: '내 페이지' }[v.mode] || v.mode;
@@ -105,17 +104,15 @@
   async function aiUnderstand(text) {
     const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 15000);
     try {
-      const hist = log.filter(m => m.text).map(m => ({ who: m.who, text: m.text }));
-      const r = await fetch(ENDPOINT, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', 'x-demo-code': localStorage.getItem(CODE_KEY) }, body: JSON.stringify(window.ASSIST.body(context(), hist, text)) });
-      if (r.status === 401) { localStorage.removeItem(CODE_KEY); throw new Error('팀 코드가 틀려요'); }
-      const j = await r.json();
-      if (!r.ok || j.stop_reason === 'refusal') throw new Error('AI 응답 없음');
-      const u = window.ASSIST.parse((j.content || []).filter(b => b.type === 'text').map(b => b.text).join(''));
-      if (!u) throw new Error('AI 답 형식 오류');
-      return u;
+      const history = log.filter(m => m.text).map(m => ({ who: m.who === 'me' ? 'me' : 'bot', text: m.text }));
+      const r = await fetch(ENDPOINT, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ctx: context(), history, text }) });
+      if (r.status === 429) throw new Error('잠시 뒤 다시');
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.u) throw new Error('AI 답 없음');
+      return Object.assign(j.u, { ai: true });
     } finally { clearTimeout(tm); }
   }
-  function modeBtn() { const b = $('#chatMode'); b.textContent = live() ? 'AI 연결됨' : '시연판 · AI 연결'; b.classList.toggle('on', live()); }
+  function modeBtn() { const b = $('#chatMode'); b.textContent = live() ? 'AI' : '오프라인'; b.classList.toggle('on', live()); b.title = live() ? 'Claude가 문장을 읽고 안내해요. 연결이 안 되면 정해 둔 말로 답해요' : '인터넷이 없어 정해 둔 말로 답해요'; }
 
   function draw() { $('#chatLog').innerHTML = log.map(m => `<div class="cm ${m.who}">${m.html}</div>`).join(''); $('#chatLog').scrollTop = 1e6; chips(); modeBtn(); }
   let busy = false;
@@ -123,7 +120,7 @@
     if (!text.trim() || busy) return;
     log.push({ who: 'me', html: esc(text), text });
     let u = null, note = '';
-    if (FAQ[text] && !live()) { log.push({ who: 'bot', html: FAQ[text], text: FAQ[text].replace(/<[^>]+>/g, '') }); return draw(); }
+    if (FAQ[text]) { log.push({ who: 'bot', html: FAQ[text], text: FAQ[text].replace(/<[^>]+>/g, '') }); return draw(); }
     if (live()) {
       busy = true; log.push({ who: 'bot wait', html: '<span class="dots">AI가 읽는 중</span>' }); draw();
       try { u = await aiUnderstand(text); } catch (e) { note = `<small>실시간 AI 연결 실패(${esc(e.name === 'AbortError' ? '응답 시간 초과' : e instanceof TypeError ? '인터넷 · 서버 연결 안 됨' : e.message)}) — 정해 둔 말로 답했어요.</small>`; }
@@ -133,25 +130,16 @@
     const html = (u ? esc(u.reply) + (extra ? '<div class="cextra">' + extra + '</div>' : '') + '<small class="aimark">AI 답 · 확인 필요한 내용은 공고 · 기관에서</small>' : (FAQ[text] || extra)) + note;
     log.push({ who: 'bot', html, text: u ? u.reply : html.replace(/<[^>]+>/g, '').slice(0, 200) }); draw();
   }
-  function askCode() {
-    log.push({ who: 'bot', html: `실시간 AI는 <b>팀 코드</b>가 있어야 켜져요(AI 비용 보호). 코드를 넣으면 이 브라우저에만 저장돼요.<form class="ccode" id="codeForm"><input type="password" id="codeIn" placeholder="팀 코드" autocomplete="off" aria-label="팀 코드"><button>연결</button></form>` }); draw();
-    $('#codeIn').focus();
-  }
   function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') }); } draw(); $('#chatIn').focus(); }
   function close() { $('#chatBox').hidden = true; $('#chatFab').hidden = false; }
   $('#chatFab').onclick = open;
   $('#chatForm').onsubmit = e => { e.preventDefault(); const v = $('#chatIn').value; $('#chatIn').value = ''; say(v); };
-  $('#chatBox').addEventListener('submit', e => {
-    if (e.target.id !== 'codeForm') return;
-    e.preventDefault(); const v = $('#codeIn').value.trim(); if (!v) return;
-    localStorage.setItem(CODE_KEY, v);
-    e.target.outerHTML = '<p><b>연결했어요.</b> 이제 AI가 문장을 읽고 안내해요. 코드가 틀리면 첫 질문 때 알려 드려요.</p>'; log[log.length - 1].html = $('#chatLog').lastElementChild.innerHTML; draw();
-  });
+
   $('#chatBox').addEventListener('click', e => {
     const b = e.target.closest('[data-c]'); if (!b) return;
     const c = b.dataset.c;
     if (c === 'close') return close();
-    if (c === 'mode') { if (live()) { localStorage.removeItem(CODE_KEY); log.push({ who: 'bot', html: 'AI 연결을 끊었어요. 정해 둔 말로 답해요.' }); return draw(); } return askCode(); }
+
     if (c === 'say') return say(b.dataset.v);
     if (c === 'space') { A.go('space', { space: b.dataset.id }); return; }
     if (c === 'owner') { window.OWNER.start(null); A.go('owner'); return; }
