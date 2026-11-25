@@ -324,11 +324,13 @@
   });
   mbox.addEventListener('input', () => { const e = $('#aerr'); if (e) e.hidden = true; });
 
-  const SHARE_BASE = 'https://parkmiyeong.com/drafthon/binkan/';
+  const SHORT_BASE = 'https://parkmiyeong.com/b/';
   let lastShare = null;
   function share(w) {
     // 공유 주소는 늘 실제 사이트. /s/빈칸?w=…로 보내야 카톡 · 메신저가 이 바람 썸네일을 보여 준다(api/binkan-share · binkan-ogimg)
-    const s = SP[w.space], url = SHARE_BASE + 's/' + w.space + '?' + new URLSearchParams({ w: w.title, n: String(store.likes(w)) }).toString();
+    // 짧은 주소: 처음부터 있던 바람은 번호(/b/w05), 새 바람은 빈칸.가게이름(base64url).공감수 — 서버(api/binkan-share)가 풀어서 썸네일을 그린다
+    const b64 = t => btoa(unescape(encodeURIComponent(t))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const s = SP[w.space], url = SHORT_BASE + (w.seed ? w.id : `${w.space}.${b64(w.title)}.${store.likes(w)}`);
     const place = /^동성로/.test(shortAddr(s)) ? shortAddr(s) : '동성로 ' + shortAddr(s);
     const text = `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
     lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };

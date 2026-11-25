@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/b/:c",
+      "destination": "/api/binkan-share?c=:c"
+    },
+    {
       "source": "/drafthon/binkan/s/:id",
       "destination": "/api/binkan-share?s=:id"
     },
