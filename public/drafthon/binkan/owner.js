@@ -5,6 +5,7 @@
   const STEPS = ['상담', '창업 카드', '과제 정리', '지원서', '진행 상태'];
   const blank = () => ({ step: 1, status: null, known: null, item: '', space: null, near: null, trouble: null, story: '', problem: null, tasks: null, app: null, result: null });
   if (!st.owner) st.owner = blank();
+  st.owner.busy = null;
   const O = () => st.owner;
   const set = patch => { Object.assign(st.owner, patch); save(); A.rerender(); };
 
@@ -98,7 +99,8 @@
 
   // ---------------- 화면 조각 ----------------
   const stepper = n => `<ol class="ostep">${STEPS.map((t, i) => `<li class="${i + 1 < n ? 'done' : i + 1 === n ? 'now' : ''}"><span>${i + 1}</span>${t}</li>`).join('')}</ol>`;
-  const aiTag = '<span class="tag ai">AI 초안</span>';
+  const aiTag = ai => ai ? '<span class="tag ai" title="Claude가 이 내용을 보고 만들었어요">AI 초안</span>' : '<span class="tag" title="AI 연결이 안 돼 정해 둔 규칙으로 만들었어요">기본 정리</span>';
+  const strip = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const placeName = o => o.space ? shortAddr(SP[o.space]) : o.near ? o.near + ' 근처' : '';
   const ptOf = o => o.space ? SP[o.space] : LM.find(l => l.name === o.near) || LM[0];
 
@@ -125,8 +127,8 @@
         <section class="oq"><h3>어떤 어려움이 있나요?</h3><div class="ochips">${['고객 관리', '홍보', '매출', '재고', '기타'].map(v => `<button class="${o.trouble === v ? 'on' : ''}" data-o="trouble" data-v="${v}">${v}</button>`).join('')}</div>
         <label class="ofl">상황을 편하게 적어 주세요<textarea data-o-in="story" rows="3" maxlength="300" placeholder="예: 처음 온 손님은 많은데 다시 오는 손님이 적어요">${esc(o.story)}</textarea></label>
         <p class="err" id="oerr" hidden></p>
-        <button class="cta" data-o="problem"${o.trouble && o.item.trim() ? '' : ' disabled'}>AI와 문제 정리하기</button></section>`;
-      if (o.problem) h += `<section class="oq aiout"><h3>정리한 문제 ${aiTag}</h3>
+        <button class="cta" data-o="problem"${o.trouble && o.item.trim() && !o.busy ? '' : ' disabled'}>${o.busy === 'problem' ? 'AI가 정리하는 중…' : 'AI와 문제 정리하기'}</button></section>`;
+      if (o.problem) h += `<section class="oq aiout"><h3>정리한 문제 ${aiTag(o.problem.ai)}</h3>
         <label class="ofl">문제 한 줄 <small>(고쳐도 돼요)</small><input data-o-in="problem.one" value="${esc(o.problem.one)}"></label>
         <div class="two"><div><b>원인 후보</b><ul>${o.problem.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div><div><b>먼저 확인할 숫자</b><ul>${o.problem.check.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div></div>
         <button class="cta" data-o="go2">이대로 확인 → 가게 카드</button></section>`;
@@ -162,12 +164,12 @@
           <div><h3>받을 수 있는 지원</h3>${sup}<p class="fine">${esc(SUP.checked)} 공고 · 보도로 확인. 최종 자격은 공고 기관이 판단해요.</p></div>
         </div>
       </section>
-      <div class="onav"><button class="cta2" data-o="step" data-v="1">← 상담으로</button><button class="cta" data-o="go3">학생 팀과 할 과제 정리 →</button></div>`;
+      <div class="onav"><button class="cta2" data-o="step" data-v="1">← 상담으로</button><button class="cta" data-o="go3"${o.busy ? ' disabled' : ''}>${o.busy === 'tasks' ? 'AI가 과제를 짜는 중…' : '학생 팀과 할 과제 정리 →'}</button></div>`;
   }
 
   function s3() {
     const o = O(), T = o.tasks, n = T.list.filter(t => t.on).length;
-    return `<section class="ocard"><div class="ohead"><p class="kick">과제 정리</p><h2>대학생 4인 팀과 한 학기 동안 할 일 ${aiTag}</h2><p class="was">${esc(o.item)} @ ${esc(placeName(o))} · 고른 과제 <b>${n}</b>개 (1~4개)</p></div>
+    return `<section class="ocard"><div class="ohead"><p class="kick">과제 정리</p><h2>대학생 4인 팀과 한 학기 동안 할 일 ${aiTag(T.ai)}</h2><p class="was">${esc(o.item)} @ ${esc(placeName(o))} · 고른 과제 <b>${n}</b>개 (1~4개)</p></div>
       <div class="tasks">${T.list.map(t => `<label class="task${t.on ? ' on' : ''}"><input type="checkbox" data-o="task" data-id="${t.id}"${t.on ? ' checked' : ''}><div><b>${esc(t.t)}</b><small>필요한 전공: ${esc(t.major)} · ${t.wk}주</small><small>결과물: ${esc(t.out)}</small></div></label>`).join('')}</div>
       <div class="expert"><b>학생 팀이 할 일이 아니에요 → 전문가 · 기관으로</b><ul>${T.expert.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>
       <p class="err" id="oerr" hidden></p></section>
@@ -236,9 +238,26 @@
       case 'trouble': return set({ trouble: v, problem: null });
       case 'reco': return set({ reco: combos(o) });
       case 'pick': { const c = o.reco[+b.dataset.i]; return set({ space: c.space, item: c.item, step: 2, tasks: null }); }
-      case 'problem': if (!o.story.trim()) o.story = `${o.trouble} 때문에 고민이에요`; return set({ problem: AI.problem(o.trouble, o.story, o.item.trim()) });
+      case 'problem': {
+        if (o.busy) return;
+        if (!o.story.trim()) o.story = `${o.trouble} 때문에 고민이에요`;
+        set({ busy: 'problem' });
+        window.ASSIST.call('problem', { item: o.item.trim(), trouble: o.trouble, story: o.story })
+          .then(out => set({ busy: null, problem: Object.assign(out, { ai: true }) }))
+          .catch(() => set({ busy: null, problem: Object.assign(AI.problem(o.trouble, o.story, o.item.trim()), { ai: false }) }));
+        return;
+      }
       case 'go2': if (!o.item.trim()) return err('업종을 적어 주세요'); return set({ step: 2, tasks: null });
-      case 'go3': return set({ step: 3, tasks: o.tasks || AI.tasks(o) });
+      case 'go3': {
+        if (o.busy) return;
+        if (o.tasks) return set({ step: 3 });
+        set({ busy: 'tasks' });
+        const input = { status: o.status, item: o.item, place: placeName(o), trouble: o.trouble || '', problem: o.problem ? o.problem.one : '', risks: riskList(o).map(strip) };
+        window.ASSIST.call('tasks', input, 25000)
+          .then(out => set({ busy: null, step: 3, tasks: { ai: true, expert: out.expert.length ? out.expert : AI.tasks(o).expert, list: out.list.map((x, i) => Object.assign({ id: 't' + i, on: i < 4 }, x)) } }))
+          .catch(() => set({ busy: null, step: 3, tasks: Object.assign(AI.tasks(o), { ai: false }) }));
+        return;
+      }
       case 'go4': return set({ step: 4 });
       case 'step': return set({ step: +v });
       case 'result': return set({ result: v });

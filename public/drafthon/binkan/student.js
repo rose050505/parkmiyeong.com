@@ -8,6 +8,7 @@
   const TIMES = ['평일 낮', '평일 저녁', '주말'];
   const blank = () => ({ step: 1, filter: null, sel: null, role: null, prof: { school: '', major: '', groups: [], time: [], link: '' }, ans: ['', ''], status: null });
   if (!st.stu) st.stu = blank();
+  st.stu.recoBusy = null;
   const S = () => st.stu;
   const set = patch => { Object.assign(st.stu, patch); save(); A.rerender(); };
 
@@ -56,7 +57,26 @@
 
   // ---------------- 화면 ----------------
   const stepper = n => `<ol class="ostep">${STEPS.map((t, i) => `<li class="${i + 1 < n ? 'done' : i + 1 === n ? 'now' : ''}"><span>${i + 1}</span>${t}</li>`).join('')}</ol>`;
-  const aiTag = '<span class="tag ai">AI</span>';
+  const aiTag = ai => ai ? '<span class="tag ai" title="Claude가 이 내용을 보고 만들었어요">AI</span>' : '<span class="tag" title="AI 연결이 안 돼 정해 둔 규칙으로 만들었어요">기본 추천</span>';
+  const slots = () => posts().flatMap(p => p.roles.map((r, i) => ({ id: p.id + ':' + i, item: p.item, t: r.t, major: r.major })));
+  const recoKey = pf => JSON.stringify([pf.major, pf.groups, pf.time]);
+  // AI 추천: 관심 직무가 바뀌면 다시 묻는다. 기다리는 동안은 기본 추천을 보여 준다.
+  function fetchReco() {
+    const s = S(), pf = s.prof, key = recoKey(pf);
+    if (!pf.groups.length || (s.reco && s.reco.key === key) || s.recoBusy === key) return;
+    s.recoBusy = key;
+    window.ASSIST.call('reco', { major: pf.major, groups: pf.groups, time: pf.time, slots: slots() })
+      .then(out => { if (S().recoBusy !== key) return; S().reco = { key, ai: true, pick: out.pick }; S().recoBusy = null; save(); if (S().step === 3) A.rerender(); })
+      .catch(() => { if (S().recoBusy === key) { S().reco = { key, ai: false, pick: null }; S().recoBusy = null; save(); if (S().step === 3) A.rerender(); } });
+  }
+  // AI 질문: 지원서로 넘어갈 때 한 번 묻고(최대 몇 초), 안 되면 기본 질문
+  async function loadQuestions() {
+    const s = S(), p = P(s.sel), r = p.roles[s.role], key = s.sel + ':' + s.role;
+    if (s.qs && s.qs.key === key) return;
+    try { const out = await window.ASSIST.call('questions', { item: p.item, kind: p.kind, t: r.t, major: r.major, out: r.out }, 15000); s.qs = { key, ai: true, q: out.q }; }
+    catch (e) { s.qs = { key, ai: false, q: AI.questions(p, r) }; }
+    s.ans = ['', '']; save();
+  }
   const postCard = p => `<button class="pcard" data-s="open" data-id="${p.id}">
       <span class="pk">${p.ex ? '' : '<span class="tag mine">새로 선정</span> '}${p.kind === 'pre' ? '창업 준비' : '운영 중 가게'}</span>
       <b>${esc(p.item)}</b><small>📍 ${esc(where(p))}${p.wish ? ' · ' + esc(p.wish) : ''}</small>
@@ -86,7 +106,11 @@
   }
 
   function s3() {
-    const s = S(), p = P(s.sel), r = p.roles[s.role], pf = s.prof, qs = AI.questions(p, r), rec = pf.groups.length ? AI.recommend(pf) : [];
+    const s = S(), p = P(s.sel), r = p.roles[s.role], pf = s.prof, key = s.sel + ':' + s.role;
+    const qd = s.qs && s.qs.key === key ? s.qs : { ai: false, q: AI.questions(p, r) }, qs = qd.q;
+    const rk = recoKey(pf), aiRec = s.reco && s.reco.key === rk && s.reco.ai ? s.reco : null;
+    const rec = !pf.groups.length ? [] : aiRec ? aiRec.pick.map(x => { const [pid, ri] = x.id.split(':'), pp = P(pid); return pp && pp.roles[+ri] ? { p: pp, r: pp.roles[+ri], i: +ri, why: [x.why] } : null; }).filter(Boolean) : AI.recommend(pf);
+    const recBusy = pf.groups.length && !aiRec && s.recoBusy === rk;
     return `<section class="ocard"><div class="ohead"><p class="kick">지원서</p><h2>${esc(r.t)} <small>@ ${esc(p.item)}</small></h2></div>
       <form id="sform" novalidate>
         <h3>내 정보 <small>처음 한 번 저장 · 재학 확인은 본인인증 때</small></h3>
@@ -94,8 +118,8 @@
         <fieldset class="ofs"><legend>관심 직무 <small>(여러 개)</small></legend><div class="ochips">${GROUPS.map(g => `<label><input type="checkbox" name="groups" value="${g}"${pf.groups.includes(g) ? ' checked' : ''}><span>${g}</span></label>`).join('')}</div></fieldset>
         <fieldset class="ofs"><legend>가능 시간</legend><div class="ochips">${TIMES.map(t => `<label><input type="checkbox" name="time" value="${t}"${pf.time.includes(t) ? ' checked' : ''}><span>${t}</span></label>`).join('')}</div></fieldset>
         <label class="ofl">포트폴리오 링크 <small>(선택)</small><input name="link" value="${esc(pf.link)}" placeholder="https://" maxlength="200"></label>
-        ${rec.length ? `<div class="reco aiout"><b>내 정보로 맞는 자리 ${aiTag}</b>${rec.map(x => `<button type="button" class="rrow" data-s="pickrec" data-id="${x.p.id}" data-v="${x.i}"><span>${esc(x.r.t)} <small>@ ${esc(x.p.item)}</small></span><small>${esc(x.why.join(' · '))}</small></button>`).join('')}</div>` : ''}
-        <h3 style="margin-top:18px">질문 2개 ${aiTag} <small>내 말로 짧게</small></h3>
+        ${rec.length ? `<div class="reco aiout"><b>내 정보로 맞는 자리 ${aiTag(!!aiRec)}</b>${recBusy ? '<small class="busy">AI 추천 받는 중…</small>' : ''}${rec.map(x => `<button type="button" class="rrow" data-s="pickrec" data-id="${x.p.id}" data-v="${x.i}"><span>${esc(x.r.t)} <small>@ ${esc(x.p.item)}</small></span><small>${esc(x.why.join(' · '))}</small></button>`).join('')}</div>` : ''}
+        <h3 style="margin-top:18px">질문 2개 ${aiTag(qd.ai)} <small>내 말로 짧게</small></h3>
         ${qs.map((q, i) => `<label class="ofl qa"><span>Q${i + 1}. ${esc(q)}</span><textarea name="a${i}" rows="3" maxlength="400">${esc(s.ans[i] || '')}</textarea><small class="cnt2">${(s.ans[i] || '').length} / 400</small></label>`).join('')}
         <p class="err" id="serr" hidden></p>
         <div class="onav"><button type="button" class="cta2" data-s="step" data-v="2">← 공고로</button><button class="cta" type="submit">지원서 제출</button></div>
@@ -152,7 +176,7 @@
     const c = e.target.parentElement.querySelector('.cnt2'); if (c) c.textContent = `${e.target.value.length} / 400`;
     readForm(); const er = document.getElementById('serr'); if (er) er.hidden = true;
   });
-  W.addEventListener('change', e => { if (mine() && e.target.closest('#sform') && e.target.name === 'groups') { readForm(); A.rerender(); } });
+  W.addEventListener('change', e => { if (mine() && e.target.closest('#sform') && (e.target.name === 'groups' || e.target.name === 'time')) { readForm(); fetchReco(); A.rerender(); } });
   W.addEventListener('click', e => {
     if (!mine()) return;
     const b = e.target.closest('[data-s]'); if (!b) return;
@@ -163,8 +187,8 @@
       case 'map': return A.go('home');
       case 'filter': return set({ filter: v || null });
       case 'open': return set({ sel: b.dataset.id, role: null, step: 2 });
-      case 'go3': return set({ step: 3 });
-      case 'pickrec': readForm(); return set({ sel: b.dataset.id, role: +v, step: 3, ans: ['', ''] });
+      case 'go3': if (b.disabled) return; b.disabled = true; b.textContent = '질문 준비 중…'; loadQuestions().then(() => { set({ step: 3 }); fetchReco(); }); return;
+      case 'pickrec': readForm(); S().sel = b.dataset.id; S().role = +v; b.textContent = '질문 준비 중…'; loadQuestions().then(() => set({ step: 3 })); return;
       case 'step': if (s.step === 3) readForm(); return set({ step: +v });
       case 'st': return set({ status: v });
       case 'go5': return set({ step: 5 });

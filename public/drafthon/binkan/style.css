@@ -491,3 +491,4 @@ body.work-open .work { display: block; grid-column: 2 / 4; overflow: auto; backg
 .cta.quick { margin: 4px 0 0; background: var(--ink); }
 .aor { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12px; margin: 12px 0 0 !important; }
 .aor::before, .aor::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.busy { display: block; color: #2456b8; font-size: 12px; margin-top: 4px; }

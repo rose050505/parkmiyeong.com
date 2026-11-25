@@ -9,7 +9,7 @@ const hits = new Map(); let all = [];
 function limited(ip) {
   const now = Date.now(), cut = now - 60000;
   all = all.filter(t => t > cut); if (all.length >= 300) return true;
-  const h = (hits.get(ip) || []).filter(t => t > cut); if (h.length >= 20) return true;
+  const h = (hits.get(ip) || []).filter(t => t > cut); if (h.length >= 40) return true;
   h.push(now); hits.set(ip, h); all.push(now); return false;
 }
 const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
@@ -26,6 +26,22 @@ export default async function handler(req, res) {
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'x';
   if (limited(ip)) return res.status(429).json({ error: '요청이 너무 많아요' });
   const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+  // 화면 안 AI 칸: mode별 지시문 고정(_binkan_assist.cjs TASKS), 출력은 모양 검증 뒤 { out }만
+  if (b.mode) {
+    if (!A.TASKS[b.mode]) return res.status(400).json({ error: 'mode' });
+    const input = b.input && typeof b.input === 'object' ? b.input : {};
+    if (JSON.stringify(input).length > 6000) return res.status(400).json({ error: '입력이 너무 김' });
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'server-side-fallback-2026-07-01' },
+        body: JSON.stringify(Object.assign(A.taskBody(b.mode, input), { output_config: { effort: 'low' }, fallbacks: 'default' }))
+      });
+      const j = await r.json();
+      if (!r.ok || j.stop_reason === 'refusal') return res.status(r.ok ? 200 : 502).json({ out: null });
+      return res.status(200).json({ out: A.taskParse(b.mode, (j.content || []).filter(x => x.type === 'text').map(x => x.text).join(''), input) });
+    } catch (e) { return res.status(502).json({ out: null }); }
+  }
   const text = str(b.text, 300).trim(); if (!text) return res.status(400).json({ error: '빈 문장' });
   const c = b.ctx || {}, sp = c.space && typeof c.space === 'object' ? c.space : null;
   const ctx = { screen: str(c.screen, 30) || '첫 화면', space: sp ? { id: str(sp.id, 6), addr: str(sp.addr, 60), was: str(sp.was, 40), wishes: list(sp.wishes, 4, 80) } : null, owner: str(c.owner, 160), trending: list(c.trending, 8, 80), shown: list(c.shown, 6, 120), user: str(c.user, 60) };
