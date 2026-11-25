@@ -258,6 +258,8 @@
   window.OWNER = {
     render,
     // 빈칸에서 들어오면 그 자리를 고른 채로 시작. 진행 중인 상담이 있으면 이어서.
+    // 챗봇이 대화로 채워서 시작: patch = { status, trouble, story, item, known }
+    startWith(patch) { st.owner = Object.assign(blank(), patch); save(); },
     start(spaceId) {
       // 빈칸에서 들어왔는데 지금 상담이 다른 자리 것이면 새로 시작(같은 자리면 이어서)
       if (spaceId && O().space !== spaceId) { st.owner = Object.assign(blank(), { status: 'pre', known: 'place', space: spaceId }); save(); }

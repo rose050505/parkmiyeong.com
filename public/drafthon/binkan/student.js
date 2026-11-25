@@ -187,6 +187,7 @@
 
   window.STUDENT = {
     render,
+    startWith(patch) { const prof = st.stu.prof; st.stu = Object.assign(blank(), { prof }, patch); save(); },
     start(postId) { if (postId && P(postId)) { st.stu.sel = postId; st.stu.role = null; st.stu.step = 2; save(); } },
   };
 })();
