@@ -175,6 +175,56 @@
       return (rest.match(/\d+/g) || []).every(d => ok.has(d)) ? { line } : null;
     },
   };
+  // 「내 가게」 추가 기능 AI 칸 셋(설계도/추가기능_설계.md §5): 표 · 목록에 있는 숫자만, 한글 수 · 배수 표현은 버림
+  // 줄 안의 숫자가 모두 입력 숫자와 「값으로」 같아야 함(12월 1일 = 12-01, 18:40 = 18 · 40, 4.5 ≠ 5)
+  const numList = vs => vs.map(v => String(v ?? '')).join(' ').replace(/(\d),(?=\d{3})/g, '$1').match(/\d+(\.\d+)?/g) || [];
+  const numsIn = (text, src) => { const ok = new Set(numList(src).map(Number)); return numList([text]).every(n => ok.has(Number(n))); };
+  // 「두 배 · 세 번 · 절반」처럼 숫자 없이 크기를 말하는 표현은 버림
+  const KOR_NUM = /(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s?(배|번|곳|그릇|명|개|시간)|절반|배로|배나/;
+  Object.assign(TASKS, {
+  flow: {
+    system: `너는 동성로 가게 사장님에게 시험 메뉴가 언제 얼마나 팔렸는지 표를 한 줄로 풀어 주는 도우미다. [표]에 있는 숫자만 그대로 인용해 2문장 안(120자 안)으로 차이를 말하고, 더 만들 칸과 덜 만들 칸을 [표]의 칸 이름 그대로 하나씩 고른다(근거가 약하면 빈 문자열, 둘은 서로 달라야 한다). 「기록 더 필요」인 칸은 말하지 않는다. 숫자는 아라비아 숫자로만 쓰고 「두 배」 같은 말은 쓰지 않는다. 원인(날씨 · 행사 등) 추측이나 예측은 하지 않는다. ${RULE}
+  출력: {"line":"한 줄","more":"칸 이름 또는 빈 문자열","less":"칸 이름 또는 빈 문자열"}`,
+    user: i => `[메뉴] ${str(i.menu, 24)}\n[표] 칸 | 기록한 날 | 평균 판매 | 품절 날 | 평균 품절 시각 | 평균 남은 양\n${(Array.isArray(i.rows) ? i.rows.slice(0, 9) : []).map(r => `${str(r.d, 4)} | ${parseInt(r.n, 10) || 0}${r.thin ? ' (기록 더 필요)' : ''} | ${str(String(r.avg ?? ''), 6) || '-'} | ${parseInt(r.so, 10) || 0} | ${str(r.at, 5) || '-'} | ${str(String(r.left ?? ''), 6) || '-'}`).join('\n')}`,
+    parse: (o, i) => {
+      const line = str(o.line, 160); if (!line || KOR_NUM.test(line)) return null;
+      const rows = Array.isArray(i.rows) ? i.rows.slice(0, 9) : [];
+      if (!numsIn(line, rows.flatMap(r => [r.n, r.avg, r.so, r.at, r.left]))) return null;
+      const ok = rows.filter(r => !r.thin).map(r => str(r.d, 4));
+      const pick = v => { const s = str(v, 4); return ok.find(d => d === s || d === s.replace(/요일$/, '')) || ''; };
+      const more = pick(o.more), less = pick(o.less);
+      return { line, more, less: less === more ? '' : less };
+    },
+  },
+  echo: {
+    system: `너는 동성로 가게 사장님에게, 시민이 처음 남긴 바람과 그 메뉴를 먹어 본 시민들의 한 줄을 맞대어 정리해 주는 도우미다. [가 본 시민 한 줄]에는 번호가 붙어 있다. 반복된 반응 최대 2개(각각 근거 번호 2개 이상), 처음 바람과 어긋난 점 최대 1개(근거 번호), 다음 주에 해 볼 일 하나(50자 안)를 낸다. 한 줄에 없는 내용을 만들지 않고, 숫자 · 사람 수 · 비율을 쓰지 않는다(사이트가 센다). n은 목록 번호 그대로(1부터). ${RULE}
+  출력: {"same":[{"t":"반복된 반응(30자 안)","refs":[1,3]}],"gap":{"t":"바람과 어긋난 점(40자 안) 또는 빈 문자열","refs":[2]},"try":"다음 주 해 볼 일"}`,
+    user: i => `[처음 바람] ${str(i.title, 30)} — ${str(i.why, 120)}\n[메뉴] ${str(i.menu, 24)}\n[가 본 시민 한 줄]\n${arr(i.notes, 20, 60).map((t, k) => `${k + 1}. ${t}`).join('\n')}`,
+    parse: (o, i) => {
+      const notes = arr(i.notes, 20, 60), N = notes.length; if (N < 3) return null;
+      const refs = v => [...new Set((Array.isArray(v) ? v : []).map(n => parseInt(n, 10)))].filter(n => n >= 1 && n <= N);
+      const same = (Array.isArray(o.same) ? o.same : []).map(x => x && { t: str(x.t, 40), refs: refs(x.refs) }).filter(x => x && x.t && x.refs.length >= 2).slice(0, 2);
+      const g = o.gap && typeof o.gap === 'object' ? { t: str(o.gap.t, 50), refs: refs(o.gap.refs) } : { t: '', refs: [] };
+      const gap = g.t && g.refs.length ? g : null, tr = str(o.try, 70);
+      const text = same.map(x => x.t).concat(gap ? gap.t : '', tr).join(' ');
+      // 「한 그릇」 「한번」처럼 시민 한 줄 · 메뉴 원문에 있던 표현은 그대로 옮겨도 됨 — 원문에 없는 한글 수 · 배수 표현만 버림
+    const srcT = notes.concat(str(i.title, 30), str(i.why, 120), str(i.menu, 24));
+    const nos = v => String(v).replace(/\s/g, ''), srcN = srcT.map(nos);   // 「한번」 ↔ 「한 번」 띄어쓰기는 같게 봄
+    if ((text.match(new RegExp(KOR_NUM.source + '|셋이|넷이|대부분', 'g')) || []).some(m => !srcN.some(x => x.includes(nos(m)))) || !numsIn(text, srcT)) return null;
+      return (same.length || gap) && tr ? { same, gap, try: tr } : null;
+    },
+  },
+  effect: {
+    system: `너는 동성로 가게 사장님에게 「한 가지 바꾸기」 전후를 비교한 표를 한 줄로 풀어 주는 도우미다. [전후 표]에 있는 숫자만 그대로 인용해 2문장 안(120자 안)으로 무엇이 달라졌고 무엇이 비슷한지 말한다. 숫자는 아라비아 숫자로만 쓴다. 「효과가 있다 · 없다」 판정, 원인 추측, 계속하라 · 그만하라는 권유는 하지 않는다(사장님이 고른다). ${RULE}
+  출력: {"line":"한 줄"}`,
+    user: i => `[메뉴] ${str(i.menu, 24)}\n[바꾼 것] ${str(i.what, 40)} (${str(i.from, 10)}부터 · 비교 기준 ${str(i.basis, 20)})\n[전후 표] 칸 | 항목 | 바꾸기 전 | 바꾼 뒤\n${(Array.isArray(i.rows) ? i.rows.slice(0, 12) : []).map(r => `${str(r.d, 4)} | ${str(r.k, 12)} | ${str(String(r.b ?? ''), 8) || '-'} | ${str(String(r.a ?? ''), 8) || '-'}`).join('\n')}`,
+    parse: (o, i) => {
+      const line = str(o.line, 160); if (!line || KOR_NUM.test(line)) return null;
+      const rows = Array.isArray(i.rows) ? i.rows.slice(0, 12) : [];
+      return numsIn(line, rows.flatMap(r => [r.b, r.a]).concat(str(i.from, 10), str(i.what, 40), str(i.basis, 20))) ? { line } : null;
+    },
+  },
+  });
   const taskBody = (mode, input) => TASKS[mode] && ({ model: 'claude-opus-5-5', max_tokens: 3000, system: TASKS[mode].system, messages: [{ role: 'user', content: TASKS[mode].user(input || {}) }] });
   function taskParse(mode, raw, input) {
     if (!TASKS[mode] || typeof raw !== 'string') return null;

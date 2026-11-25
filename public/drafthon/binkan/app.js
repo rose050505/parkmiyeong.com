@@ -149,10 +149,16 @@
     if (!L.length) return '';
     const uid = st.user && st.user.id;
     return `<div class="wans"><p class="wansh">근처 가게 ${L.length}곳이 답했어요 <small>바람은 그대로 열려 있어요</small></p>${L.map(a => {
-      const end = a.state === '끝남', went = MY().wentBy(a.id, uid), rep = MY().reportedBy(a.id, uid), own = uid && a.uid === uid;
-      return `<div class="wa${end ? ' end' : ''}" id="a-${esc(a.id)}"><p class="wah"><b>${esc(a.store)}</b> <small>${esc(a.item)} · 약 ${MY().roundDist(a.dist)}m</small><span class="tag st">${end ? '끝났어요' : esc(a.state)}</span></p>
-        ${a.menu ? `<p class="wam">${esc(a.menu)}</p>` : ''}<p class="war">${esc(a.reply)}</p>
-        <div class="waf">${end ? '' : `<button data-act="storemap" data-id="${esc(a.id)}">지도에서 가게 보기</button>`}${own ? '<small class="fine">내 가게가 올린 답</small>' : `<button class="went${went ? ' on' : ''}" data-act="went" data-id="${esc(a.id)}"${went ? ' aria-pressed="true"' : ''}>가 봤어요 ${a.went || 0}</button><button class="rep" data-act="report" data-id="${esc(a.id)}"${rep ? ' disabled' : ''}>${rep ? '신고함' : '신고'}</button>`}</div></div>`;
+      const end = a.state === '끝남', ready = a.state === '준비 중', went = MY().wentBy(a.id, uid), wanted = MY().wantBy(a.id, uid), rep = MY().reportedBy(a.id, uid), own = uid && a.uid === uid;
+      const label = end ? '끝났어요' : a.outcome === '정식' ? '이제 늘 팔아요' : a.state, tl = MY().trialLabel(a), mineN = uid && MY().noteBy(a.id, uid), notes = MY().notesOf(a).slice(-3).reverse();
+      // 「준비 중」이면 [먹어보고 싶어요](관심), 판매를 시작하면 [가 봤어요] + 가 본 시민 한 줄(모두에게 공개 · 신고는 운영단이 처리)
+      const act = own ? '<small class="fine">내 가게가 올린 답</small>' : ready ? `<button class="want${wanted ? ' on' : ''}" data-act="want" data-id="${esc(a.id)}"${wanted ? ' aria-pressed="true"' : ''}>먹어보고 싶어요 ${a.wants || 0}</button>`
+        : end ? '' : `<button class="went${went ? ' on' : ''}" data-act="went" data-id="${esc(a.id)}"${went ? ' aria-pressed="true"' : ''}>가 봤어요 ${a.went || 0}</button>`;
+      return `<div class="wa${end ? ' end' : ''}" id="a-${esc(a.id)}"><p class="wah"><b>${esc(a.store)}</b> <small>${esc(a.item)} · 약 ${MY().roundDist(a.dist)}m</small><span class="tag st">${esc(label)}</span></p>
+        ${a.menu ? `<p class="wam">${esc(a.menu)}</p>` : ''}${tl && !end ? `<p class="wtrial">${esc(tl)}</p>` : ''}<p class="war">${esc(a.reply)}</p>
+        <div class="waf">${end ? '' : `<button data-act="storemap" data-id="${esc(a.id)}">지도에서 가게 보기</button>`}${act}${own ? '' : `<button class="rep" data-act="report" data-id="${esc(a.id)}"${rep ? ' disabled' : ''}>${rep ? '신고함' : '신고'}</button>`}</div>
+        ${went && !own && !end ? `<div class="wnote"><input id="note-${esc(a.id)}" maxlength="60" value="${esc(mineN ? mineN.t : '')}" placeholder="가 봤어요 — 한 줄 남길래요? (선택, 60자 · 모두에게 보여요)"><button data-act="notego" data-id="${esc(a.id)}">${mineN ? '한 줄 바꾸기' : '남기기'}</button><p class="err" id="nerr-${esc(a.id)}" hidden></p></div>` : ''}
+        ${notes.length ? `<ul class="wnotes"><li class="wnh">가 본 시민 한 줄</li>${notes.map(n => `<li>「${esc(n.t)}」${uid && n.uid === uid ? ' <small>(내 한 줄)</small>' : uid ? ` <button class="link" data-act="report" data-id="${esc(a.id)}" data-n="${esc(n.id)}">신고</button>` : ''}</li>`).join('')}</ul>` : ''}</div>`;
     }).join('')}</div>`;
   }
 
@@ -311,6 +317,15 @@
       <section><h3>바람 <small>${ws.length}</small></h3>${ws.length ? ws.map(w => wishCard(w, true)).join('') : '<p class="emptyw">맞는 바람이 없어요. 빈칸을 골라 첫 바람을 남겨 보세요.</p>'}</section>
       <section><h3>빈칸 <small>직전 업종 · 주소 · ${ss.length}</small></h3>${ss.slice(0, 12).map(s => `<button class="srow" data-act="space" data-id="${esc(s.id)}"><b>${esc(shortAddr(s))}</b><small>직전 ${esc(s.was)}</small></button>`).join('') || '<p class="emptyw">없음</p>'}</section>`;
   }
+  // 알림 문구(종류: 답 · 판매 시작 · 내일까지 · 정식 메뉴 · 끝남)
+  function alertText(x) {
+    const st0 = `<b>${esc(x.a.store)}</b>`, src = x.why === 'wrote' ? '내가 쓴 바람' : x.why === 'liked' ? '내가 공감한 바람' : '「먹어보고 싶어요」 누른 메뉴', t = MY().trialLabel(x.a);
+    if (x.kind === 'start') return `${st0}에서 「${esc(x.a.menu)}」 판매를 시작했어요${t ? ` · ${esc(t)}` : ''} <small>(${src})</small>`;
+    if (x.kind === 'endsoon') return `${st0}의 「${esc(x.a.menu)}」 시험 판매가 내일까지예요`;
+    if (x.kind === 'regular') return `${st0}의 「${esc(x.a.menu)}」가 이제 늘 파는 메뉴가 됐어요 <small>(${src})</small>`;
+    if (x.kind === 'end') return x.why === 'wanted' ? `${st0}의 「${esc(x.a.menu)}」가 끝났어요 <small>(${src})</small>` : `${src} 「${esc(x.w.title)}」에 답한 ${st0}이 「끝났어요」로 바꿨어요`;
+    return `${src} 「${esc(x.w.title)}」에 근처 가게가 답했어요 — ${st0} <small>${esc(x.a.item)} · 약 ${MY().roundDist(x.a.dist)}m</small>`;
+  }
   function mine() {
     const ws = myWishes().slice().reverse(), liked = store.wishes().filter(w => store.liked(w));
     const al = MY() ? MY().alertsFor(st.user) : [];
@@ -318,7 +333,7 @@
       <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · 본인인증 완료 · ${esc(rolesOf(st.user).map(roleName).join(' · '))}</p></section>
       <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림과 첫 방문 쿠폰을 보내 드려요. 내가 쓰거나 공감한 바람에 <b>근처 가게가 답하면</b> 여기에 알려 드려요.</p>
         ${al.length ? `<ul class="alist">${al.map(x => `<li class="${x.unread ? 'new' : ''}${x.kind === 'end' ? ' end' : ''}">
-          <p>${x.unread ? '<span class="tag mine">새 알림</span> ' : ''}${x.why === 'wrote' ? '내가 쓴' : '내가 공감한'} 바람 「${esc(x.w.title)}」${x.kind === 'end' ? `에 답한 <b>${esc(x.a.store)}</b>이 「끝났어요」로 바꿨어요` : `에 근처 가게가 답했어요 — <b>${esc(x.a.store)}</b> <small>${esc(x.a.item)} · 약 ${MY().roundDist(x.a.dist)}m</small>`}${x.self ? ' <small class="fine">(내 가게 답)</small>' : ''}</p>
+          <p>${x.unread ? '<span class="tag mine">새 알림</span> ' : ''}${alertText(x)}${x.self ? ' <small class="fine">(내 가게 답)</small>' : ''}</p>
           ${x.kind === 'end' ? '' : `<p class="am">${esc(x.a.menu)} — ${esc(x.a.reply)}</p>${x.a.state === '끝남' ? '<p class="fine">지금은 끝난 메뉴예요.</p>' : `<button class="cta2 sm" data-act="showcard" data-id="${esc(x.a.id)}">가게에서 이 화면 보여 주기</button> <button class="link" data-act="storemap" data-id="${esc(x.a.id)}">지도에서 가게 보기</button>`}`}</li>`).join('')}</ul>` : ''}</section>
       <section><h3>내 바람 <small>${ws.length}</small></h3>${ws.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <section><h3>공감한 바람 <small>${liked.length}</small></h3>${liked.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
@@ -342,10 +357,10 @@
   // ---------------- 모달 · 알림 ----------------
   const modal = $('#modal'), mbox = $('#modalBox');
   function openModal(html, cls) { mbox.className = 'box' + (cls ? ' ' + cls : ''); mbox.innerHTML = html + '<button class="x" data-act="close" aria-label="닫기">×</button>'; modal.hidden = false; mbox.querySelector('button:not(.x), input')?.focus(); }
-  function reportForm(id) {
-    openModal(`<h3>이 답을 신고할까요?</h3><p class="fine">운영단이 보고 숨길지 정해요. 신고한 사람은 사장님에게 보이지 않아요.</p>
+  function reportForm(id, nid) {
+    openModal(`<h3>${nid ? '이 한 줄을' : '이 답을'} 신고할까요?</h3><p class="fine">운영단이 보고 숨길지 정해요. 신고한 사람은 사장님에게 보이지 않아요.</p>
       <div class="rlist">${['비방 · 깎아내림', '광고 · 연락처', '거짓 · 약속과 다름', '기타'].map((t, i) => `<label><input type="radio" name="rwhy" value="${t}"${i === 0 ? ' checked' : ''}> ${t}</label>`).join('')}</div>
-      <button class="cta" data-act="reportgo" data-id="${esc(id)}">신고하기</button>`);
+      <button class="cta" data-act="reportgo" data-id="${esc(id)}" data-n="${esc(nid || '')}">신고하기</button>`);
   }
   const closeModal = () => { modal.hidden = true; };
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
@@ -487,8 +502,10 @@
       case 'mystore': return needAuth(() => { MY().start(); go('mystore'); });
       case 'ops': return needAuth(() => go('ops'));
       case 'went': return needAuth(() => { const r = MY().went(id); toast(r); render(); redraw(); });
-      case 'report': return needAuth(() => reportForm(id));
-      case 'reportgo': { const why = (mbox.querySelector('input[name="rwhy"]:checked') || {}).value; if (!why) return; closeModal(); toast(MY().report(b.dataset.id, why)); return render(); }
+      case 'report': return needAuth(() => reportForm(id, b.dataset.n));
+      case 'want': return needAuth(() => { toast(MY().want(id)); render(); redraw(); });
+      case 'notego': { const el = document.getElementById('note-' + id), r = MY().addNote(id, el ? el.value : ''); if (r.err) { const e2 = document.getElementById('nerr-' + id); if (e2) { e2.textContent = r.err; e2.hidden = false; } return; } toast(r.ok); return render(); }
+      case 'reportgo': { const why = (mbox.querySelector('input[name="rwhy"]:checked') || {}).value; if (!why) return; closeModal(); toast(MY().report(b.dataset.id, why, b.dataset.n || '')); return render(); }
       case 'showcard': { const h = MY().showCard(b.dataset.id || id); if (h) openModal(h, 'showbig'); return; }
       case 'printguide': return window.print();
       case 'visitok': { const r = MY().confirmVisit(id); toast(r); const h = MY().showCard(id); if (h) openModal(h, 'showbig'); return; }

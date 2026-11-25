@@ -94,7 +94,7 @@
 
   function tTrack() {
     const stores = MY().stores().filter(s => s.setup), tracked = stores.map(s => ({ s, ap: MY().appOf(s) })).filter(x => x.ap && x.ap.track);
-    const reported = MY().db.answers().filter(a => a.reports > 0);
+    const reported = MY().db.answers().filter(a => a.reports > 0), repNotes = MY().db.answers().flatMap(a => (a.notes || []).filter(n => n.reports > 0).map(n => ({ a, n })));
     const rows = tracked.map(({ s, ap }) => ({ s, ap, risk: MY().risk(s), note: MY().areaNote(s), m: MY().monthly(s) }));
     const atRisk = rows.filter(r => r.risk.length).length;
     // 효과 요약(설계서 §0 전체 지표): 선정 · 비교군의 이번 달 기록 지속 · 영업 유지, 그리고 바람 → 답 → 알림 → 보여 주기 → 방문 단계
@@ -112,12 +112,14 @@
       ${rows.length ? rows.map(({ s, ap, risk, note, m }) => `<section class="oq${risk.length ? ' risk1' : ''}"><h3>${esc(MY().storeLabel(s))} <small>${ap.result === 'yes' ? '선정' : ap.result === 'no' ? '비교군' : '심사 중'} · ${esc(s.sub)}</small></h3>
         ${risk.length ? `<p class="rflag"><b>버티기 위험</b> ${risk.map(esc).join(' · ')} <small>[가정 — 기준은 운영단이 정함]</small></p><div class="ochips"><button data-p="act" data-id="${esc(s.id)}" data-v="지원 안내 연결">지원 안내 연결</button><button data-p="act" data-id="${esc(s.id)}" data-v="학생 팀 연결">학생 팀 연결</button></div>` : ''}
         ${note ? `<p class="anote"><b>주변 변화</b> ${esc(note)} <small>위험 수에는 넣지 않음 · 사라진 업소는 이전 · 상호 변경일 수도 있음</small></p>` : ''}
-        <div class="tblwrap"><table class="otable"><thead><tr><th>달</th><th>영업 일수</th><th>매출 구간</th><th>답 수</th><th>판매 일수</th><th>누적 판매</th><th>바람 보고 온 손님</th></tr></thead>
-        <tbody>${m.map(r => `<tr><td>${r.ym.replace('-', '.')}${r.alive ? ` <small>${esc(r.alive)}</small>` : ''}</td>${cell(r.open)}${cell(r.band)}${cell(r.answers)}${cell(r.soldDays)}${cell(r.sold)}${cell(r.came)}</tr>`).join('')}</tbody></table></div>
+        <div class="tblwrap"><table class="otable"><thead><tr><th>달</th><th>영업 일수</th><th>매출 구간</th><th>답 수</th><th>판매 일수</th><th>누적 판매</th><th>바람 보고 온 손님</th><th>바꾼 것</th><th>유지</th><th>시험 결과</th></tr></thead>
+        <tbody>${m.map(r => `<tr><td>${r.ym.replace('-', '.')}${r.alive ? ` <small>${esc(r.alive)}</small>` : ''}</td>${cell(r.open)}${cell(r.band)}${cell(r.answers)}${cell(r.soldDays)}${cell(r.sold)}${cell(r.came)}${cell(r.changes)}${cell(r.kept)}${cell(r.outcome)}</tr>`).join('')}</tbody></table></div>
         ${st.opsLog.filter(l => l.sid === s.id).map(l => `<small class="fine">${new Date(l.at).toLocaleDateString('ko-KR')} ${esc(l.what)}</small>`).join(' · ')}</section>`).join('')
         : '<p class="emptyw">추적할 가게가 아직 없어요. 지원서(추적 동의)를 낸 사장님이 「내 가게」를 설정하면 월 집계가 여기에 떠요.</p>'}
       ${stores.length > tracked.length ? `<p class="fine">지원서 없이 「내 가게」를 쓰는 가게 ${stores.length - tracked.length}곳은 공유 동의가 없어 보이지 않아요.</p>` : ''}
       <p class="fine">공유 항목은 사장님이 「내 가게 → 공유 항목」에서 켠 것만 보여요. 메뉴 가격 · 정확한 매출 · 답글 밖의 메모 · 손님 정보는 이 표에 나오지 않게 만들었어요(백엔드에서도 같은 항목만 내보내요).</p>
+      <h3 style="margin-top:18px">신고된 가 본 시민 한 줄 <small>${repNotes.length}건 · 사장님은 지울 수 없고 운영단이 숨김을 정해요</small></h3>
+      ${repNotes.length ? `<div class="tlist">${repNotes.map(({ a, n }) => `<div class="trow"><span>「${esc(n.t)}」 <small>${n.gone ? '쓴 사람이 내림 · ' : ''}${esc(a.store)} 「${esc(a.menu)}」 · 신고 ${n.reports}건 · ${esc((n.reportWhy || []).join(', '))}</small></span>${n.gone ? '<small>공개 안 됨</small>' : `<button class="cta2 sm" data-p="${n.hidden ? 'nunhide' : 'nhide'}" data-id="${a.id}" data-n="${n.id}">${n.hidden ? '다시 보이기' : '숨기기'}</button>`}</div>`).join('')}</div>` : '<p class="fine">신고된 한 줄이 없어요.</p>'}
       <h3 style="margin-top:18px">신고된 답 <small>${reported.length}건</small></h3>
       ${reported.length ? `<div class="tlist">${reported.map(a => `<div class="trow"><span><b>${esc(a.store)}</b> 「${esc(a.menu)}」 <small>${esc(a.reply)}</small><br><small>신고 ${a.reports}건 · ${esc((a.reportWhy || []).join(', '))}</small></span>${a.hidden ? `<button class="cta2 sm" data-p="unhide" data-id="${a.id}">다시 보이기</button>` : `<button class="cta2 sm" data-p="hide" data-id="${a.id}">숨기기</button>`}</div>`).join('')}</div>` : '<p class="fine">신고된 답이 없어요.</p>'}`;
   }
@@ -164,6 +166,7 @@
         save(); A.toast('팀을 확정했어요 · 사장님 「내 가게 → 학생 팀」에 떠요'); return rerender();
       }
       case 'act': st.opsLog.push({ sid: id, what: b.dataset.v, at: Date.now() }); save(); A.toast(`${b.dataset.v}을 기록했어요`); return rerender();
+      case 'nhide': case 'nunhide': { const a = MY().db.answer(id), n = a && (a.notes || []).find(x => x.id === b.dataset.n); if (n) { n.hidden = k === 'nhide'; MY().db.putAnswer(a); A.toast(n.hidden ? '한 줄을 숨겼어요' : '다시 보이게 했어요'); } return rerender(); }
       case 'hide': case 'unhide': { const a = MY().db.answer(id); if (a) { a.hidden = k === 'hide'; MY().db.putAnswer(a); A.toast(a.hidden ? '답을 숨겼어요 · 시민에게 안 보여요' : '다시 보이게 했어요'); } return rerender(); }
     }
   });
