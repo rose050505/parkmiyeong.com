@@ -197,7 +197,7 @@
     const tl = [['접수', true], ['운영단 심사 (시 + 지역 대학)', !!r], [r === 'no' ? '다음 기회' : '선정 → 학생 모집', r === 'yes'], ['팀 구성 · 한 학기', false]];
     return `<section class="ocard"><div class="ohead"><p class="kick">진행 상태</p><h2>${esc(o.item)} @ ${esc(placeName(o))}</h2></div>
       <ol class="tl">${tl.map(([t, d], i) => `<li class="${d ? 'done' : i === tl.findIndex(x => !x[1]) ? 'now' : ''}">${esc(t)}</li>`).join('')}</ol>
-      ${!r ? `<p class="was">지원서가 접수됐어요. 운영단이 준비 정도 · 시민 바람 · 과제 적합성을 봐요.</p><div class="onav"><button class="cta2" data-o="result" data-v="no">운영단 처리: 다음 기회</button><button class="cta" data-o="result" data-v="yes">운영단 처리: 선정</button></div>` : ''}
+      ${!r ? `<p class="was">지원서가 접수됐어요. 운영단(대구시 + 지역 대학)이 준비 정도 · 이 자리 시민 바람 수(공감 포함) · 과제 적합성을 봐요.</p><div class="onav"><button class="cta2" data-o="result" data-v="no">운영단 처리: 다음 기회</button><button class="cta" data-o="result" data-v="yes">운영단 처리: 선정</button></div>` : ''}
       ${r === 'yes' ? `<div class="okpost"><p class="kick">선정! 학생 모집 공고가 올라갔어요</p><h3>[동행 프로젝트 1기] ${esc(o.item)} @ ${esc(placeName(o))}</h3>
         <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)} · ${t.wk}주 · ${esc(t.out)}</li>`).join('')}</ul>
         <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요. 선발은 운영단 → 사장님 면담 순서예요.</p>

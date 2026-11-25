@@ -8,8 +8,8 @@ const ORIGIN_OK = o => /^https:\/\/(www\.)?parkmiyeong\.com$/.test(o) || /^https
 const hits = new Map(); let all = [];
 function limited(ip) {
   const now = Date.now(), cut = now - 60000;
-  all = all.filter(t => t > cut); if (all.length >= 300) return true;
-  const h = (hits.get(ip) || []).filter(t => t > cut); if (h.length >= 40) return true;
+  all = all.filter(t => t > cut); if (all.length >= 3000) return true;
+  const h = (hits.get(ip) || []).filter(t => t > cut); if (h.length >= 1000) return true;   // 대회 중엔 사실상 제한 없음(11/26 미영). 공개할 때 다시 낮추기
   h.push(now); hits.set(ip, h); all.push(now); return false;
 }
 const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');

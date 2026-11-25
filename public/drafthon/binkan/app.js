@@ -237,7 +237,7 @@
     const ws = st.wishes.slice().reverse(), liked = store.wishes().filter(w => st.liked[w.id]);
     return `${back()}
       <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · 본인인증 완료 · ${esc(roleName(st.user.role))}</p></section>
-      <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림을 보내 드려요. <small>(제안 기능)</small></p></section>
+      <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림과 첫 방문 쿠폰을 보내 드려요.</p></section>
       <section><h3>내 바람 <small>${ws.length}</small></h3>${ws.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <section><h3>공감한 바람 <small>${liked.length}</small></h3>${liked.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <button class="link" data-act="logout">로그아웃</button>`;
