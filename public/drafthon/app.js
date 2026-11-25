@@ -214,7 +214,7 @@
           <div><b class="red">${fmt(m.n_floor1_open)}곳</b><span>그중 1층 · 같은 층에 새 업소 없음<br>= 먼저 볼 빈 점포 후보</span></div>
         </div>
         <p class="note">${fmt(m.n_prev)} − 사라짐 ${fmt(m.n_gone)} − 중복 기록 정리 ${fmt(m.n_dup)} + 새로 생김 ${fmt(m.n_new)} = ${fmt(m.n_now)}. 이름 · 번호만 바뀐 같은 업소 ${fmt(m.n_kept)}곳은 사라짐에서 뺐습니다. 사라진 업소 비율: 동성로 범위 ${m.rate_scope.toFixed(1)}% · 대구 전체 ${m.rate_daegu.toFixed(1)}% (같은 규칙).</p>
-        <p class="note">참고(공식 통계): 동성로 중대형 상가 공실률 26.2% — 면적 기준, 2026년 3분기(한국부동산원, 경북매일 26-11-17 보도). 이 화면은 그 빈 곳이 <b>어디일 수 있는지</b>를 업소 기록으로 찾습니다.</p>
+        <p class="note">참고(공식 통계): 동성로 중대형 상가 공실률 26.2% — 면적 기준, 2026년 3분기(한국부동산원, 경북매일 26-11-17 보도). 이 화면은 그 빈 곳이 <b>어디일 수 있는지</b>를 업소 기록으로 찾습니다. 정책 문서의 표(사라짐 119 · 새로 89)는 도로명 「동성로」 업소만 본 값이고, 이 화면은 범위를 성내1동까지 넓히고 중복 기록을 더 엄격히 정리한 값입니다.</p>
         <div class="warn">「사라진 업소」는 실제 공실이 아니라 빈 점포 <b>후보</b>입니다. 비었는지는 현장 · 건물주 확인이 필요합니다(층 정보 없는 곳 ${m.n_floor_unknown}곳 포함).</div>
         <div class="row" style="margin:.4rem 0">
           <label class="chk"><input type="checkbox" id="f1" ${S.filt.f1 ? 'checked' : ''}>1층만</label>
@@ -369,6 +369,14 @@
   }
 
   // ---------- ③ ----------
+  // 준비 항목을 누가 맡는지: 신고 · 계약 = 사장님 · 기관, 결과물이 남는 일 = 학생 팀(공고가 됨)
+  function ownerTag(t) {
+    if (/구청|세무서|신고|사업자 등록|보건증|건강진단|위생교육|확정일자|권리금|계약|원상복구|단말기|거래처/.test(t)) return '<span class="otag own">사장님 · 구청 · 세무서</span>';
+    if (/원가|가격|본전|디자인|로고|메뉴판|간판|사진|인스타|SNS|홍보|조사|세어 보기|둘러보|배치|기록|설문|상자|포장/.test(t)) return '<span class="otag stu">학생 팀</span>';
+    return '<span class="otag own">사장님</span>';
+  }
+  const stageList = st => (st || []).map(s => `<h3>${esc(s.when)}</h3><ul class="olist">${s.items.map(i => `<li>${ownerTag(i)}${esc(i)}</li>`).join('')}</ul>`).join('') +
+    '<p class="note"><span class="otag stu">학생 팀</span> 일만 학생 공고가 됩니다. 신고 · 계약은 사장님이, 자금은 아래 <span class="otag sup">지원사업 · 개업 전 · 후</span>이 맡습니다.</p>';
   function helpersHTML(hs) {
     return `<div class="helpers"><h3>AI가 추린 필요한 일손 = 전공 · 업무 분야</h3>${(hs || []).map(h =>
       `<div class="hp"><b>${esc(h.field)}</b> · ${esc(h.weeks || '')}<br>할 일: ${esc(h.task)}<br>결과물: ${esc(h.deliverable)}<br><span class="note">왜: ${esc(h.why)}</span></div>`).join('')}</div>`;
@@ -412,7 +420,7 @@
     const o = res.out;
     $('#prepOut').innerHTML = badge(res) + `<p style="margin:.5rem 0"><b>${esc(o.summary)}</b></p><div class="two"><div>` +
       helpersHTML(o.helpers) + `<div class="row" style="margin-top:.7rem"><button class="btn" id="toS4">이 일손으로 공고 작성 → A</button></div></div><div>` +
-      (o.stages || []).map(s => `<h3>${esc(s.when)}</h3><ul>${s.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('') +
+      stageList(o.stages) +
       `<h3>이 자리 · 이 아이템에서 고려할 점</h3><ul>${(o.consider || []).map(i => `<li>${esc(i)}</li>`).join('')}</ul>${supBox('pre', 'design')}</div></div>`;
     wireCrumbs();
     $('#toS4').onclick = () => { S.postSrc = 'prep'; go('post'); };
@@ -453,7 +461,7 @@
     const proseBad = [...new Set(pv.flatMap(x => x.bad).concat(spv.bad))];
     const head = checkHead(evAll, proseBad, pv.reduce((a, x) => a + x.total, spv.total), !evAll.length && pv.some(x => x.total));
     if (!S.lastPrompt[diagKey()]) S.lastPrompt[diagKey()] = diagPrompt(p, res.worry);
-    $('#diagOut').innerHTML = badge(res) + head + promptBox(diagKey()) + `<p style="margin:.5rem 0"><b>${esc(o.summary)}</b></p><div class="two"><div>` +
+    $('#diagOut').innerHTML = badge(res) + `<p class="corechip"><span class="src2">1년차 기본 과제</span><b>고객 관리</b> 손님 말 · 후기에서 출발 → 메뉴판 · 온라인 노출</p>` + head + promptBox(diagKey()) + `<p style="margin:.5rem 0"><b>${esc(o.summary)}</b></p><div class="two"><div>` +
       (o.issues || []).map((i, n) => `<div class="rec"><h4>${i.rank}. ${esc(i.issue)}</h4><p><span class="k">사장님 글(예시)</span>「${esc(i.owner_said)}」</p><p><span class="k">자료</span>${esc(i.data)}</p><p><span class="k">첫 단계</span>${esc(i.first_step)}</p>${evHTML(evs[n])}${proseNote(pv[n])}</div>`).join('') + '</div><div>' +
       helpersHTML(o.helpers) + `<div class="row" style="margin-top:.7rem"><button class="btn" id="toS4">이 일손으로 학생 공고 쓰기 → ④</button></div></div></div>`;
     $('#toS4').onclick = () => { S.postSrc = 'diag'; go('post'); };
@@ -504,7 +512,7 @@
       `동성로(${short(S.diagPoint.addr)} 부근)의 기존 가게 — 사장님 말: 「${(S.chats.old && S.chats.old.ans[0]) || ''}」`;
     const meet = src.kind === 'diag' || src.kind === 'support' ? (S.chats.old && S.chats.old.ans[2]) || '' : src.kind === 'designA' ? (S.chats.newA && S.chats.newA.ans[4]) || '' : '';
     const user = `대학생이 지원할 과제 공고문을 쓴다.\n[가게] ${where}\n[AI 진단 요약] ${o.summary}\n[필요한 일손] ${JSON.stringify(o.helpers)}\n[학생 역량 이름 목록] ${SKILLS.join(', ')}\n${meet ? '[사장님이 말한 만날 수 있는 때 · 바라는 점] ' + meet + '\n' : ''}${revise ? '[사장님 수정 요청] ' + revise + '\n' : ''}\n` +
-      `할 일: 학생이 읽고 바로 지원을 정할 수 있게 쓴다. 가게 이름 · 사장님 개인정보는 쓰지 않는다. 활동비 · 학점은 금액을 만들지 말고 「시범 사업 운영 기준에 따름」. 한 학기(16주) 안의 과제.\n` +
+      `할 일: 학생이 읽고 바로 지원을 정할 수 있게 쓴다. 지원 조건에 「4인 팀 중 ○○ 담당 1자리」 「연계 교과(학점) · 지도교수 검수」를 넣는다. 가게 이름 · 사장님 개인정보는 쓰지 않는다. 활동비 · 학점은 금액을 만들지 말고 「시범 사업 운영 기준에 따름」. 한 학기(16주) 안의 과제.\n` +
       `출력 JSON: {"title":"공고 제목","store":"가게 소개 1~2문장","why":"이 과제가 필요한 이유","tasks":["학생이 할 일"],"majors":["전공 이름 짧게(예: 시각디자인, 경영)"],"keywords":["역량 이름 목록에서 고른 것 3~6개"],"weeks":16,"hours_per_week":8,"deliverables":["결과물"],"qualify":["지원 조건"],"meet":"만날 수 있는 때(평일 오후 · 주말 등, 모르면 빈칸)","support":"활동비 · 학점: 시범 사업 운영 기준에 따름"}`;
     const usePre = !revise && (src.res.src === 'pre' || !live()) && (!['diag', 'support'].includes(src.kind) || meet === EX.chatOld[2].ex) && (src.kind !== 'designA' || meet === EX.chatA[4].ex);
     const res = await getAI(usePre ? src.pre : null, COMMON, user, 'post');
@@ -605,9 +613,9 @@
         const moved = !sc ? '' : rr === i + 1 ? `<span class="tag">규칙 점수 ${rl}와 같은 자리</span>` : rr > i + 1 ? `<span class="tag up">규칙 점수 ${rl} → AI ${i + 1}위로 올림</span>` : `<span class="tag">규칙 점수 ${rl} → AI ${i + 1}위</span>`;
         return `<div class="rec"><h4>${i + 1}. ${esc(s.name)} · ${esc(s.major)} <span class="note">(규칙 점수 ${sc ? sc.sc.total : '-'}점)</span> ${moved}</h4>
         <p><span class="k">이유</span>${esc(r.why)}</p><p><span class="k">아쉬운 점</span>${esc(r.gap)}</p><p><span class="k">첫 만남 확인</span>${esc(r.ask)}</p>
-        ${conf ? (conf === r.id ? '<div class="done">✓ 담당자 최종 확인 — 매칭 확정 (가상 예시)</div>' : '') : `<button class="btn ok two conf" data-id="${esc(r.id)}">담당자 최종 확인<small>사장님 · 학생에게 첫 만남 안내</small></button>`}</div>`;
+        ${conf ? (conf === r.id ? '<div class="done">✓ 담당자 최종 확인 · 지도교수 승인 — 매칭 확정 (가상 예시)</div>' : '') : `<button class="btn ok two conf" data-id="${esc(r.id)}">담당자 최종 확인<small>지도교수 승인 뒤 첫 만남 안내</small></button>`}</div>`;
       }).join('') + (o.later && o.later.length ? `<div class="later"><b>AI가 뒤로 둔 학생</b>${o.later.map(r => { const s2 = S.students.find(x => x.id === r.id) || { name: r.id }; const sc2 = scored.find(x => x.s.id === r.id); return `<p>${esc(s2.name)} (규칙 ${sc2 ? sc2.sc.total : '-'}점) — ${esc(r.gap)}</p>`; }).join('')}</div>` : '') + (o.note ? `<p class="note">${esc(o.note)}</p>` : '') +
-      (conf ? `<div class="done">매칭 확정: 사장님 · 학생에게 첫 만남 안내 (시연에서는 실제로 보내지 않음)<br>→ 한 학기 프로젝트 → 결과물 인수인계 · 성과 기록</div>` : '');
+      (conf ? `<div class="done">매칭 확정: 사장님 · 학생에게 첫 만남 안내 (시연에서는 실제로 보내지 않음)<br>→ 한 학기 프로젝트(8주 중간 점검: 지도교수 · 전담 인력) → 결과물 인수인계 · 학기 말 평가(사장님 · 지도교수)</div>` : '');
     document.querySelectorAll('.conf').forEach(b => b.onclick = () => { S.confirmed[mk] = b.dataset.id; showMatch(mk, scored); });
   }
 
@@ -815,7 +823,7 @@
       <p class="note">대안: ${esc(o.area.alt)}</p>
       ${evHTML(evs)}
       <div class="two"><div>${helpersHTML(o.helpers)}<div class="row" style="margin-top:.7rem"><button class="btn" id="toPostA">이 일손으로 공고 작성 → A</button></div></div>
-      <div>${(o.stages || []).map(s => `<h3>${esc(s.when)}</h3><ul>${s.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`).join('')}${supBox('pre', 'design')}</div></div>`;
+      <div>${stageList(o.stages)}${supBox('pre', 'design')}</div></div>`;
     wireCrumbs();
     $('#toPostA').onclick = () => { S.postSrc = 'designA'; go('post'); };
   }
@@ -924,7 +932,7 @@
     const L = SUPD.list;
     let body = '';
     if (mode === 'area') body = L.filter(s => s.id === 'dsr').map(s => supCard(s, sit)).join('');
-    else if (mode === 'design') body = `<h4 class="supg">개업 전 신청</h4>${L.filter(s => s.when === 'before').map(s => supCard(s, sit)).join('')}<h4 class="supg">개업 후 신청</h4>${L.filter(s => s.when === 'after').map(s => supCard(s, sit)).join('')}`;
+    else if (mode === 'design') body = `<h4 class="supg"><span class="otag sup">지원사업 · 개업 전</span> 개업 전 신청</h4>${L.filter(s => s.when === 'before').map(s => supCard(s, sit)).join('')}<h4 class="supg"><span class="otag sup">지원사업 · 개업 후</span> 개업 후 신청</h4>${L.filter(s => s.when === 'after').map(s => supCard(s, sit)).join('')}`;
     else body = L.map(s => supCard(s, sit)).join('');
     return `<div class="supbox"><h3>받을 수 있는 지원 <span class="tag real">실제 공고 · 보도</span> <span class="src2">규칙</span>판정</h3>${body}
       <p class="note">금액은 공고 원문에서 확인한 것만 씁니다 — 조건을 충족하면 받을 수 있는 최대 금액이며, 최종 자격은 공고 기관이 판단합니다. 판정은 공고 조건과 상황을 규칙으로 대조한 것입니다(${esc(SUPD.checked || '')} 확인).</p>
