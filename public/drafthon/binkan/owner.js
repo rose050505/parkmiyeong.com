@@ -22,7 +22,7 @@
   ];
   const bigCat = t => CAT.find(([, re]) => re.test(t))[0];
   const tokens = t => t.replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|전문점|매장)$/, '')).filter(w => w.length >= 2);
-  // 흔한 말(카페 · 1인 · 전문 …)만 겹친 것은 같은 바람으로 보지 않는다(「디저트 카페」가 「보드게임 카페」에 붙던 문제). 흔한 말뿐이면 그대로 씀
+  // 흔한 말(카페 · 1인 · 전문 …)만 겹친 것은 같은 의견으로 보지 않는다(「디저트 카페」가 「보드게임 카페」에 붙던 문제). 흔한 말뿐이면 그대로 씀
   const COMMON = new Set(['카페', '1인', '전문', '가게', '맛집', '작은', '조용한', '동성로', '대구', '바', '샵', '숍', '하우스', '스토어', '느낌', '분위기', '가성비', '저렴한', '혼자']);
   const split = k => { for (const c of COMMON) if (k.length > c.length + 1 && k.endsWith(c)) return [k.slice(0, -c.length), c]; return [k]; };   // 「디저트카페」 → 디저트 + 카페
   const wishMatch = (item, w) => { const all = tokens(item).flatMap(split), tk = all.filter(k => !COMMON.has(k)), hay = (w.title + ' ' + w.why).replace(/\s+/g, ''); return (tk.length ? tk : all).some(k => hay.includes(k)); };
@@ -30,7 +30,7 @@
     const near = M.bg.filter(([x, y]) => dist({ x, y }, pt) <= 100);
     return { all: near.length, same: near.filter(b => b[2] === cat).length, vacant: M.spaces.filter(s => s !== pt && dist(s, pt) <= 100).length };
   }
-  // 근처 바람: 150m 안(업종과 닿는 것 먼저 · 공감순). 150m 안에 없으면 max(300m) 안에서 가까운 3개(설계서 §2-①). 「내 가게」도 같은 계산을 씀
+  // 근처 의견: 150m 안(업종과 닿는 것 먼저 · 공감순). 150m 안에 없으면 max(300m) 안에서 가까운 3개(설계서 §2-①). 「내 가게」도 같은 계산을 씀
   function nearWishes(pt, item, max = 300) {
     const L = store.wishes().map(w => ({ w, m: dist(SP[w.space], pt), hit: !!item && wishMatch(item, w) }));
     const in150 = L.filter(x => x.m <= 150).sort((a, b) => (b.hit - a.hit) || (store.likes(b.w) - store.likes(a.w)));
@@ -61,7 +61,7 @@
         if (food) L.push({ t: '메뉴 · 가격 설계', major: '식품영양 · 경영', out: '메뉴판 초안 · 원가표', wk: 4, on: true });
         L.push({ t: '브랜드 · 간판 · 메뉴판 디자인', major: '시각디자인', out: '로고 · 간판 시안 · 메뉴판', wk: 4, on: true });
         L.push({ t: '오픈 홍보 · 지도 앱 등록', major: '미디어 · 광고홍보', out: 'SNS 계정 · 오픈 콘텐츠 · 지도 등록', wk: 3, on: true });
-        L.push({ t: '근처 바람으로 메뉴 실험', major: '식품영양 · 경영 · 미디어', out: '개업 뒤 근처 시민 바람에 답 1~2개 · 답한 메뉴 기록 양식', wk: 3, on: !food });
+        L.push({ t: '근처 의견으로 메뉴 실험', major: '식품영양 · 경영 · 미디어', out: '개업 뒤 근처 시민 의견에 답 1~2개 · 답한 메뉴 기록 양식', wk: 3, on: !food });
         L.push({ t: '매장 동선 · 공간 배치안', major: '실내건축', out: '배치 도면 2안', wk: 3, on: false });
       } else {
         const by = {
@@ -72,7 +72,7 @@
           '기타': [['운영 문제 기록 · 정리', '경영', '문제 목록 · 우선순위']],
         }[o.trouble] || [];
         by.forEach(([t, major, out]) => L.push({ t, major, out, wk: 4, on: true }));
-        L.push({ t: '근처 바람으로 메뉴 실험', major: '식품영양 · 경영 · 미디어', out: '근처 시민 바람에 답 1~2개 · 답한 메뉴 기록 양식', wk: 4, on: true });
+        L.push({ t: '근처 의견으로 메뉴 실험', major: '식품영양 · 경영 · 미디어', out: '근처 시민 의견에 답 1~2개 · 답한 메뉴 기록 양식', wk: 4, on: true });
         L.push({ t: '가게 소개 · 메뉴판 다시 만들기', major: '시각디자인', out: '메뉴판 · 소개 카드', wk: 3, on: false });
       }
       const expert = o.status === 'pre'
@@ -87,22 +87,22 @@
     const W = store.wishes(), out = [];
     if (o.known === 'none') {
       const seen = new Set();
-      W.sort((a, b) => store.likes(b) - store.likes(a)).forEach(w => { if (!seen.has(w.space) && out.length < 3) { seen.add(w.space); out.push({ space: w.space, item: w.title, why: [`바람 1위 · 공감 ${store.likes(w)}`, `직전: ${SP[w.space].was}`] }); } });
+      W.sort((a, b) => store.likes(b) - store.likes(a)).forEach(w => { if (!seen.has(w.space) && out.length < 3) { seen.add(w.space); out.push({ space: w.space, item: w.title, why: [`의견 1위 · 공감 ${store.likes(w)}`, `직전: ${SP[w.space].was}`] }); } });
     } else if (o.known === 'item') {
       const cat = bigCat(o.item);
       M.spaces.map(s => {
         const ws = W.filter(w => w.space === s.id && wishMatch(o.item, w)), likes = ws.reduce((a, w) => a + store.likes(w), 0), ar = around(s, cat);
         return { s, ws, likes, ar, sc: (ws.length ? 10 : 0) + likes / 8 - ar.same / 15 };
-      }).sort((a, b) => b.sc - a.sc).slice(0, 3).forEach(r => out.push({ space: r.s.id, item: o.item, why: [r.ws.length ? (r.ws.length > 1 ? `이 빈칸에 비슷한 바람 ${r.ws.length}개(「${r.ws[0].title}」 외) · 공감 합 ${r.likes}` : `이 빈칸에 비슷한 바람 「${r.ws[0].title}」 · 공감 ${r.likes}`) : '맞는 바람은 아직 없음', `100m 안 같은 업종대(${cat}) ${r.ar.same}곳`] }));
+      }).sort((a, b) => b.sc - a.sc).slice(0, 3).forEach(r => out.push({ space: r.s.id, item: o.item, why: [r.ws.length ? (r.ws.length > 1 ? `이 빈칸에 비슷한 의견 ${r.ws.length}개(「${r.ws[0].title}」 외) · 공감 합 ${r.likes}` : `이 빈칸에 비슷한 의견 「${r.ws[0].title}」 · 공감 ${r.likes}`) : '맞는 의견은 아직 없음', `100m 안 같은 업종대(${cat}) ${r.ar.same}곳`] }));
     } else if (o.known === 'place') {
       const s = SP[o.space], ws = W.filter(w => w.space === s.id).sort((a, b) => store.likes(b) - store.likes(a));
-      ws.slice(0, 3).forEach(w => out.push({ space: s.id, item: w.title, why: [`이 빈칸 바람 · 공감 ${store.likes(w)}`, `100m 안 같은 업종대 ${around(s, bigCat(w.title)).same}곳`] }));
+      ws.slice(0, 3).forEach(w => out.push({ space: s.id, item: w.title, why: [`이 빈칸 의견 · 공감 ${store.likes(w)}`, `100m 안 같은 업종대 ${around(s, bigCat(w.title)).same}곳`] }));
       if (out.length < 3) {
         const near = M.bg.filter(([x, y]) => dist({ x, y }, s) <= 100), c = {};
         ['교육', '예술·스포츠', '수리·개인', '소매'].forEach(k => c[k] = near.filter(b => b[2] === k).length);
         const ex = { '교육': '스터디카페 · 공방', '예술·스포츠': '보드게임 카페 · 연습실', '수리·개인': '셀프 사진관 · 네일', '소매': '소품샵 · 편집숍' };
         const usedCat = new Set(out.map(x => bigCat(x.item)));
-        Object.entries(c).filter(([k]) => !usedCat.has(k)).sort((a, b) => a[1] - b[1]).slice(0, 3 - out.length).forEach(([k, n]) => out.push({ space: s.id, item: ex[k], why: [`100m 안 ${k} ${n}곳 — 주변에 적은 업종대`, '시민 바람은 아직 없음'] }));
+        Object.entries(c).filter(([k]) => !usedCat.has(k)).sort((a, b) => a[1] - b[1]).slice(0, 3 - out.length).forEach(([k, n]) => out.push({ space: s.id, item: ex[k], why: [`100m 안 ${k} ${n}곳 — 주변에 적은 업종대`, '시민 의견은 아직 없음'] }));
       }
     }
     return out;
@@ -123,12 +123,12 @@
     if (o.status === 'pre') {
       h += `<section class="oq"><h3>정해 둔 것이 있나요?</h3><div class="ochips">${[['both', '아이템 · 자리 둘 다'], ['item', '아이템만'], ['place', '자리만'], ['none', '아직 없음']].map(([v, t]) => `<button class="${o.known === v ? 'on' : ''}" data-o="known" data-v="${v}">${t}</button>`).join('')}</div>`;
       if (o.known === 'both' || o.known === 'item') h += `<label class="ofl">어떤 가게인가요?<input data-o-in="item" value="${esc(o.item)}" placeholder="예: 파스타집, 스터디카페, 소품샵" maxlength="30"></label>`;
-      if (o.known === 'both' || o.known === 'place') h += `<label class="ofl">어느 빈칸인가요?<select data-o-in="space"><option value="">빈칸 고르기 (바람 많은 순)</option>${M.spaces.slice().sort((a, b) => store.bySpace(b.id).length - store.bySpace(a.id).length).map(s => `<option value="${s.id}"${o.space === s.id ? ' selected' : ''}>${esc(shortAddr(s))} — 직전 ${esc(s.was)}${store.bySpace(s.id).length ? ` · 바람 ${store.bySpace(s.id).length}` : ''}</option>`).join('')}</select></label>`;
+      if (o.known === 'both' || o.known === 'place') h += `<label class="ofl">어느 빈칸인가요?<select data-o-in="space"><option value="">빈칸 고르기 (의견 많은 순)</option>${M.spaces.slice().sort((a, b) => store.bySpace(b.id).length - store.bySpace(a.id).length).map(s => `<option value="${s.id}"${o.space === s.id ? ' selected' : ''}>${esc(shortAddr(s))} — 직전 ${esc(s.was)}${store.bySpace(s.id).length ? ` · 의견 ${store.bySpace(s.id).length}` : ''}</option>`).join('')}</select></label>`;
       const ready = o.known && (o.known === 'none' || (o.known === 'item' && o.item.trim()) || (o.known === 'place' && o.space) || (o.known === 'both' && o.item.trim() && o.space));
       h += `<p class="err" id="oerr" hidden></p>`;
       if (o.known === 'both') h += `<button class="cta" data-o="go2"${ready ? '' : ' disabled'}>이 자리의 위험과 근거 보기 →</button>`;
-      else if (o.known) h += `<button class="cta" data-o="reco"${ready ? '' : ' disabled'}>${o.known === 'item' ? '맞는 빈칸 추천 받기' : o.known === 'place' ? '이 빈칸에 맞는 업종 보기' : '바람 많은 빈칸 × 업종 조합 보기'}</button>`;
-      if (o.reco) h += `<section class="oq"><h3>추천 <small>시민 바람 · 주변 업소 계산</small></h3>${o.reco.map((c, i) => `<div class="combo"><div><b>${esc(c.item)}</b> <span class="at">@ ${esc(shortAddr(SP[c.space]))}</span><ul>${c.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div><button class="cta2" data-o="pick" data-i="${i}">이 조합으로 →</button></div>`).join('') || '<p class="emptyw">조건에 맞는 추천이 없어요.</p>'}</section>`;
+      else if (o.known) h += `<button class="cta" data-o="reco"${ready ? '' : ' disabled'}>${o.known === 'item' ? '맞는 빈칸 추천 받기' : o.known === 'place' ? '이 빈칸에 맞는 업종 보기' : '의견 많은 빈칸 × 업종 조합 보기'}</button>`;
+      if (o.reco) h += `<section class="oq"><h3>추천 <small>시민 의견 · 주변 업소 계산</small></h3>${o.reco.map((c, i) => `<div class="combo"><div><b>${esc(c.item)}</b> <span class="at">@ ${esc(shortAddr(SP[c.space]))}</span><ul>${c.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div><button class="cta2" data-o="pick" data-i="${i}">이 조합으로 →</button></div>`).join('') || '<p class="emptyw">조건에 맞는 추천이 없어요.</p>'}</section>`;
       h += `</section>`;
     }
     if (o.status === 'open') {
@@ -159,25 +159,25 @@
       const nb = nearWishes(pt, o.item), mine = nb.list.filter(x => x.hit);
       risk.push(`<li class="${ar.vacant >= 4 ? 'mid' : 'lo'}"><b>주변 빈칸 ${ar.vacant}곳</b> ${ar.vacant >= 4 ? '골목 공실이 늘고 있을 수 있음' : '이번 분기 새로 빈 1층 후보 기준(오래된 공실 · 위층은 안 셈)'}</li>`);
       risk.push(nb.near
-        ? `<li class="lo"><b>가게 근처(150m) 바람 ${nb.list.length}개</b> ${nb.list.slice(0, 3).map(x => `「${esc(x.w.title)}」 ♥${store.likes(x.w)}`).join(' · ')}${mine.length ? ` — 우리 업종과 닿는 바람 ${mine.length}개` : ''}</li>`
-        : `<li class="lo"><b>가게 150m 안 바람 없음</b> ${nb.list.length ? '300m 안 가까운 바람: ' + nb.list.map(x => `「${esc(x.w.title)}」 약 ${Math.round(x.m / 10) * 10}m`).join(' · ') : '300m 안에도 아직 없음'}</li>`);
+        ? `<li class="lo"><b>가게 근처(150m) 의견 ${nb.list.length}개</b> ${nb.list.slice(0, 3).map(x => `「${esc(x.w.title)}」 ♥${store.likes(x.w)}`).join(' · ')}${mine.length ? ` — 우리 업종과 닿는 의견 ${mine.length}개` : ''}</li>`
+        : `<li class="lo"><b>가게 150m 안 의견 없음</b> ${nb.list.length ? '300m 안 가까운 의견: ' + nb.list.map(x => `「${esc(x.w.title)}」 약 ${Math.round(x.m / 10) * 10}m`).join(' · ') : '300m 안에도 아직 없음'}</li>`);
     }
-    if (sp) risk.push(`<li class="${match.length ? 'lo' : 'mid'}"><b>바람 ${match.length ? '일치' : '없음'}</b> ${match.length ? match.map(w => `「${esc(w.title)}」 공감 ${store.likes(w)}`).join(' · ') : '이 업종을 바라는 바람은 아직 없음'}</li>`);
+    if (sp) risk.push(`<li class="${match.length ? 'lo' : 'mid'}"><b>의견 ${match.length ? '일치' : '없음'}</b> ${match.length ? match.map(w => `「${esc(w.title)}」 공감 ${store.likes(w)}`).join(' · ') : '이 업종을 바라는 의견은 아직 없음'}</li>`);
     const nA = sp ? answeredBy(ws) : 0;
-    if (nA) risk.push(`<li class="lo"><b>근처 가게 ${nA}곳이 이 빈칸 바람에 일부 답함</b> 바람은 그대로 열려 있음 — 같은 바람을 노린다면 그 가게 메뉴도 확인</li>`);
+    if (nA) risk.push(`<li class="lo"><b>근처 가게 ${nA}곳이 이 빈칸 의견에 일부 답함</b> 의견은 그대로 열려 있음 — 같은 의견을 노린다면 그 가게 메뉴도 확인</li>`);
     return risk;
   }
-  // 가게 카드의 「근처 바람에 답하기」 줄 — riskList 밖에 둔다(riskList 글은 AI tasks 입력으로 감)
+  // 가게 카드의 「근처 의견에 답하기」 줄 — riskList 밖에 둔다(riskList 글은 AI tasks 입력으로 감)
   function ansRow(o) {
     if (o.status !== 'open' || !o.near) return '';
     const nb = nearWishes(ptOf(o), o.item);
-    return `<div class="nearans"><b>근처 바람에 답하기</b> <small>${nb.near ? '가게 150m 안' : '150m 안에 없어 300m 안 가까운 순'}</small>
-      ${nb.list.slice(0, 3).map(x => `<div class="narow"><span>「${esc(x.w.title)}」 <small>♥${store.likes(x.w)} · 약 ${Math.max(10, Math.round(x.m / 10) * 10)}m</small></span><button class="cta2 sm" data-o="answer" data-w="${esc(x.w.id)}">이 바람에 답하기</button></div>`).join('') || '<p class="fine">300m 안에도 아직 바람이 없어요.</p>'}</div>`;
+    return `<div class="nearans"><b>근처 의견에 답하기</b> <small>${nb.near ? '가게 150m 안' : '150m 안에 없어 300m 안 가까운 순'}</small>
+      ${nb.list.slice(0, 3).map(x => `<div class="narow"><span>「${esc(x.w.title)}」 <small>♥${store.likes(x.w)} · 약 ${Math.max(10, Math.round(x.m / 10) * 10)}m</small></span><button class="cta2 sm" data-o="answer" data-w="${esc(x.w.id)}">이 의견에 답하기</button></div>`).join('') || '<p class="fine">300m 안에도 아직 의견이 없어요.</p>'}</div>`;
   }
   function ansBand(o) {
     if (o.status !== 'open' || !o.near || !['홍보', '고객 관리', '매출'].includes(o.trouble)) return '';
     const n = nearWishes(ptOf(o), o.item).list.length; if (!n) return '';
-    return `<div class="mband"><div><b>근처 바람 ${n}개 — 답해 보기</b><small>아직 손님이 아닌 근처 사람들이 바라는 것에 「우리 가게에서 해 볼게요」라고 답하면, 그 바람을 남기고 공감한 사람에게 알림이 가요. 지원서를 내기 전에도, 선정되지 않아도 쓸 수 있어요.</small></div><button class="cta" data-o="mystore">내 가게에서 답해 보기 →</button></div>`;
+    return `<div class="mband"><div><b>근처 의견 ${n}개 — 답해 보기</b><small>아직 손님이 아닌 근처 사람들이 바라는 것에 「우리 가게에서 해 볼게요」라고 답하면, 그 의견을 남기고 공감한 사람에게 알림이 가요. 지원서를 내기 전에도, 선정되지 않아도 쓸 수 있어요.</small></div><button class="cta" data-o="mystore">내 가게에서 답해 보기 →</button></div>`;
   }
   function s2() {
     const o = O(), risk = riskList(o), who = o.status === 'pre' ? 'pre' : 'open';
@@ -223,12 +223,12 @@
     const tl = [['접수', true], ['운영단 심사 (시 + 지역 대학)', !!r], [r === 'no' ? '다음 기회' : '선정 → 학생 모집', r === 'yes'], ['팀 구성 · 한 학기', false]];
     return `<section class="ocard"><div class="ohead"><p class="kick">진행 상태</p><h2>${esc(o.item)} @ ${esc(placeName(o))}</h2></div>
       <ol class="tl">${tl.map(([t, d], i) => `<li class="${d ? 'done' : i === tl.findIndex(x => !x[1]) ? 'now' : ''}">${esc(t)}</li>`).join('')}</ol>
-      ${!r ? `<p class="was">지원서가 접수됐어요. 운영단(대구시 + 지역 대학)이 준비 정도 · 이 자리 시민 바람 수(공감 포함) · 과제 적합성을 봐요.</p>${A.hasRole('ops') ? `<div class="onav"><button class="cta2" data-o="opsres" data-v="no">운영단 처리: 다음 기회</button><button class="cta2" data-o="opsgo">운영단 표에서 점수 매기기</button><button class="cta" data-o="opsres" data-v="yes">운영단 처리: 선정</button></div>` : '<p class="fine">운영단 심사 중이에요 — 운영단 표에서 처리되면 여기 진행 상태가 바뀌어요.</p>'}` : ''}
+      ${!r ? `<p class="was">지원서가 접수됐어요. 운영단(대구시 + 지역 대학)이 준비 정도 · 이 자리 시민 의견 수(공감 포함) · 과제 적합성을 봐요.</p>${A.hasRole('ops') ? `<div class="onav"><button class="cta2" data-o="opsres" data-v="no">운영단 처리: 다음 기회</button><button class="cta2" data-o="opsgo">운영단 표에서 점수 매기기</button><button class="cta" data-o="opsres" data-v="yes">운영단 처리: 선정</button></div>` : '<p class="fine">운영단 심사 중이에요 — 운영단 표에서 처리되면 여기 진행 상태가 바뀌어요.</p>'}` : ''}
       ${r === 'yes' ? `<div class="okpost"><p class="kick">선정! 학생 모집 공고가 올라갔어요</p><h3>[동행 프로젝트 1기] ${esc(o.item)} @ ${esc(placeName(o))}</h3>
         <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)} · ${t.wk}주 · ${esc(t.out)}</li>`).join('')}</ul>
         <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요 [제안]. 선발은 운영단 → 사장님 면담 순서예요.</p>
-        <p class="note2">「내 가게」에서 근처 바람에 답하고, 답한 메뉴를 기록해요. 학기 중엔 학생 팀이 같이 쓰고, 학기가 끝나면 사장님 혼자 다음 바람에 답해요. 이 기록이 개업 뒤 추적 자료도 돼요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
-      ${r === 'no' ? `<div class="okpost no"><p class="kick">이번 기수에는 선정되지 않았어요</p><p>다음 기수에 우선 검토해요. 그 사이 받을 수 있는 지원을 확인해 보세요. 같은 시기에 신청했지만 선정되지 않은 가게도 같은 기록으로 함께 살펴봐요(동의한 경우). 「내 가게」(근처 바람에 답하기 · 상권 변화)는 똑같이 쓸 수 있어요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
+        <p class="note2">「내 가게」에서 근처 의견에 답하고, 답한 메뉴를 기록해요. 학기 중엔 학생 팀이 같이 쓰고, 학기가 끝나면 사장님 혼자 다음 의견에 답해요. 이 기록이 개업 뒤 추적 자료도 돼요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
+      ${r === 'no' ? `<div class="okpost no"><p class="kick">이번 기수에는 선정되지 않았어요</p><p>다음 기수에 우선 검토해요. 그 사이 받을 수 있는 지원을 확인해 보세요. 같은 시기에 신청했지만 선정되지 않은 가게도 같은 기록으로 함께 살펴봐요(동의한 경우). 「내 가게」(근처 의견에 답하기 · 상권 변화)는 똑같이 쓸 수 있어요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
       </section>
       <div class="onav"><button class="cta2" data-o="reset">새 상담 시작</button><button class="cta2" data-o="map">지도로</button></div>`;
   }

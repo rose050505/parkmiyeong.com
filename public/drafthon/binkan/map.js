@@ -15,7 +15,7 @@
     document.head.appendChild(s);
   }));
 
-  // 바람 핀이 겹치면 우선순위(z) 낮은 쪽을 하트만 남은 작은 핀으로, 그래도 겹치면 숨김(확대하면 다시 보임)
+  // 의견 핀이 겹치면 우선순위(z) 낮은 쪽을 하트만 남은 작은 핀으로, 그래도 겹치면 숨김(확대하면 다시 보임)
   function declutter(list) {
     const taken = [];
     for (const p of list.filter(p => p._el.classList.contains('wish')).sort((a, b) => (b.z || 0) - (a.z || 0))) {
@@ -88,7 +88,7 @@
       for (const p of pins) { const [a, b] = p._xy; p._el.style.left = a * s + 'px'; p._el.style.top = b * s + 'px'; }
       declutter(pins);
     }
-    // 바람 핀이 겹치면 우선순위(z) 낮은 쪽을 하트만 남은 작은 핀으로
+    // 의견 핀이 겹치면 우선순위(z) 낮은 쪽을 하트만 남은 작은 핀으로
 
     function zoomAt(f, cx, cy) { const ns = Math.max(0.4, Math.min(6, s * f)); tx = cx - (cx - tx) * ns / s; ty = cy - (cy - ty) * ns / s; s = ns; apply(); }
     el.addEventListener('wheel', e => { e.preventDefault(); const r = el.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
@@ -122,7 +122,7 @@
         tx = r.width / 2 - a * s; ty = cy - b * s; apply();
       },
       relayout() { fit(); },
-      // 주어진 점들이 화면에 꽉 차게 (첫 화면: 바람이 모인 곳)
+      // 주어진 점들이 화면에 꽉 차게 (첫 화면: 의견이 모인 곳)
       fitTo(list, padPx = 90) {
         if (!list.length) return;
         const r = el.getBoundingClientRect(), xy = list.map(p => px(p.x, p.y));

@@ -1,4 +1,4 @@
-// 경영 도우미 「내 가게」 (설계도/경영도우미_설계.md 2판): ① 근처 바람에 답하기 ② 상권 변화 ③ 답한 메뉴 기록 → 운영단 추적
+// 경영 도우미 「내 가게」 (설계도/경영도우미_설계.md 2판): ① 근처 의견에 답하기 ② 상권 변화 ③ 답한 메뉴 기록 → 운영단 추적
 // 숫자는 사이트가 계산하고, AI(assist.js TASKS answer · themes · area)는 문장만 쓴다. AI가 안 되면 「기본 정리」로 끝까지 돈다.
 // 읽고 쓰기는 db 묶음 하나로 모았다 — 백엔드가 붙으면 db만 설계서 §5 API로 바꾼다.
 (function () {
@@ -10,7 +10,7 @@
   const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const today = () => ymd(new Date());   // 기기 시간 기준
   const dayNo = s => { const [y, m, d] = String(s).split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
-  const SHARE_KEYS = [['open', '영업 여부 (그 달 영업 일수)', true], ['band', '매출 구간 (월 1회 직접 고름)', true], ['answers', '답 수', false], ['sold', '답한 메뉴 판매 일수 · 누적 판매', false], ['came', '바람 보고 온 손님 수', false],
+  const SHARE_KEYS = [['open', '영업 여부 (그 달 영업 일수)', true], ['band', '매출 구간 (월 1회 직접 고름)', true], ['answers', '답 수', false], ['sold', '답한 메뉴 판매 일수 · 누적 판매', false], ['came', '의견 보고 온 손님 수', false],
     ['changes', '시험 메뉴에서 바꾼 것 수', false], ['kept', '바꾼 것 가운데 유지한 것 수', false], ['outcome', '시험 결과(정식 메뉴 · 접음)', false]];
   const BANDS = ['월 500만 원 미만', '500만 ~ 1,000만 원', '1,000만 ~ 2,000만 원', '2,000만 ~ 3,000만 원', '3,000만 원 이상'];   // 구간 경계 [가정]
   const STATES = ['준비 중', '판매 중', '끝남'];
@@ -60,7 +60,7 @@
       if (!sid) return;
       if (!a.srv) {
         try { const j = await window.BK.postAnswer(w.op, { storeId: sid, menuName: (a.menu || a.item || '메뉴').slice(0, 120), message: a.reply.slice(0, 1000) }); a.srv = j.id; a.srvState = '준비 중'; a.srvMenu = j.menuName || a.menu; }
-        catch (e) {   // 같은 가게가 이 바람에 이미 답함(다른 기기에서 올림) → 그 답에 이어 붙여 고치기로
+        catch (e) {   // 같은 가게가 이 의견에 이미 답함(다른 기기에서 올림) → 그 답에 이어 붙여 고치기로
           if (e.status !== 409) throw e;
           const had = (await window.BK.storeAnswers(sid)).find(x => x.wishId === w.op); if (!had) throw e;
           a.srv = had.id; a.srvState = ST2[had.status] || '준비 중'; a.srvMenu = had.menuName; a.srvSig = [had.menuName, had.message, a.srvState].join('|');
@@ -128,7 +128,7 @@
   const appOf = s => s ? db.ownerApps().filter(a => a.uid === s.uid).slice(-1)[0] || null : null;   // 이 가게 사장님이 낸 동행 프로젝트 지원서(가장 최근)
   // 지원서(추적 동의 필수)를 낸 가게는 영업 여부 · 매출 구간이 켜진 것으로 본다 — K4 · 월 집계 · 위험 판정이 모두 이 값을 씀
   const shareOf = s => Object.assign({}, s.share, appOf(s) ? { open: true, band: true } : {});
-  // 이 답의 알림을 받는 회원 수: 바람을 쓴 회원 + 공감한 회원(운영팀이 넣어 둔 공감 수는 사람이 아니라 빼고), 답한 가게 사장님은 빼고
+  // 이 답의 알림을 받는 회원 수: 의견을 쓴 회원 + 공감한 회원(운영팀이 넣어 둔 공감 수는 사람이 아니라 빼고), 답한 가게 사장님은 빼고
   const recipients = (w, ownerUid) => new Set([w.uid].concat(Object.entries(st.likedBy || {}).filter(([u, m]) => m && m[w.id] && u !== '_old').map(([u]) => u)).filter(u => u && u !== ownerUid)).size;
 
   // ---------------- 화면 상태 (저장 안 함) ----------------
@@ -171,13 +171,13 @@
     ui.view = c.mode === 'owner' && !c.s.setup ? 'k1' : 'k';
     ui.open = null; ui.pending = opts.wish || null;
     if (c.mode === 'owner' && BKon()) fromServer(c.s);   // 열 때마다: 이 계정 가게가 서버에 있으면(다른 기기에서 고쳤어도) 그 설정을 받음   // 이 계정 가게가 서버에 이미 있으면(같은 시범 가게 계정을 다른 기기에서 씀) 그 설정으로 채움
-    if (c.s) myAnswers(c.s).forEach(x => ui.extra.add(x.wish));   // 내가 답한 바람은 150m 밖이어도 목록에 남김
+    if (c.s) myAnswers(c.s).forEach(x => ui.extra.add(x.wish));   // 내가 답한 의견은 150m 밖이어도 목록에 남김
     if (opts.view && c.mode === 'owner' && c.s.setup) ui.view = opts.view;
-    if (c.mode === 'owner' && c.s.setup) { ui.since = c.s.lastSeen || 0; c.s.lastSeen = Date.now(); db.putStore(c.s); }   // 지난번 연 뒤 새로 생긴 회원 바람에 「새 바람」
+    if (c.mode === 'owner' && c.s.setup) { ui.since = c.s.lastSeen || 0; c.s.lastSeen = Date.now(); db.putStore(c.s); }   // 지난번 연 뒤 새로 생긴 회원 의견에 「새 의견」
   }
 
   // ---------------- 계산 ----------------
-  // 근처 바람 목록. 150m 목록 밖이어도 300m 안이면 답할 수 있다 — 가게 카드 · 상권 변화에서 고른 바람(ui.extra)은 뒤에 붙인다
+  // 근처 의견 목록. 150m 목록 밖이어도 300m 안이면 답할 수 있다 — 가게 카드 · 상권 변화에서 고른 의견(ui.extra)은 뒤에 붙인다
   function nearList(s) {
     const pt = ptOf(s); if (!pt) return { list: [], near: true };
     const r = T().nearWishes(pt, s.item), L = r.list.slice();
@@ -300,7 +300,7 @@
     if (bn.length < n) return { need: n - bn.length, nA: Af.length, nB: B.length };
     return { basis: `전후 ${n}일`, rows: items(bn, Af.slice(0, n), '전체') };
   }
-  // ⓔ 가 본 시민 한 줄: 연락처 · 링크 · 욕설만 막음(바람 점검 BAD는 「별로 · 할인」까지 막아 아쉬운 한 줄이 사라지므로 쓰지 않음)
+  // ⓔ 가 본 시민 한 줄: 연락처 · 링크 · 욕설만 막음(의견 점검 BAD는 「별로 · 할인」까지 막아 아쉬운 한 줄이 사라지므로 쓰지 않음)
   function noteCheck(t) {
     t = (t || '').trim();
     if (t.length < 2) return '한 줄을 두 글자 이상 적어 주세요';
@@ -347,7 +347,7 @@
   // 주변 변화(위험 수에 넣지 않음): 100m 안 같은 업종이 지난 분기보다 줄었을 때. 사라진 업소는 폐업만이 아니라 이전 · 상호 변경일 수도 있다
   const areaNote = s => { const ar = area(s); return ar && ar.now < ar.before ? `100m 안 같은 업종(${s.sub}) ${ar.before}→${ar.now}곳` : ''; };
 
-  // 답글 점검(바람 점검 BAD와 따로): 욕설 · 연락처 · 링크 · 남 깎아내림 금지, 가격 · 할인 · 무료는 사장님이 적은 것에 있을 때만.
+  // 답글 점검(의견 점검 BAD와 따로): 욕설 · 연락처 · 링크 · 남 깎아내림 금지, 가격 · 할인 · 무료는 사장님이 적은 것에 있을 때만.
   // 자기 가게를 낮추는 말(「맛없으면 말씀해 주세요」)은 막지 않는다.
   // 숫자 맞추기: 8,000 · 8천 · 1만 2천 · 만 원 → 8000 · 8000 · 12000 · 10000
   const normNum = t => String(t).replace(/(\d),(?=\d{3})/g, '$1')
@@ -360,10 +360,10 @@
   function checkReply(d, s) {
     const menu = (d.menu || '').trim(), reply = (d.reply || '').trim(), t = `${menu} ${reply}`;
     if (!menu) return '메뉴 이름을 적어 주세요';
-    if (reply.length < 5) return '바람 아래에 보일 답글을 적어 주세요';
+    if (reply.length < 5) return '의견 아래에 보일 답글을 적어 주세요';
     if (/△△|○○/.test(t)) return '틀 문장의 ○○ · △△ 자리를 채워 주세요';
     if (/(쓰레기|망해라|꺼져|씨발|시발|ㅅㅂ|병신|개같)/.test(t)) return '욕설 · 비방으로 보이는 말이 있어요. 고쳐서 올려 주세요';
-    { const nc = noteCheck(t); if (nc && !/두 글자/.test(nc)) return nc + ' — 고쳐서 올려 주세요'; }   // 바람 · 한 줄과 같은 욕설 · 연락처 · 링크 기준
+    { const nc = noteCheck(t); if (nc && !/두 글자/.test(nc)) return nc + ' — 고쳐서 올려 주세요'; }   // 의견 · 한 줄과 같은 욕설 · 연락처 · 링크 기준
     if (/((다른|옆|근처|주변|딴|그)\s*[가-힣]{0,6}(집|가게|매장|식당|카페)|거기|저기).{0,15}(별로|비싸|맛없|못하|나쁘|더럽|불친절|엉망|최악|위생|구려|후지)/.test(t)
       || /(창업|새\s*가게|빈칸|여기\s*들어오).{0,15}(필요\s*없|소용\s*없|안\s*돼|망할|고생|들어오지|하지\s*마|말리)/.test(t)) return '다른 가게나 빈칸 창업을 깎아내리는 말은 쓸 수 없어요';
     if (/((01[016789]|공일공)[\s.-]?[\d일이삼사오육칠팔구공영]{3,4}|\d{2,3}-\d{3,4}-\d{4}|카톡|카카오\s*(톡|아이디|채널|id)|오픈\s*채팅|오픈톡|인스타|페북|페이스북|아이디|\bid\b|\bdm\b|디엠|문자\s*주|전화\s*주)/i.test(t)) return '연락처 · 계정은 답글에 넣을 수 없어요(시민은 이 사이트에서 가게를 찾아요)';
@@ -384,9 +384,9 @@
 
   // ---------------- AI 칸 (실패하면 기본 정리) ----------------
   const themesKey = L => L.slice(0, 12).map(x => x.w.id + ':' + x.w.why.length).join(',');
-  function baseThemes(L) {   // 기본 정리: 바람의 업종 칩(cat)별로 세기
+  function baseThemes(L) {   // 기본 정리: 의견의 업종 칩(cat)별로 세기
     const c = {}; L.forEach(x => { c[x.w.cat] = c[x.w.cat] || []; c[x.w.cat].push(x.n); });
-    return Object.entries(c).sort((a, b) => b[1].length - a[1].length).map(([t, refs]) => ({ t: `${t} 바람 ${refs.length}개`, refs, try: '' }));
+    return Object.entries(c).sort((a, b) => b[1].length - a[1].length).map(([t, refs]) => ({ t: `${t} 의견 ${refs.length}개`, refs, try: '' }));
   }
   function loadThemes(s, L) {
     const key = themesKey(L);
@@ -423,7 +423,7 @@
   const bar = (c, s) => `<div class="mtop"><button class="back" data-m="map">← 지도로</button><p class="kick">내 가게 · 경영 도우미</p>
       ${s && s.setup ? `<div class="mhead"><h2>${esc(s.name || s.item)} <small>${esc(s.item)} @ ${esc(placeOf(s))}</small>${c.mode === 'owner' || c.mode === 'team' ? ` <span class="mcode" title="손님이 「가게에서 이 화면 보여 주기」를 보여 주면 그 화면의 [사장님 확인]에 넣어요">오늘 손님 확인 번호 <b>${dayCode(codeKey(s))}</b></span>` : ''}</h2>
         <div class="mbtns">${c.mode === 'owner' ? `<button class="mb${s.openDays.includes(today()) ? ' on' : ''}" data-m="openday">${s.openDays.includes(today()) ? '✓ 오늘 영업했어요' : '오늘 영업했어요'}</button>
-          <button class="mb${ui.view === 'k' ? ' on' : ''}" data-m="v" data-v="k">근처 바람 · 기록</button><button class="mb${ui.view === 'k1' ? ' on' : ''}" data-m="v" data-v="k1">가게 설정</button><button class="mb${ui.view === 'k4' ? ' on' : ''}" data-m="v" data-v="k4">공유 항목 · 이번 달</button><button class="mb${ui.view === 'k5' ? ' on' : ''}" data-m="v" data-v="k5">학생 팀</button>` : ''}</div></div>` : ''}</div>`;
+          <button class="mb${ui.view === 'k' ? ' on' : ''}" data-m="v" data-v="k">근처 의견 · 기록</button><button class="mb${ui.view === 'k1' ? ' on' : ''}" data-m="v" data-v="k1">가게 설정</button><button class="mb${ui.view === 'k4' ? ' on' : ''}" data-m="v" data-v="k4">공유 항목 · 이번 달</button><button class="mb${ui.view === 'k5' ? ' on' : ''}" data-m="v" data-v="k5">학생 팀</button>` : ''}</div></div>` : ''}</div>`;
 
   function banners(c, s) {
     const L = [];
@@ -440,10 +440,10 @@
   function themesBlock(s, L) {
     if (L.length < 2) return '<div id="mthemes"></div>';
     const key = themesKey(L), th = s.themes && s.themes.key === key ? s.themes : ui.themes && ui.themes.key === key ? ui.themes : null;
-    if (!th) return `<div id="mthemes" class="themes aiout"><b>사람들이 바라는 공통점</b> <small class="busy">AI가 근처 바람을 묶는 중…</small></div>`;
+    if (!th) return `<div id="mthemes" class="themes aiout"><b>사람들이 바라는 공통점</b> <small class="busy">AI가 근처 의견을 묶는 중…</small></div>`;
     return `<div id="mthemes" class="themes aiout"><b>사람들이 바라는 공통점 ${aiTag(th.ai)}</b>
-      <ul>${th.list.map(x => `<li><b>${esc(x.t)}</b> <small>바람 ${x.refs.map(n => `#${n}`).join(' · ')}</small>${x.try ? `<span>→ ${esc(x.try)}</span>` : ''}</li>`).join('')}</ul>
-      ${th.ai ? '' : '<small class="fine">바람 종류별로 세어 묶었어요.</small>'}</div>`;
+      <ul>${th.list.map(x => `<li><b>${esc(x.t)}</b> <small>의견 ${x.refs.map(n => `#${n}`).join(' · ')}</small>${x.try ? `<span>→ ${esc(x.try)}</span>` : ''}</li>`).join('')}</ul>
+      ${th.ai ? '' : '<small class="fine">의견 종류별로 세어 묶었어요.</small>'}</div>`;
   }
 
   // 답 올리기의 시험 판매 칸(기본: 오늘부터 3주, 11/26 미영)
@@ -457,46 +457,46 @@
   }
   function k2Block(s, x, c) {
     const wid = x.w.id, d = s.drafts[wid], mine = myAnswerFor(s, wid), owner = !c || c.mode === 'owner';
-    if (!d) return `<div class="k2 aiout" id="k2-${wid}"><small class="busy">AI가 이 바람과 우리 메뉴를 읽는 중… <small>(안 되면 기본 틀로 이어져요)</small></small></div>`;
+    if (!d) return `<div class="k2 aiout" id="k2-${wid}"><small class="busy">AI가 이 의견과 우리 메뉴를 읽는 중… <small>(안 되면 기본 틀로 이어져요)</small></small></div>`;
     return `<div class="k2 aiout" id="k2-${wid}">
       ${d.ai ? `<p class="k2fit"><b>이 가게가 채울 수 있나 ${aiTag(true)}</b> <span class="fit f${['지금 메뉴로 됨', '조금 바꾸면 됨', '어려움'].indexOf(d.fit)}">${esc(d.fit)}</span> ${esc(d.why)}</p>${d.idea ? `<p class="k2idea"><b>해 볼 방법</b> ${esc(d.idea)}</p>` : ''}${d.fit === '어려움' ? '<p class="fine">억지로 맞추지 않아도 돼요. 그래도 답하고 싶으면 아래를 직접 채워 주세요.</p>' : ''}`
         : `<p class="k2fit"><b>답 초안</b> ${aiTag(false)} <small>틀 문장을 넣어 뒀어요. 메뉴 이름과 답글을 채워 주세요.</small></p>`}
       <div class="orow"><label class="ofl">메뉴 이름<input data-m-in="d.menu" data-w="${wid}" value="${esc(d.menu)}" maxlength="24" placeholder="예: 1인 파스타 덮밥"></label>
-        <label class="ofl">바람 아래에 보일 답글 <small class="cnt" id="cnt-${wid}">${(d.reply || '').length} / 100</small><textarea data-m-in="d.reply" data-w="${wid}" rows="3" maxlength="140">${esc(d.reply)}</textarea></label></div>
+        <label class="ofl">의견 아래에 보일 답글 <small class="cnt" id="cnt-${wid}">${(d.reply || '').length} / 100</small><textarea data-m-in="d.reply" data-w="${wid}" rows="3" maxlength="140">${esc(d.reply)}</textarea></label></div>
       ${trialFields(d, wid)}
       <p class="err" id="k2err-${wid}" hidden></p>
-      <p class="fine">가격 · 할인은 가게 설정의 「가격 · 행사」에 적은 것만 쓸 수 있어요. 연락처 · 링크 · 다른 가게를 깎아내리는 말은 올라가지 않아요. 답을 올려도 바람은 닫히지 않아요.</p>
+      <p class="fine">가격 · 할인은 가게 설정의 「가격 · 행사」에 적은 것만 쓸 수 있어요. 연락처 · 링크 · 다른 가게를 깎아내리는 말은 올라가지 않아요. 답을 올려도 의견은 닫히지 않아요.</p>
       <div class="k2nav"><button class="cta2 sm" data-m="close2">닫기</button><button class="cta2 sm" data-m="redraft" data-w="${wid}"${ui.busy['d' + wid] ? ' disabled' : ''}>AI 초안 다시 받기</button>
-        ${owner ? `<button class="cta sm" data-m="post" data-w="${wid}">${mine ? '고친 답 올리기' : '이 바람에 답 올리기'}</button>` : '<small class="fine">올리기는 사장님만 해요 — 초안은 저장돼요</small>'}</div></div>`;
+        ${owner ? `<button class="cta sm" data-m="post" data-w="${wid}">${mine ? '고친 답 올리기' : '이 의견에 답 올리기'}</button>` : '<small class="fine">올리기는 사장님만 해요 — 초안은 저장돼요</small>'}</div></div>`;
   }
 
-  // 바람이 없는 가게: 300m 밖이어도 우리 업종과 닿는 동성로 바람(답은 300m 안만) + 가장 가까운 빈칸에 바람을 남기는 링크
+  // 의견이 없는 가게: 300m 밖이어도 우리 업종과 닿는 동성로 의견(답은 300m 안만) + 가장 가까운 빈칸에 의견을 남기는 링크
   function farBox(s) {
     const pt = ptOf(s); if (!pt) return '';
     const far = store.wishes().map(w => ({ w, m: dist(SP[w.space], pt) })).filter(x => x.m > 300 && T().wishMatch(s.item, x.w)).sort((a, b) => a.m - b.m).slice(0, 3);
     const v = M.spaces.map(x => ({ x, m: dist(x, pt) })).sort((a, b) => a.m - b.m)[0], url = v ? `${location.origin}${location.pathname}#s=${v.x.id}` : '';
-    return `<div class="farw">${far.length ? `<b>멀리 있는 우리 업종 바람</b> <small>답은 가게 300m 안 바람에만 할 수 있어요 · 메뉴 아이디어로 참고</small><ul>${far.map(x => `<li>「${esc(x.w.title)}」 <small>약 ${roundDist(x.m)}m · ${esc(x.w.why)}</small></li>`).join('')}</ul>` : ''}
-      ${v ? `<p><b>바람 모으기</b> 가게에서 가장 가까운 빈칸(${esc(shortAddr(v.x))}, 약 ${roundDist(v.m)}m)에 「여기 ○○ 있으면」을 남기는 링크예요. 계산대 · 메뉴판에 붙여 손님에게 알려 주세요.</p><div class="k1find"><input readonly value="${esc(url)}" id="collect-url"><button class="cta2 sm" data-m="copylink">링크 복사</button></div>` : ''}</div>`;
+    return `<div class="farw">${far.length ? `<b>멀리 있는 우리 업종 의견</b> <small>답은 가게 300m 안 의견에만 할 수 있어요 · 메뉴 아이디어로 참고</small><ul>${far.map(x => `<li>「${esc(x.w.title)}」 <small>약 ${roundDist(x.m)}m · ${esc(x.w.why)}</small></li>`).join('')}</ul>` : ''}
+      ${v ? `<p><b>의견 모으기</b> 가게에서 가장 가까운 빈칸(${esc(shortAddr(v.x))}, 약 ${roundDist(v.m)}m)에 「여기 ○○ 있으면」을 남기는 링크예요. 계산대 · 메뉴판에 붙여 손님에게 알려 주세요.</p><div class="k1find"><input readonly value="${esc(url)}" id="collect-url"><button class="cta2 sm" data-m="copylink">링크 복사</button></div>` : ''}</div>`;
   }
   function leftCol(c, s) {
     const nb = nearList(s), L = nb.list;
     if (c.mode === 'owner' || c.mode === 'team') loadThemes(s, L);
-    return `<section class="mcol"><h3>근처 바람 <small>${nb.near ? `가게 150m 안 ${L.length}개 · 우리 업종과 닿는 것 먼저 · 공감순` : L.length ? '150m 안에 없어 300m 안 가까운 순' : '300m 안에도 아직 없어요'}</small></h3>
+    return `<section class="mcol"><h3>근처 의견 <small>${nb.near ? `가게 150m 안 ${L.length}개 · 우리 업종과 닿는 것 먼저 · 공감순` : L.length ? '150m 안에 없어 300m 안 가까운 순' : '300m 안에도 아직 없어요'}</small></h3>
       ${themesBlock(s, L)}
       ${L.map(x => {
         const n = answersFor(x.w.id).length, mine = myAnswerFor(s, x.w.id), open = ui.open === x.w.id;
-        return `<article class="nw${open ? ' open' : ''}" id="nw-${x.w.id}"><div class="nwh"><span class="no">#${x.n}</span><span class="cat">${esc(x.w.cat)}</span>${x.hit ? '<span class="tag calc">우리 업종과 닿음</span>' : ''}${x.w.seed ? '<span class="tag">운영팀 바람</span>' : '<span class="tag real">회원 바람</span>'}${!x.w.seed && ui.since && +String(x.w.id).slice(1) > ui.since ? '<span class="tag mine">새 바람</span>' : ''}</div>
+        return `<article class="nw${open ? ' open' : ''}" id="nw-${x.w.id}"><div class="nwh"><span class="no">#${x.n}</span><span class="cat">${esc(x.w.cat)}</span>${x.hit ? '<span class="tag calc">우리 업종과 닿음</span>' : ''}${x.w.seed ? '<span class="tag">운영팀 의견</span>' : '<span class="tag real">회원 의견</span>'}${!x.w.seed && ui.since && +String(x.w.id).slice(1) > ui.since ? '<span class="tag mine">새 의견</span>' : ''}</div>
           <h4>${esc(x.w.title)}${x.extra ? ' <small class="fine">150m 밖 · 300m 안</small>' : ''}</h4><p>${esc(x.w.why)}</p>
           <div class="nwf"><small>♥ ${store.likes(x.w)} · 약 ${roundDist(x.m)}m · ${n ? `답한 가게 ${n}곳` : '아직 답한 가게 없음'}${mine ? ` · <b>내 답: ${esc(mine.state)}</b>` : ''}</small>
             ${open ? '' : `<button class="cta2 sm" data-m="ans" data-w="${x.w.id}">${mine ? '내 답 고치기' : '답하기'}</button>`}</div>
           ${open ? k2Block(s, x, c) : ''}</article>`;
-      }).join('') || `${farBox(s)}<div class="emptyw"><p>가게 300m 안에 아직 바람이 없어요. 위치가 맞는지 <button class="link" data-m="v" data-v="k1">가게 설정</button>에서 확인해 주세요.</p><p class="fine">바람이 모이게 하려면: 가게 앞 · 계산대에서 「동성로 빈칸에 여기 있으면 좋겠는 가게를 남겨 주세요」라고 알려 주세요. 근처 빈칸에 새 바람이 생기면 여기에 「새 바람」으로 떠요.</p></div>`}
-      <p class="fine">「운영팀 바람」은 서비스를 소개하려고 운영팀이 넣어 둔 바람이라 실제 시민 글이 아니에요. 공감 · 거리 · 답한 가게 수는 사이트가 세요.</p></section>`;
+      }).join('') || `${farBox(s)}<div class="emptyw"><p>가게 300m 안에 아직 의견이 없어요. 위치가 맞는지 <button class="link" data-m="v" data-v="k1">가게 설정</button>에서 확인해 주세요.</p><p class="fine">의견이 모이게 하려면: 가게 앞 · 계산대에서 「동성로 빈칸에 여기 있으면 좋겠는 가게를 남겨 주세요」라고 알려 주세요. 근처 빈칸에 새 의견이 생기면 여기에 「새 의견」으로 떠요.</p></div>`}
+      <p class="fine">「운영팀 의견」은 서비스를 소개하려고 운영팀이 넣어 둔 의견이라 실제 시민 글이 아니에요. 공감 · 거리 · 답한 가게 수는 사이트가 세요.</p></section>`;
   }
 
-  // 알림 → 방문 단계: 알림 받은 회원 → 먹어보고 싶어요 → 보여 주기 화면을 연 회원 → 가 봤어요 → 바람 보고 온 손님(그중 시민 화면에서 확인)
+  // 알림 → 방문 단계: 알림 받은 회원 → 먹어보고 싶어요 → 보여 주기 화면을 연 회원 → 가 봤어요 → 의견 보고 온 손님(그중 시민 화면에서 확인)
   const funnel = a => { const w = wishById(a.wish), sx = stats(a); return { sent: w ? recipients(w, a.uid) : 0, wants: a.wants || 0, shows: a.shows || 0, went: a.went || 0, came: sx.came, ok: (a.days || []).reduce((x, d) => x + (d.ok || 0), 0) }; };
-  const funnelLine = a => { const f = funnel(a); return `알림 ${f.sent}명 → 먹어보고 싶어요 ${f.wants} → 보여 주기 연 ${f.shows}명 → 가 봤어요 ${f.went} → 바람 보고 온 손님 <b>${f.came}</b>명${f.ok ? ` (시민 화면에서 확인 ${f.ok})` : ''}`; };
+  const funnelLine = a => { const f = funnel(a); return `알림 ${f.sent}명 → 먹어보고 싶어요 ${f.wants} → 보여 주기 연 ${f.shows}명 → 가 봤어요 ${f.went} → 의견 보고 온 손님 <b>${f.came}</b>명${f.ok ? ` (시민 화면에서 확인 ${f.ok})` : ''}`; };
   const mstat = a => { const sx = stats(a), t = trialOf(a), price = +t.price || 0, soldT = soldDays(a).filter(d => d.date >= (t.from || '') && d.date <= (t.to || '9')).reduce((x, d) => x + d.sold, 0);
     return `판매 <b>${sx.soldDays}</b>일 · 누적 <b>${sx.sold}</b>${price && t.on ? ` · 시험 가격 × 판매 ${fmt(soldT * price, '원')}` : ''}`; };
   const det = (aid, key, title, body, extra = '') => `<details class="mbox" data-det="${aid}:${key}"${ui.det[aid + ':' + key] ? ' open' : ''}><summary>${title}${extra}</summary>${body}</details>`;
@@ -508,7 +508,7 @@
     const ing = a.ing || {}, end = a.state === '끝남', tl = trialLabel(a), label = a.state !== '끝남' && a.outcome === '정식' ? '늘 팔아요' : a.state;
     return `<article class="mcard${end ? ' end' : ''}" id="mc-${a.id}">
       ${showSummary(a) ? summaryBox(c, a) : ''}
-      <p class="mk"><span class="tag st">${esc(label)}</span> ${w ? `「${esc(w.title)}」에 답함` : '바람이 지워짐'} · ${md(ymd(new Date(a.at)))}${a.hidden ? ' · <b class="bad">운영단이 숨김</b>' : ''}${owner && !end ? ` <button class="link" data-m="change" data-a="${a.id}" data-w="${a.wish}">답 고치기</button>` : ''}</p>
+      <p class="mk"><span class="tag st">${esc(label)}</span> ${w ? `「${esc(w.title)}」에 답함` : '의견이 지워짐'} · ${md(ymd(new Date(a.at)))}${a.hidden ? ' · <b class="bad">운영단이 숨김</b>' : ''}${owner && !end ? ` <button class="link" data-m="change" data-a="${a.id}" data-w="${a.wish}">답 고치기</button>` : ''}</p>
       <b class="mm">${esc(a.menu)}</b>${tl ? `<p class="mtrial">${esc(tl)}${a.startAt ? ` · ${md(ymd(new Date(a.startAt)))} 판매 시작` : ''}</p>` : ''}
       <p class="mstat" id="ms-${a.id}">${mstat(a)}</p>
       <p class="mfun" id="mf-${a.id}">${funnelLine(a)}</p>
@@ -518,7 +518,7 @@
         <label>판매 수<input type="number" min="0" max="999" inputmode="numeric" data-m-in="day.sold" data-a="${a.id}" value="${d.sold === 0 && !dayOf(a, date) ? '' : esc(d.sold)}" placeholder="0"></label>
         <label class="chk"><input type="checkbox" data-m-in="day.soldout" data-a="${a.id}"${d.soldout ? ' checked' : ''}> 품절</label>
         ${d.soldout ? `<label class="wide">품절 시각<input type="time" data-m-in="day.soldoutAt" data-a="${a.id}" value="${esc(d.soldoutAt || '')}"></label>` : ''}
-        <button class="plus" data-m="plus" data-a="${a.id}">＋ 바람 보고 왔어요 <b id="pc-${a.id}">${d.came || 0}</b></button></div>
+        <button class="plus" data-m="plus" data-a="${a.id}">＋ 의견 보고 왔어요 <b id="pc-${a.id}">${d.came || 0}</b></button></div>
       ${det(a.id, 'prep', '내일 만들 양', prepBox(a, d))}
       ${det(a.id, 'flow', '언제 얼마나 팔렸나', flowBox(a))}
       ${ing.isNew ? det(a.id, 'order', '새 재료 주문할 양', orderBox(a)) : ''}
@@ -585,10 +585,10 @@
   function notesBox(c, a) {
     const L = notesOf(a), key = JSON.stringify(L.map(n => n.id)), ai = a.aiEcho && a.aiEcho.key === key ? a.aiEcho.out : null, w = wishById(a.wish);
     if (!L.length) return '<p class="fine">「가 봤어요」를 누른 시민이 한 줄을 남기면 여기에 모여요(모두에게 공개 · 사장님은 지울 수 없고 운영단이 신고를 처리해요).</p>';
-    return `${w ? `<p class="fine">처음 바람: 「${esc(w.title)}」 — ${esc(w.why)}</p>` : ''}<ol class="notes">${L.map((n, i) => `<li id="nt-${a.id}-${i + 1}">${esc(n.t)} <small>${md(ymd(new Date(n.at)))}</small></li>`).join('')}</ol>
-      ${ai ? `<div class="mline aiout">${ai.same.map(x => `<p><b>반복된 반응</b> ${esc(x.t)} <small>${x.refs.map(n => `#${n}`).join(' ')}</small></p>`).join('')}${ai.gap ? `<p><b>바람과 어긋난 점</b> ${esc(ai.gap.t)} <small>${ai.gap.refs.map(n => `#${n}`).join(' ')}</small></p>` : ''}<p><b>다음 주 해 볼 일</b> ${esc(ai.try)} ${aiTag(true)}</p>
+    return `${w ? `<p class="fine">처음 의견: 「${esc(w.title)}」 — ${esc(w.why)}</p>` : ''}<ol class="notes">${L.map((n, i) => `<li id="nt-${a.id}-${i + 1}">${esc(n.t)} <small>${md(ymd(new Date(n.at)))}</small></li>`).join('')}</ol>
+      ${ai ? `<div class="mline aiout">${ai.same.map(x => `<p><b>반복된 반응</b> ${esc(x.t)} <small>${x.refs.map(n => `#${n}`).join(' ')}</small></p>`).join('')}${ai.gap ? `<p><b>의견과 어긋난 점</b> ${esc(ai.gap.t)} <small>${ai.gap.refs.map(n => `#${n}`).join(' ')}</small></p>` : ''}<p><b>다음 주 해 볼 일</b> ${esc(ai.try)} ${aiTag(true)}</p>
         ${c.mode !== 'teamOff' ? `<button class="cta2 sm" data-m="echotry" data-a="${a.id}">이걸로 한 가지 바꾸기</button>` : ''}</div>`
-        : L.length >= 3 ? `<button class="cta2 sm" data-m="aiecho" data-a="${a.id}"${ui.busy['echo' + a.id] ? ' disabled' : ''}>${ui.busy['echo' + a.id] ? 'AI가 읽는 중…' : 'AI로 바람과 맞대 보기'}</button>${ui.fail['echo' + a.id] ? ' <small class="fine">지금은 AI가 답하지 않아 목록만 보여 드려요.</small>' : ''}` : '<p class="fine">한 줄이 3개 이상 모이면 처음 바람과 맞대어 정리해요.</p>'}`;
+        : L.length >= 3 ? `<button class="cta2 sm" data-m="aiecho" data-a="${a.id}"${ui.busy['echo' + a.id] ? ' disabled' : ''}>${ui.busy['echo' + a.id] ? 'AI가 읽는 중…' : 'AI로 의견과 맞대 보기'}</button>${ui.fail['echo' + a.id] ? ' <small class="fine">지금은 AI가 답하지 않아 목록만 보여 드려요.</small>' : ''}` : '<p class="fine">한 줄이 3개 이상 모이면 처음 의견과 맞대어 정리해요.</p>'}`;
   }
   function tweakBox(c, a) {
     const L = a.changes || [], cur = L.find(x => x.state === '진행 중'), canEdit = c.mode === 'owner' || c.mode === 'team';
@@ -622,7 +622,7 @@
     return `<div class="msum"><p class="kick">시험 판매 ${md(t.from)}~${md(t.to)} ${today() > t.to ? '끝' : '정리'} — 남길까 · 접을까</p>
       <dl class="mdl"><dt>판매한 날</dt><dd>${sx.soldDays}일 · 누적 ${sx.sold}${price ? ` · 시험 기간 안 시험 가격 × 판매 ${fmt(soldT * price, '원')}` : ''}</dd>
         <dt>품절 날</dt><dd>${D.filter(d => d.soldout).length}일 · 평균 남은 양 ${lf.length ? fmt(mean(lf.map(d => +d.left)), (a.ing || {}).unit || '') : '-'}</dd>
-        <dt>손님 고리</dt><dd>먹어보고 싶어요 ${f.wants} → 보여 주기 ${f.shows} → 가 봤어요 ${f.went} → 바람 보고 온 손님 ${f.came}</dd>
+        <dt>손님 고리</dt><dd>먹어보고 싶어요 ${f.wants} → 보여 주기 ${f.shows} → 가 봤어요 ${f.went} → 의견 보고 온 손님 ${f.came}</dd>
         <dt>가 본 시민</dt><dd>한 줄 ${notesOf(a).length}개${ech && ech.same[0] ? ` · 반복된 반응 「${esc(ech.same[0].t)}」` : ''}</dd>
         <dt>바꾼 것</dt><dd>${(a.changes || []).map(x => `「${esc(x.what)}」 ${esc(x.state)}`).join(' · ') || '없음'}</dd></dl>
       ${c.mode === 'owner' ? `<div class="k2nav"><button class="cta2 sm" data-m="outcome" data-a="${a.id}" data-v="접기">접기 (시민에게 「끝났어요」)</button><button class="cta2 sm" data-m="outcome" data-a="${a.id}" data-v="늘리기">기간 1주 늘리기 [가정]</button><button class="cta sm" data-m="outcome" data-a="${a.id}" data-v="정식">정식 메뉴로</button></div>` : ''}</div>`;
@@ -630,22 +630,22 @@
   function midCol(c, s) {
     const L = myAnswers(s);
     return `<section class="mcol"><h3>답한 메뉴 <small>${L.length}개 · 하루 한 줄</small></h3>
-      ${L.map(a => mcard(c, s, a)).join('') || '<p class="emptyw">아직 답한 메뉴가 없어요. 왼쪽 근처 바람에 [답하기]를 눌러 보세요.</p>'}
-      <p class="fine">「바람 보고 온 손님」은 시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 보여 줄 때 세요. 그 화면의 [사장님 확인]에 위의 「오늘 손님 확인 번호」를 넣으면 확인된 손님으로 따로 남고, 바쁠 땐 여기 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.</p></section>`;
+      ${L.map(a => mcard(c, s, a)).join('') || '<p class="emptyw">아직 답한 메뉴가 없어요. 왼쪽 근처 의견에 [답하기]를 눌러 보세요.</p>'}
+      <p class="fine">「의견 보고 온 손님」은 시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 보여 줄 때 세요. 그 화면의 [사장님 확인]에 위의 「오늘 손님 확인 번호」를 넣으면 확인된 손님으로 따로 남고, 바쁠 땐 여기 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.</p></section>`;
   }
 
   function areaBlock(s) {
     const ar = area(s);
     if (!ar) return `<div id="marea"><p class="emptyw">가게 설정에서 상권 비교에 쓸 업종과 위치를 고르면 계산해요.</p></div>`;
     const ak = areaKey(s, ar), ln = s.area && s.area.key === ak ? s.area : ui.area && ui.area.key === ak ? ui.area : null;
-    const base = `같은 업종(${s.sub}) ${ar.before}곳 → ${ar.now}곳, 사라진 업소 ${ar.goneAll}곳${ar.vac.find(v => v.w) ? ` · 근처 빈칸에 「${ar.vac.find(v => v.w).w.title}」 바람이 있어요` : ''}`;
+    const base = `같은 업종(${s.sub}) ${ar.before}곳 → ${ar.now}곳, 사라진 업소 ${ar.goneAll}곳${ar.vac.find(v => v.w) ? ` · 근처 빈칸에 「${ar.vac.find(v => v.w).w.title}」 의견이 있어요` : ''}`;
     const vacW = ar.vac.filter(v => v.w).sort((a, b) => store.likes(b.w) - store.likes(a.w));
     return `<div id="marea">
       <p class="mline aiout">${ln ? `${esc(ln.line || base)} ${aiTag(ln.ai && !!ln.line)}` : `<small class="busy">AI가 한 줄로 푸는 중…</small>`}</p>
       <dl class="mdl"><dt>같은 업종</dt><dd><b>${ar.before} → ${ar.now}곳</b> <small>${esc(s.sub)} · 우리 가게는 빼고 공공데이터에 있는 업소 · 새로 ${ar.born} · 사라짐 ${ar.goneSame}</small></dd>
         <dt>사라진 업소</dt><dd><b>${ar.goneAll}곳</b> ${ar.goneSubs.length ? `<small>${ar.goneSubs.slice(0, 5).map(([k, n]) => `${esc(k)} ${n}`).join(' · ')}${ar.goneSubs.length > 5 ? ` 외 ${ar.goneSubs.length - 5}종` : ''}</small>` : ''}</dd>
-        <dt>근처 빈칸</dt><dd><b>${ar.vac.length}곳</b> ${vacW.length ? `<small>바람 1위 「${esc(vacW[0].w.title)}」 ♥${store.likes(vacW[0].w)}</small>` : '<small>바람은 아직 없음</small>'}</dd></dl>
-      ${vacW.length ? `<button class="cta2 sm" data-m="ans" data-w="${vacW[0].w.id}">이 빈칸 바람에 답하기 ←</button>` : ''}
+        <dt>근처 빈칸</dt><dd><b>${ar.vac.length}곳</b> ${vacW.length ? `<small>의견 1위 「${esc(vacW[0].w.title)}」 ♥${store.likes(vacW[0].w)}</small>` : '<small>의견은 아직 없음</small>'}</dd></dl>
+      ${vacW.length ? `<button class="cta2 sm" data-m="ans" data-w="${vacW[0].w.id}">이 빈칸 의견에 답하기 ←</button>` : ''}
     </div>`;
   }
   function rightCol(c, s) {
@@ -662,7 +662,7 @@
     const subsAll = M.subs.map((n, i) => ({ n, c: cnt[i] || 0 })).filter(x => x.c).sort((a, b) => b.c - a.c);
     const sug = subsAll.filter(x => tk.some(k => x.n.split(/[\/ ]/).some(p => p && (p.includes(k) || k.includes(p)))));
     const pt = ptOf(s);
-    return `<section class="ocard k1"><div class="ohead"><h2>가게 설정</h2><p class="was">근처 바람 · 상권 변화를 계산하는 데 써요. 가게 이름 · 메뉴 이름은 답을 올릴 때 시민에게 보여요.</p></div>
+    return `<section class="ocard k1"><div class="ohead"><h2>가게 설정</h2><p class="was">근처 의견 · 상권 변화를 계산하는 데 써요. 가게 이름 · 메뉴 이름은 답을 올릴 때 시민에게 보여요.</p></div>
       <div class="k1grid"><div>
         <div class="orow"><label class="ofl">가게 이름<input data-m-in="name" value="${esc(s.name)}" maxlength="20" placeholder="예: ○○덮밥"></label>
           <label class="ofl">업종<input data-m-in="item" value="${esc(s.item)}" maxlength="20" placeholder="예: 덮밥집"></label></div>
@@ -673,7 +673,7 @@
           ${s.menus.map((m, i) => `<div class="mrow"><input data-m-in="menu.name" data-i="${i}" value="${esc(m.name)}" maxlength="20" placeholder="메뉴 ${i + 1}"><input data-m-in="menu.price" data-i="${i}" value="${esc(m.price)}" maxlength="10" placeholder="가격(선택)" inputmode="numeric">${s.menus.length > 3 ? `<button class="x2" data-m="delmenu" data-i="${i}" aria-label="메뉴 ${i + 1} 지우기">×</button>` : ''}</div>`).join('')}
           ${s.menus.length < 8 ? '<button class="link" data-m="addmenu">＋ 메뉴 더하기</button>' : ''}</fieldset>
         <label class="ofl">가격 · 행사 <small>(선택 — 답글에 가격 · 할인을 쓰려면 여기에 먼저)</small><textarea data-m-in="offer" rows="2" maxlength="80" placeholder="예: 평일 점심 덮밥 8,000원">${esc(s.offer)}</textarea></label>
-        <label class="ofl">첫 방문 혜택 <small>(선택 — 바람 보고 온 시민의 「보여 주기」 화면에 크게 보여요)</small><input data-m-in="perk" value="${esc(s.perk)}" maxlength="40" placeholder="예: 첫 방문 음료 하나"></label>
+        <label class="ofl">첫 방문 혜택 <small>(선택 — 의견 보고 온 시민의 「보여 주기」 화면에 크게 보여요)</small><input data-m-in="perk" value="${esc(s.perk)}" maxlength="40" placeholder="예: 첫 방문 음료 하나"></label>
       </div><div>
         <p class="ofl">가게 위치 <small>지도에서 가게 자리를 눌러 찍어 주세요(끌면 지도가 움직여요)</small></p>
         <div class="k1box"><div class="map k1map" id="k1map"></div></div>
@@ -682,7 +682,7 @@
         <div class="ochips">${LM.map(l => `<button data-m="lm" data-v="${esc(l.name)}">${esc(l.name)} 근처</button>`).join('')}</div>
       </div></div>
       <p class="err" id="merr" hidden></p>
-      <div class="onav">${s.setup ? '<button class="cta2" data-m="v" data-v="k">← 내 가게로</button>' : '<span></span>'}<button class="cta" data-m="save1">${s.setup ? '설정 저장' : '저장하고 근처 바람 보기 →'}</button></div></section>`;
+      <div class="onav">${s.setup ? '<button class="cta2" data-m="v" data-v="k">← 내 가게로</button>' : '<span></span>'}<button class="cta" data-m="save1">${s.setup ? '설정 저장' : '저장하고 근처 의견 보기 →'}</button></div></section>`;
   }
 
   function k4(c, s) {
@@ -694,7 +694,7 @@
       <h3 style="margin-top:16px">이번 달(${cur.replace('-', '.')}) 매출 구간 <small>월 1회 · 사장님이 직접 고름 · 구간 경계 [가정]</small></h3>
       <div class="ochips">${BANDS.map(b => `<button class="${mo.band === b ? 'on' : ''}" data-m="band" data-v="${esc(b)}">${esc(b)}</button>`).join('')}</div>
       <h3 style="margin-top:16px">운영단에 가는 월 집계 미리 보기</h3>
-      <div class="tblwrap"><table class="otable"><thead><tr><th>달</th><th>영업 일수</th><th>매출 구간</th><th>답 수</th><th>판매 일수</th><th>누적 판매</th><th>바람 보고 온 손님</th><th>바꾼 것</th><th>유지</th><th>시험 결과</th></tr></thead>
+      <div class="tblwrap"><table class="otable"><thead><tr><th>달</th><th>영업 일수</th><th>매출 구간</th><th>답 수</th><th>판매 일수</th><th>누적 판매</th><th>의견 보고 온 손님</th><th>바꾼 것</th><th>유지</th><th>시험 결과</th></tr></thead>
         <tbody>${rows.map(r => `<tr><td>${r.ym.replace('-', '.')}${r.alive ? ` <small>${esc(r.alive)}</small>` : ''}</td>${cell(r.open)}${cell(r.band)}${cell(r.answers)}${cell(r.soldDays)}${cell(r.sold)}${cell(r.came)}${cell(r.changes)}${cell(r.kept)}${cell(r.outcome)}</tr>`).join('')}</tbody></table></div>
       <div class="onav"><button class="cta2" data-m="v" data-v="k">← 내 가게로</button><span></span></div></section>`;
   }
@@ -702,7 +702,7 @@
   function k5(c, s) {
     const ap = appOf(s), t = s.team;
     if (!ap || ap.result !== 'yes') return `<section class="ocard"><div class="ohead"><h2>학생 팀</h2><p class="was">동행 프로젝트에 선정된 가게가 학기 중에 학생 팀(4명 + 지도교수)을 초대해요. ${ap ? (ap.result === 'no' ? '이번 기수에는 선정되지 않았어요. 「내 가게」는 똑같이 쓰고, 같은 기록으로 함께 살펴봐요.' : '지원서가 운영단 심사 중이에요.') : '아직 지원서가 없어요.'}</p></div>
-      <p class="fine">「근처 바람으로 메뉴 실험」은 학생 팀 과제 후보예요(메뉴 설계 · 답글 · 기록 양식 — 식품영양 · 경영 · 미디어).</p>
+      <p class="fine">「근처 의견으로 메뉴 실험」은 학생 팀 과제 후보예요(메뉴 설계 · 답글 · 기록 양식 — 식품영양 · 경영 · 미디어).</p>
       <div class="onav"><button class="cta2" data-m="v" data-v="k">← 내 가게로</button>${ap ? '<span></span>' : '<button class="cta" data-act="owner">동행 프로젝트 지원하기 →</button>'}</div></section>`;
     const teamOps = (st.teams[ap.id] || { members: [] }).members;
     const done = t.checks.every(Boolean), handed = !!t.handedAt, after = handed ? myAnswers(s).filter(a => a.at > t.handedAt).length : 0;
@@ -712,7 +712,7 @@
       <div class="k1find"><input id="k5id" placeholder="학생 아이디로 초대" maxlength="20"${handed ? ' disabled' : ''}><button class="cta2 sm" data-m="inviteid"${handed ? ' disabled' : ''}>초대</button></div>
       ${t.members.length ? `<h3>초대한 학생</h3><div class="tlist">${t.members.map((m, i) => `<div class="trow"><span><b>${esc(m.name)}</b> <small>@${esc(m.uid)}${m.major ? ' · ' + esc(m.major) : ''}</small></span>${m.on ? `<button class="cta2 sm" data-m="revoke" data-i="${i}">권한 끄기</button>` : '<small>권한 꺼짐</small>'}</div>`).join('')}</div>` : ''}
       <label class="ofl" style="max-width:260px">학기 끝 <input type="date" data-m-in="team.until" value="${esc(t.until)}"${handed ? ' disabled' : ''}></label>
-      <h3 style="margin-top:16px">인수인계 체크 4개 <small>학생이 떠나도 사장님이 혼자 다음 바람에 답할 수 있게</small></h3>
+      <h3 style="margin-top:16px">인수인계 체크 4개 <small>학생이 떠나도 사장님이 혼자 다음 의견에 답할 수 있게</small></h3>
       <div class="checks">${CHECKS.map((x, i) => `<label class="chk1${t.checks[i] ? ' on' : ''}"><input type="checkbox" data-m-in="team.check" data-i="${i}"${t.checks[i] ? ' checked' : ''}${handed ? ' disabled' : ''}> ${esc(x)}${facts[i] ? ` <small>${esc(facts[i])}</small>` : ''}</label>`).join('')}</div>
       <p class="fine"><button class="link" data-m="guide">사용법 한 장 보기 · 인쇄</button> — 학생 팀이 사장님께 남기는 「내 가게」 사용법이에요.</p>
       ${handed ? `<div class="okpost"><p class="kick">인수인계 끝 · ${ymd(new Date(t.handedAt))}</p><p>학생 권한이 모두 꺼졌어요. 그 뒤 사장님이 혼자 올린 답 <b>${after}개</b>.</p></div>`
@@ -721,15 +721,15 @@
   }
 
   // 과제 1-2 ② 「도입하고 계속 쓰게」: 쓰는 법 · 비용 · 교육 · 막힐 때 (설계서 §8)
-  const helpCard = s => `<section class="mhelp"><div><b>쓰는 법</b><ol><li>근처 바람에 「우리 가게에서 해 볼게요」라고 답해요</li><li>알림을 받은 손님이 가게에서 화면을 보여 주면 확인해요</li><li>답한 메뉴를 하루 한 줄 적어요 — 분기마다 상권 변화도 와요</li></ol></div>
+  const helpCard = s => `<section class="mhelp"><div><b>쓰는 법</b><ol><li>근처 의견에 「우리 가게에서 해 볼게요」라고 답해요</li><li>알림을 받은 손님이 가게에서 화면을 보여 주면 확인해요</li><li>답한 메뉴를 하루 한 줄 적어요 — 분기마다 상권 변화도 와요</li></ol></div>
       <div><b>비용 · 교육</b><p>동행 프로젝트 선정 가게와 함께 살펴보는 가게는 무료 [제안]. AI 비용은 운영단 예산으로 [확인 필요]. 선정 가게는 학생 팀이 한 학기 같이 쓰고 사용법 한 장을 남겨요.</p></div>
       <div><b>막히면</b><p>오른쪽 아래 빈칸 도우미에게 물어보세요. 기록이 한 달 넘게 끊기면 「지금 영업 중이세요?」를 먼저 여쭤봐요. <button class="link" data-m="guide">사용법 한 장</button></p></div></section>`;
   const guideHTML = () => `<div class="guide"><h3>「내 가게」 사용법 한 장</h3><ol>
       <li><b>가게 설정</b> — 가게 이름 · 업종 · 메뉴 3개 이상 · 지도에서 위치. 가격 · 행사와 첫 방문 혜택은 여기에 적은 것만 답글에 쓸 수 있어요.</li>
-      <li><b>근처 바람에 답하기</b> — 가게 150m(없으면 300m) 안 빈칸 바람을 보고 [답하기]. AI가 「채울 수 있나 · 메뉴 · 답글」 초안을 내면 고쳐서 올려요. 연락처 · 링크 · 남 깎아내리는 말은 안 올라가요.</li>
+      <li><b>근처 의견에 답하기</b> — 가게 150m(없으면 300m) 안 빈칸 의견을 보고 [답하기]. AI가 「채울 수 있나 · 메뉴 · 답글」 초안을 내면 고쳐서 올려요. 연락처 · 링크 · 남 깎아내리는 말은 안 올라가요.</li>
       <li><b>손님 확인</b> — 알림을 받은 시민이 「가게에서 이 화면 보여 주기」를 보여 주면 그 화면의 [사장님 확인]을 누르거나 답한 메뉴 카드의 [＋]를 눌러요.</li>
       <li><b>하루 한 줄</b> — 판매 수 · 품절. 판매한 날이 3일 넘으면 내일 준비량이 나와요. 안 팔리면 「끝남」으로 접어요(시민에게 「끝났어요」).</li>
-      <li><b>상권 변화</b> — 분기마다 가게 100m 안 같은 업종 · 사라진 업소 · 근처 빈칸이 바뀌어요. 근처 빈칸 바람에도 답할 수 있어요.</li>
+      <li><b>상권 변화</b> — 분기마다 가게 100m 안 같은 업종 · 사라진 업소 · 근처 빈칸이 바뀌어요. 근처 빈칸 의견에도 답할 수 있어요.</li>
       <li><b>이번 달 확인</b> — 동행 프로젝트 가게는 달마다 매출 구간을 골라요. 운영단에는 구간과 횟수만 가요.</li></ol>
       <button class="cta" data-act="printguide">인쇄하기</button></div>`;
   function render() {
@@ -776,7 +776,7 @@
       const wid = ui.pending, m = reachable(c.s, wid); ui.pending = null;
       if (m <= 300) ui.extra.add(wid);
       const x = nearList(c.s).list.find(y => y.w.id === wid);
-      if (x) openAnswer(c, x); else { ui.msg = `그 바람은 가게에서 약 ${roundDist(m)}m라 답할 수 없어요(가게 300m 안 바람만 답해요). 위치가 맞는지 가게 설정에서 확인해 주세요.`; rerender(); }
+      if (x) openAnswer(c, x); else { ui.msg = `그 의견은 가게에서 약 ${roundDist(m)}m라 답할 수 없어요(가게 300m 안 의견만 답해요). 위치가 맞는지 가게 설정에서 확인해 주세요.`; rerender(); }
     }
     if (ui.open) { const el2 = document.getElementById('nw-' + ui.open); if (el2 && ui.scrollTo) { el2.scrollIntoView({ block: 'center' }); ui.scrollTo = false; } }
   }
@@ -915,7 +915,7 @@
         ui.sum[a.id] = false; db.putAnswer(a); return keepScroll(() => A.refresh());
       }
       case 'keep': { if (!owner) return; const a = db.answer(b.dataset.a); if (a && a.state !== '판매 중') { a.state = '판매 중'; db.putAnswer(a); } A.toast('계속 팔아요 · 「판매 중」'); return keepScroll(() => A.refresh()); }
-      case 'change': { if (reachable(s, b.dataset.w) <= 300) ui.extra.add(b.dataset.w); const x = nearList(s).list.find(y => y.w.id === b.dataset.w); if (x) openAnswer(c, x); else A.toast('그 바람이 이제 가게 300m 밖이에요'); return; }
+      case 'change': { if (reachable(s, b.dataset.w) <= 300) ui.extra.add(b.dataset.w); const x = nearList(s).list.find(y => y.w.id === b.dataset.w); if (x) openAnswer(c, x); else A.toast('그 의견이 이제 가게 300m 밖이에요'); return; }
       case 'plus': {
         const a = db.answer(b.dataset.a); if (!a) return;
         const date = ui['date' + a.id] || today(), d = dayOf(a, date, true); d.came = (d.came || 0) + 1; db.putAnswer(a); refreshNums(a);
@@ -956,12 +956,12 @@
       });
     } else local();
   }
-  // 답 올리기: 점검 → 저장(한 바람에 가게당 답 1개, 있으면 고치기) → 바람 쓴 사람 · 공감한 사람 알림
+  // 답 올리기: 점검 → 저장(한 의견에 가게당 답 1개, 있으면 고치기) → 의견 쓴 사람 · 공감한 사람 알림
   function post(c, wid) {
     if (c.mode !== 'owner') return;
     const s = c.s, x = nearList(s).list.find(y => y.w.id === wid), d = s.drafts[wid];
     if (!x || !d) return;
-    if (x.m > 300) return merr('가게 300m 안 바람에만 답할 수 있어요', 'k2err-' + wid);
+    if (x.m > 300) return merr('가게 300m 안 의견에만 답할 수 있어요', 'k2err-' + wid);
     const bad = checkReply(d, s); if (bad) return merr(bad, 'k2err-' + wid);
     if (d.trial && d.trial.on && d.trial.to && d.trial.from && d.trial.to < d.trial.from) return merr('시험 판매 끝나는 날이 시작일보다 앞이에요', 'k2err-' + wid);
     const added = A.addRole('open');   // 백엔드 전: 올릴 때 「기존 사장님」 역할을 더함(사업자등록 확인은 백엔드)
@@ -973,20 +973,20 @@
     if (s.team.members.some(m => m.on)) a.byTeam = true;
     db.putAnswer(a); delete s.drafts[wid]; db.putStore(s);   // 올린 뒤 초안은 지움(다음 고치기는 저장된 답에서 다시 엶)
     ui.open = null;
-    const n = BKon() ? 0 : recipients(x.w, s.uid);   // 서버 모드: 받는 사람 수는 서버가 셈(바람 쓴 회원 + 공감한 회원)
-    A.toast(old ? '고친 답을 올렸어요' : `답을 올렸어요 · ${n ? `바람을 쓰거나 공감한 회원 ${n}명에게 알림이 가요` : BKon() ? '바람을 쓰거나 공감한 회원에게 알림이 가요' : '이 바람을 쓰거나 공감한 회원이 생기면 알려요'}${added ? ' · 기존 사장님 역할을 더했어요' : ''}`);
+    const n = BKon() ? 0 : recipients(x.w, s.uid);   // 서버 모드: 받는 사람 수는 서버가 셈(의견 쓴 회원 + 공감한 회원)
+    A.toast(old ? '고친 답을 올렸어요' : `답을 올렸어요 · ${n ? `의견을 쓰거나 공감한 회원 ${n}명에게 알림이 가요` : BKon() ? '의견을 쓰거나 공감한 회원에게 알림이 가요' : '이 의견을 쓰거나 공감한 회원이 생기면 알려요'}${added ? ' · 기존 사장님 역할을 더했어요' : ''}`);
     keepScroll(() => A.refresh());
   }
 
   // ---------------- 시민 쪽 (app.js가 부름) ----------------
-  // 알림: 내가 쓴 · 공감한 바람에 답이 옴 / 「먹어보고 싶어요」 누른 답이 판매를 시작함 · 내일 끝남 / 정식 메뉴가 됨 / 끝남
+  // 알림: 내가 쓴 · 공감한 의견에 답이 옴 / 「먹어보고 싶어요」 누른 답이 판매를 시작함 · 내일 끝남 / 정식 메뉴가 됨 / 끝남
   function alertsFor(u) {
     if (!u) return [];
     const mineW = new Set(A.myWishes().map(w => w.id)), wants = st.wants[u.id] || {}, out = [], tm = addDays(today(), 1), srvAl = new Set(BKon() ? (window.BK.srvAlerts || []).filter(x => x.kind === 'ANSWER_POSTED').map(x => x.answerId) : []);
     for (const a of db.answers()) {
       if (a.hidden) continue;
       const w = wishById(a.wish); if (!w) continue;
-      const why = mineW.has(a.wish) ? 'wrote' : (store.liked ? store.liked(w) : st.liked[a.wish]) ? 'liked' : srvAl.has(a.srv) ? 'wrote' : null, wanted = !!wants[a.id];   // srvAl: 서버가 보낸 내 알림(다른 기기에서 쓴 바람)   // 서버 모드에서도 store.liked
+      const why = mineW.has(a.wish) ? 'wrote' : (store.liked ? store.liked(w) : st.liked[a.wish]) ? 'liked' : srvAl.has(a.srv) ? 'wrote' : null, wanted = !!wants[a.id];   // srvAl: 서버가 보낸 내 알림(다른 기기에서 쓴 의견)   // 서버 모드에서도 store.liked
       if (!why && !wanted) continue;
       const base = { a, w, why: why || 'wanted', self: a.uid === u.id }, t = trialOf(a), add = (kind, key, at) => out.push(Object.assign({ kind, key: a.id + ':' + key, at }, base));
       if (why) add('answer', 'ans', a.at);
@@ -1005,17 +1005,17 @@
     if (u && u.id !== a.uid && !db.got('shows', u.id, aid)) { db.mark('shows', u.id, aid, Date.now()); a.shows = (a.shows || 0) + 1; db.putAnswer(a); }
     const done = u && db.got('visits', u.id, aid + ':' + today());
     return `<div class="showcard${end ? ' end' : ''}">
-      ${end ? '<p class="send">이 메뉴는 끝났어요</p>' : '<p class="sk">동성로 빈칸 · 바람 보고 왔어요</p>'}
+      ${end ? '<p class="send">이 메뉴는 끝났어요</p>' : '<p class="sk">동성로 빈칸 · 의견 보고 왔어요</p>'}
       <p class="ss">${esc(a.store)}</p><p class="si">${esc(a.item)} · ${esc(s.id ? placeOf(s) : (a.pt && a.pt.label) || '')}</p>
       <p class="sm">${esc(a.menu)}</p>
       <p class="sr">「${esc(a.reply)}」</p>
-      ${w ? `<p class="sw">바람 「${esc(w.title)}」에 답한 메뉴</p>` : ''}
+      ${w ? `<p class="sw">의견 「${esc(w.title)}」에 답한 메뉴</p>` : ''}
       ${!end && s.perk ? `<div class="sperk"><b>첫 방문 혜택</b><span>${esc(s.perk)}</span></div>` : ''}
       ${end ? '' : u && u.id !== a.uid ? `<div class="svisit">${done ? '<b>✓ 오늘 사장님이 확인했어요</b>' : `<div class="vrow"><input id="vcode-${esc(aid)}" inputmode="numeric" maxlength="4" placeholder="확인 번호 4자리"><button class="cta" data-act="visitok" data-id="${esc(aid)}">사장님 확인</button></div><small>가게에서 사장님이 오늘 손님 확인 번호를 넣어 주세요 (하루 한 번)</small><p class="err" id="verr-${esc(aid)}" hidden></p>`}</div>` : ''}
       ${end ? '' : `<button class="link" data-act="storemap" data-id="${esc(aid)}">지도에서 가게 보기</button>`}
       <p class="fine">이름 · 연락처는 사장님께 가지 않아요.</p></div>`;
   }
-  // 「사장님 확인」: 시민 화면에서 사장님이 누르면 그날 「바람 보고 온 손님」 +1 (시민 1명 · 답 1개당 하루 한 번)
+  // 「사장님 확인」: 시민 화면에서 사장님이 누르면 그날 「의견 보고 온 손님」 +1 (시민 1명 · 답 1개당 하루 한 번)
   function confirmVisit(aid, code) {
     const u = st.user, a = db.answer(aid); if (!u || !a || a.state === '끝남') return '';
     if (a.uid === u.id) return '내 가게 답이에요 — 손님 화면에서 눌러 주세요';
@@ -1024,17 +1024,17 @@
     db.mark('visits', u.id, key, Date.now());
     const d = dayOf(a, today(), true); d.came = (d.came || 0) + 1; d.ok = (d.ok || 0) + 1; db.putAnswer(a);
     if (a.remote && BKon() && a.state === '판매 중' && !db.got('went', u.id, aid)) { db.mark('went', u.id, aid, Date.now()); a.went = (a.went || 0) + 1; window.BK.went(a.srv).catch(e => console.warn('방문 서버 저장 실패:', e.message)); }   // 다른 기기 가게: 서버 「가 봤어요」로 사장님 화면에 셈
-    return a.remote ? '확인했어요 · 사장님 화면의 「가 봤어요」에 남았어요' : '확인했어요 · 「바람 보고 온 손님」에 하나 더했어요';
+    return a.remote ? '확인했어요 · 사장님 화면의 「가 봤어요」에 남았어요' : '확인했어요 · 「의견 보고 온 손님」에 하나 더했어요';
   }
-  // 시민 지도: 근처 바람에 답하고 지금 하는(끝나지 않은) 가게 핀
+  // 시민 지도: 근처 의견에 답하고 지금 하는(끝나지 않은) 가게 핀
   function storePins() {
     const live = db.answers().filter(a => !a.hidden && a.state !== '끝남'), ids = [...new Set(live.map(a => a.sid))];
     return ids.map(id => db.stores().find(s => s.id === id)).filter(s => s && s.setup && ptOf(s)).map(s => {
       const n = live.filter(a => a.sid === s.id).length, p = ptOf(s);
-      return { id: 'st:' + s.id, x: p.x, y: p.y, cls: 'store', z: 3000, html: `<span>${esc(s.name || s.item)}</span>`, label: `${s.name || s.item} · 근처 바람 ${n}개에 답한 가게` };
+      return { id: 'st:' + s.id, x: p.x, y: p.y, cls: 'store', z: 3000, html: `<span>${esc(s.name || s.item)}</span>`, label: `${s.name || s.item} · 근처 의견 ${n}개에 답한 가게` };
     }).concat(ids.filter(id => /^srv:/.test(id) && !db.stores().some(s => s.srvId && 'srv:' + s.srvId === id)).map(id => {   // 서버에서 온 다른 가게(이 브라우저에서 만든 내 가게는 위에서 그림)
       const L = live.filter(a => a.sid === id), a = L[0];
-      return a && a.pt ? { id: 'st:' + id, x: a.pt.x, y: a.pt.y, cls: 'store', z: 3000, html: `<span>${esc(a.store)}</span>`, label: `${a.store} · 근처 바람 ${L.length}개에 답한 가게` } : null;
+      return a && a.pt ? { id: 'st:' + id, x: a.pt.x, y: a.pt.y, cls: 'store', z: 3000, html: `<span>${esc(a.store)}</span>`, label: `${a.store} · 근처 의견 ${L.length}개에 답한 가게` } : null;
     }).filter(Boolean));
   }
   function pickStore(sid) {

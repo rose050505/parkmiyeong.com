@@ -1,4 +1,4 @@
-// 팀 백엔드(V2V, Spring Boot · Render) 연결: 로그인 · 가입, 빈칸 짝짓기, 바람(의견) · 공감.
+// 팀 백엔드(V2V, Spring Boot · Render) 연결: 로그인 · 가입, 빈칸 짝짓기, 의견(의견) · 공감.
 // 서버가 안 되거나 비어 있으면 on = false → 사이트는 지금처럼 브라우저 저장으로 돈다. 늦게 깨어나면(Render 무료 서버) 그때 바꿔 탄다.
 // 주소 바꾸기(개발): localStorage.setItem('binkan.api', 'http://127.0.0.1:8081')
 (function () {
@@ -18,7 +18,7 @@
   }
   const token = () => (window.APP && APP.st.user && APP.st.user.token) || null;
 
-  // 서버 의견 → 사이트 바람 모양. 처음 바람(운영팀이 올린 것)은 seed.js와 짝지어 원래 공감 수 · 쓴 사람 표시를 이어 씀
+  // 서버 의견 → 사이트 의견 모양. 처음 의견(운영팀이 올린 것)은 seed.js와 짝지어 원래 공감 수 · 쓴 사람 표시를 이어 씀
   function toWish(o, sid) {
     const seed = window.SEED.wishes.find(s => s.space === sid && s.title === o.desiredBusiness);
     return { id: seed ? seed.id : 'o' + o.id.replace(/-/g, ''), op: o.id, seedId: seed ? seed.id : null, seed: !!seed, space: sid, cat: o.category || (seed && seed.cat) || '기타', title: o.desiredBusiness, why: o.reason || '—',
@@ -36,7 +36,7 @@
     BK.wishes = next;
     await loadAnswers();
   }
-  // 가게가 주민 바람에 단 답(PR #5). 서버가 아직 모르면(404 등) 조용히 빈 목록
+  // 가게가 주민 의견에 단 답(PR #5). 서버가 아직 모르면(404 등) 조용히 빈 목록
   async function loadAnswers() {
     const L = BK.wishes.slice(), out = []; let i = 0;
     await Promise.all(Array.from({ length: 8 }, async () => { while (i < L.length) { const w = L[i++]; try { (await call('GET', `/api/wishes/${w.op}/answers?limit=50`)).forEach(a => out.push(a)); } catch (e) { } } }));
@@ -72,7 +72,7 @@
   };
   BK.login = async (username, password) => shape(await call('POST', '/api/auth/login', { username: username.toLowerCase(), password }));
 
-  // ---------------- 바람 · 공감 ----------------
+  // ---------------- 의견 · 공감 ----------------
   BK.add = async (w) => {
     const m = BK.spaces[w.space]; if (!m) throw new Error('서버에 없는 빈칸');
     const j = await call('POST', `/api/buildings/${m.b}/opinions`, { desiredBusiness: w.title, reason: w.why === '—' ? '' : w.why, category: w.cat, vacancyId: m.v }, token());
@@ -103,7 +103,7 @@
   BK.alerts = () => call('GET', '/api/me/alerts?limit=30', null, token());
   BK.reloadAnswers = async () => { if (BK.on) { await loadAnswers(); BK.listeners.forEach(f => f()); } };
   BK.storeAnswers = sid => call('GET', `/api/stores/${sid}/answers?limit=100`, null, token());
-  // 내 알림(서버가 셈: 내가 쓴 · 공감한 바람에 가게가 답함) — 다른 기기에서 쓴 바람의 답도 알림에 뜨게
+  // 내 알림(서버가 셈: 내가 쓴 · 공감한 의견에 가게가 답함) — 다른 기기에서 쓴 의견의 답도 알림에 뜨게
   BK.srvAlerts = [];
   let freshAt = 0;
   BK.refresh = async (force) => {   // 「내 페이지」 · 「내 가게」를 열 때: 새 답 + 내 알림 다시 받기(15초에 한 번)

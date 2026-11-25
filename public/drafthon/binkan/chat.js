@@ -1,4 +1,4 @@
-// 빈칸 도우미 (챗봇) — 모든 화면 오른쪽 아래. 말로 물으면 맞는 화면으로 데려가고(길 안내), 바람 · 빈칸을 찾고, 지원사업 · 이용 방법을 답한다.
+// 빈칸 도우미 (챗봇) — 모든 화면 오른쪽 아래. 말로 물으면 맞는 화면으로 데려가고(길 안내), 의견 · 빈칸을 찾고, 지원사업 · 이용 방법을 답한다.
 // AI(assist.js · /api/binkan-assist)가 답과 할 일을 고르면 run()이 사이트 데이터로 계산해 채팅 카드로 보여 준다. AI가 안 되면 규칙(understand · answer)으로.
 (function () {
   const A = window.APP, { store, SP, M, SUP, esc, shortAddr } = A;
@@ -24,14 +24,14 @@
     if (/지원금|지원사업|혜택|보조금|대출|받을수있|정부지원|지원받/.test(t)) return { k: 'support' };
     // 「내 가게」: open 규칙(우리가게 · 장사 · 손님)보다 먼저 — 뒤에 두면 「우리 가게 근처 …」가 상담으로 먼저 걸림
     const storeCtx = /(우리|저희|내)가게|사장|장사/.test(t), trouble = /매출|손님이?줄|단골|재고|안팔|떨어/.test(t);
-    if (!trouble && ((storeCtx && /근처.{0,12}(원하|원해|원함|바라|바래|바람)/.test(t)) || /바람에답|바람답하|상권변화/.test(t) || /(^|\s)내\s*가게(\s|$|를|에|화면|열|좀|보)/.test(text))) return { k: 'mystore' };
+    if (!trouble && ((storeCtx && /근처.{0,12}(원하|원해|원함|바라|바래|바람|의견)/.test(t)) || /(의견|바람)에답|(의견|바람)답하|상권변화/.test(t) || /(^|\s)내\s*가게(\s|$|를|에|화면|열|좀|보)/.test(text))) return { k: 'mystore' };
     if (/운영중|하고있|장사|손님|매출|단골|재고|발주|리뷰|우리가게|저희가게|홍보가|안팔/.test(t)) {
       const trouble = /손님|단골|재방문|리뷰/.test(t) ? '고객 관리' : /홍보|알리|sns|인스타|모르/i.test(t) ? '홍보' : /매출|안팔|돈/.test(t) ? '매출' : /재고|발주|폐기|남아/.test(t) ? '재고' : '기타';
       return { k: 'open', trouble, item: itemOf(text) };
     }
     if (/창업|열고|열려|열어|오픈|차리|차려|개업|시작하고싶|시작해|가게를?내|해볼까|하고싶|하려고|할까/.test(t)) return { k: 'pre', item: itemOf(text) };
     if (/어디|찾아|보여/.test(t) && !/남기/.test(t)) return { k: 'find', q: text.trim() };
-    if (/바람남|남기|있었으면|있으면좋|생기면좋|원하는가게|이벤트|기프티콘|상품권/.test(t)) return { k: 'wish' };
+    if (/(의견|바람)남|남기|있었으면|있으면좋|생기면좋|원하는가게|이벤트|기프티콘|상품권/.test(t)) return { k: 'wish' };
     if (/로그인|가입|본인인증|인증/.test(t)) return { k: 'auth' };
     if (/공실|데이터|어디서|출처|정확/.test(t)) return { k: 'data' };
     if (/뭐야|뭔가요|무엇|어떻게|이용|사용법|처음|설명/.test(t)) return { k: 'howto' };
@@ -55,25 +55,25 @@
       case 'pre': {
         const known = u.item ? (sp ? 'both' : 'item') : (sp ? 'place' : null);
         if (window.OWNER.startWith({ status: 'pre', known, item: u.item, space: sp ? sp.id : null }) === false) { A.go('owner'); return R('하던 상담이 있어 그대로 열었어요(지우지 않았어요).'); } A.go('owner');
-        return R(`창업 상담으로 안내했어요.${u.item ? ` 아이템 <b>${esc(u.item)}</b>` : ''}${sp ? ` · 자리 <b>${esc(shortAddr(sp))}</b>` : ''}${known ? '를 넣어 뒀어요.' : ' 정해 둔 것(아이템 · 자리)을 골라 주세요.'} 시민 바람이 많은 빈칸을 먼저 추천해 드려요.`);
+        return R(`창업 상담으로 안내했어요.${u.item ? ` 아이템 <b>${esc(u.item)}</b>` : ''}${sp ? ` · 자리 <b>${esc(shortAddr(sp))}</b>` : ''}${known ? '를 넣어 뒀어요.' : ' 정해 둔 것(아이템 · 자리)을 골라 주세요.'} 시민 의견이 많은 빈칸을 먼저 추천해 드려요.`);
       }
       case 'support': {
         const L = SUP.list.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${esc(x.target)}</li>`).join('');
         return `${R('동성로 창업 · 가게 운영 때 볼 만한 지원이에요.')}<ul>${L}</ul>그리고 시범 사업 <b>동행 프로젝트</b>는 사장님께 시범 지원금 + 대학생 팀을 연결해요. ${btn('owner', '사장님 상담 시작')}<small>최종 자격은 공고 기관이 판단해요. (${esc(SUP.checked)} 확인)</small>`;
       }
       case 'wish':
-        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 바람을 남기는 화면을 열었어요. 시범 운영이 시작되면 공감을 많이 받은 바람에 오픈 이벤트 상품권도 걸려요.`); }
+        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 의견을 남기는 화면을 열었어요. 시범 운영이 시작되면 공감을 많이 받은 의견에 오픈 이벤트 상품권도 걸려요.`); }
         A.go('home'); A.pulse();
-        return R(`지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 바람은 공유 카드로 친구에게 보낼 수 있어요.`);
-      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 회원이 할 수 있어요. 로그인 창의 「바로 시작하기」로 바로 가입돼요(본 서비스에서는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).')} ${btn('login', '로그인 · 가입')}`;
+        return R(`지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 의견은 공유 카드로 친구에게 보낼 수 있어요.`);
+      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>의견 · 공감 · 지원서</b>만 회원이 할 수 있어요. 로그인 창의 「바로 시작하기」로 바로 가입돼요(본 서비스에서는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).')} ${btn('login', '로그인 · 가입')}`;
       case 'data': return `<small>출처</small>빈칸 ${M.meta.n_spaces}곳은 소상공인시장진흥공단 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 <b>1층 공실 후보</b>예요(같은 층에 새 업소 없음). 실제 공실인지는 현장 확인이 필요하고, 본 사업에서는 시가 상가 매물 플랫폼과 공실 정보를 연동하는 방안을 제안해요.`;
-      case 'mystore': openStore(); return R(`<b>「내 가게」</b>를 열었어요. 가게 근처(150m, 없으면 300m) 빈칸에 붙은 시민 바람을 보고 「우리 가게에서 해 볼게요」라고 답하면, 바람을 남기고 공감한 분들께 알림이 가요. 답한 메뉴 기록 · 분기 상권 변화도 같은 화면에 있어요.`);
-      case 'howto': A.go('howto'); return R(`<b>빈칸</b>(공실 후보)에 시민이 <b>바람</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 바람을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`);
+      case 'mystore': openStore(); return R(`<b>「내 가게」</b>를 열었어요. 가게 근처(150m, 없으면 300m) 빈칸에 붙은 시민 의견을 보고 「우리 가게에서 해 볼게요」라고 답하면, 의견을 남기고 공감한 분들께 알림이 가요. 답한 메뉴 기록 · 분기 상권 변화도 같은 화면에 있어요.`);
+      case 'howto': A.go('howto'); return R(`<b>빈칸</b>(공실 후보)에 시민이 <b>의견</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 의견을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`);
       case 'find': {
         if (ai && !u.q && u.item) u.q = u.item;
-        const tk = (u.q || text).replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|있어요|어디|있나요|보여줘|찾아줘)$/g, '')).filter(w => w.length >= 2 && !/^(바람|어디|있어요|있나요|보여줘|찾아줘|빈칸)$/.test(w));
+        const tk = (u.q || text).replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|있어요|어디|있나요|보여줘|찾아줘)$/g, '')).filter(w => w.length >= 2 && !/^(의견|바람|어디|있어요|있나요|보여줘|찾아줘|빈칸)$/.test(w));
         const ws = tk.length ? store.wishes().filter(w => tk.some(k => (w.title + w.cat).includes(k))).sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 4) : [];
-        if (ws.length) return `이런 바람이 있어요.<div class="crow">${ws.map(w => btn('space', `${w.title} ♥${store.likes(w)} · ${shortAddr(SP[w.space])}`, ` data-id="${esc(w.space)}"`)).join('')}</div>누르면 지도에서 그 빈칸을 열어 드려요.`;
+        if (ws.length) return `이런 의견이 있어요.<div class="crow">${ws.map(w => btn('space', `${w.title} ♥${store.likes(w)} · ${shortAddr(SP[w.space])}`, ` data-id="${esc(w.space)}"`)).join('')}</div>누르면 지도에서 그 빈칸을 열어 드려요.`;
         const ss = tk.length ? M.spaces.filter(s => tk.some(k => (s.was + s.addr).includes(k))).slice(0, 4) : [];
         if (ss.length) return `직전 업종 · 주소로 찾은 빈칸이에요.<div class="crow">${ss.map(s => btn('space', `${shortAddr(s)} · 직전 ${s.was}`, ` data-id="${s.id}"`)).join('')}</div>`;
         if (ai) return '';
@@ -87,16 +87,16 @@
     const v = A.view(), sp = v.space && SP[v.space];
     const C = { owner: ['지원금은 어떤 게 있어요?', '과제는 누가 해요?', '대학생 팀은 어떻게 뽑아요?'],
       student: ['디자인 전공인데 할 수 있는 과제 있어요?', '장학금 · 학점은 어떻게 받아요?', '창업하고 싶어요'],
-      space: [`이 자리에 창업하고 싶어요`, '여기 바람 남기고 싶어요', '받을 수 있는 지원은?'],
-      mystore: ['답을 올리면 누가 봐요?', '바람 보고 온 손님은 어떻게 세요?', '내 가게 쓰는 데 돈 들어요?', '누가 쓰는 법을 알려 줘요?'] }[v.mode]
-      || ['동성로에 디저트 카페 열고 싶어요', '우리 가게 손님이 줄었어요', '우리 가게 근처 사람들은 뭘 원해요?', '대학생인데 경력 쌓고 싶어요', '파스타 바람 어디 있어요?'];
+      space: [`이 자리에 창업하고 싶어요`, '여기 의견 남기고 싶어요', '받을 수 있는 지원은?'],
+      mystore: ['답을 올리면 누가 봐요?', '의견 보고 온 손님은 어떻게 세요?', '내 가게 쓰는 데 돈 들어요?', '누가 쓰는 법을 알려 줘요?'] }[v.mode]
+      || ['동성로에 디저트 카페 열고 싶어요', '우리 가게 손님이 줄었어요', '우리 가게 근처 사람들은 뭘 원해요?', '대학생인데 경력 쌓고 싶어요', '파스타 의견 어디 있어요?'];
     $('#chatChips').innerHTML = C.map(c => `<button class="chip ex" data-c="say" data-v="${esc(c)}">${esc(c)}</button>`).join('');
   }
   const FAQ = { '과제는 누가 해요?': '선정된 가게마다 <b>대학생 4명 + 지도교수</b>가 한 팀이에요. 과제는 사장님 상담에서 AI가 초안을 내고 사장님이 1~4개를 골라요. 세무 · 공사 · 계약처럼 학생 몫이 아닌 일은 전문가 · 기관으로 안내해요.',
     '대학생 팀은 어떻게 뽑아요?': '학생은 관심 직무 · 가능 시간 · 질문 2개로 지원하고, <b>운영단(시 + 지역 대학)이 선발 → 사장님 면담</b> 순서로 정해요. 전공 · 학년 제한은 두지 않아요.',
-    '답을 올리면 누가 봐요?': '답은 그 바람 카드 아래에 누구나 보이고, 지도 핀에도 「근처 가게가 답함」 점이 붙어요. 그 바람을 <b>남긴 분과 공감한 분</b>에게는 알림이 가고, 알림에서 「가게에서 이 화면 보여 주기」를 열 수 있어요. 답해도 바람은 닫히지 않아요.',
+    '답을 올리면 누가 봐요?': '답은 그 의견 카드 아래에 누구나 보이고, 지도 핀에도 「근처 가게가 답함」 점이 붙어요. 그 의견을 <b>남긴 분과 공감한 분</b>에게는 알림이 가고, 알림에서 「가게에서 이 화면 보여 주기」를 열 수 있어요. 답해도 의견은 닫히지 않아요.',
     '상권 변화 숫자는 어디서 나와요?': '빈칸을 찾은 것과 같은 <b>소진공 상가(상권)정보 분기 파일</b>(2026년 2분기 · 3분기)에서, 가게 100m 안 같은 업종(소분류) 업소를 분기마다 직접 세요. AI는 그 숫자를 한 줄로 풀기만 하고 숫자를 만들지 않아요.',
-    '바람 보고 온 손님은 어떻게 세요?': '시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 가게에서 보여 주면, 사장님이 그 화면의 <b>[사장님 확인]</b>에 「내 가게」 위쪽의 <b>오늘 손님 확인 번호</b>를 넣어요(확인된 손님으로 따로 셈). 바쁠 땐 답한 메뉴 카드의 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.',
+    '의견 보고 온 손님은 어떻게 세요?': '시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 가게에서 보여 주면, 사장님이 그 화면의 <b>[사장님 확인]</b>에 「내 가게」 위쪽의 <b>오늘 손님 확인 번호</b>를 넣어요(확인된 손님으로 따로 셈). 바쁠 땐 답한 메뉴 카드의 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.',
     '내 가게 쓰는 데 돈 들어요?': '동행 프로젝트에 선정된 가게와, 신청했지만 선정되지 않아 함께 살펴보는 가게는 <b>이용료가 없어요</b> [제안]. AI를 부르는 비용은 운영단 예산으로 잡는 방안이고, 학기 뒤 누가 낼지는 아직 정하는 중이에요 [확인 필요].',
     '누가 쓰는 법을 알려 줘요?': '선정 가게는 <b>학생 팀이 한 학기 같이 쓰면서</b> 사용법 한 장을 남겨요. 함께 살펴보는 가게는 <b>운영단이 첫 설정을 한 번 같이</b> 해요 [제안]. 막히면 저(빈칸 도우미)에게 물어보시거나 「내 가게」 위쪽 「사용법 한 장」을 보세요.',
     '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 장학금은 월 30만 원 [추정], 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
@@ -104,12 +104,12 @@
   // ---------------- 실시간 AI (전용 창구 /api/binkan-assist: 지시문 서버 고정, { reply, do } JSON만 받음) ----------------
   const live = () => navigator.onLine !== false;
   const ENDPOINT = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/binkan-assist' : 'https://parkmiyeong.com/api/binkan-assist';
-  let shown = [];   // 최근 채팅에 보여 준 빈칸 · 바람(번호로 가리킬 수 있게)
-  const wishLabel = w => `바람 ${w.id} 「${w.title}」 @${w.space} ${shortAddr(SP[w.space])} ♥${store.likes(w)}${w.seed ? ' (운영팀이 넣은 바람)' : ''}`;
+  let shown = [];   // 최근 채팅에 보여 준 빈칸 · 의견(번호로 가리킬 수 있게)
+  const wishLabel = w => `의견 ${w.id} 「${w.title}」 @${w.space} ${shortAddr(SP[w.space])} ♥${store.likes(w)}${w.seed ? ' (운영팀이 넣은 의견)' : ''}`;
   const spaceLabel = sp => `빈칸 ${sp.id} ${shortAddr(sp)} (직전 ${sp.was})`;
   function context() {
     const v = A.view(), sp = v.space && SP[v.space], st = A.st;
-    const screen = { home: '첫 화면(지도)', space: '빈칸 상세', write: '바람 남기기', owner: '사장님 상담', student: '대학생 동행 프로젝트', howto: '이용 방법', search: '검색 결과', mine: '내 페이지', mystore: '내 가게(근처 바람 · 답한 메뉴 · 상권 변화)', ops: '운영단 표' }[v.mode] || v.mode;
+    const screen = { home: '첫 화면(지도)', space: '빈칸 상세', write: '의견 남기기', owner: '사장님 상담', student: '대학생 동행 프로젝트', howto: '이용 방법', search: '검색 결과', mine: '내 페이지', mystore: '내 가게(근처 의견 · 답한 메뉴 · 상권 변화)', ops: '운영단 표' }[v.mode] || v.mode;
     const o = st.owner;
     return {
       screen,
@@ -139,7 +139,7 @@
   function cardRecommend(item) {
     const L = T().combos({ known: 'item', item });
     shown = L.map(c => ({ kind: 'space', id: c.space, label: spaceLabel(SP[c.space]) }));
-    return `<div class="ccard2"><b>「${esc(item)}」에 맞는 빈칸</b>${L.map((c, i) => `<div class="citem"><span class="cn">${i + 1}</span><div><b>${esc(shortAddr(SP[c.space]))}</b> <small>직전 ${esc(SP[c.space].was)}</small><ul>${c.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>${spBtns(c.space, item)}</div></div>`).join('')}<small>시민 바람 · 100m 안 같은 업종대 수로 계산</small></div>`;
+    return `<div class="ccard2"><b>「${esc(item)}」에 맞는 빈칸</b>${L.map((c, i) => `<div class="citem"><span class="cn">${i + 1}</span><div><b>${esc(shortAddr(SP[c.space]))}</b> <small>직전 ${esc(SP[c.space].was)}</small><ul>${c.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>${spBtns(c.space, item)}</div></div>`).join('')}<small>시민 의견 · 100m 안 같은 업종대 수로 계산</small></div>`;
   }
   function cardSpace(id, item) {
     const sp = SP[id]; if (!sp) return '';
@@ -153,18 +153,18 @@
     const ws = store.wishes().filter(w => tk.some(k => (w.title + w.cat + w.why).includes(k))).sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 4);
     const ss = M.spaces.filter(s => tk.some(k => (s.was + s.addr).includes(k))).slice(0, 3);
     shown = ws.map(w => ({ kind: 'wish', id: w.id, label: wishLabel(w) })).concat(ss.map(s => ({ kind: 'space', id: s.id, label: spaceLabel(s) })));
-    if (!ws.length && !ss.length) return `<div class="ccard2"><b>「${esc(q)}」</b> 바람 · 빈칸이 아직 없어요. 빈칸에 첫 바람을 남겨 보세요.</div>`;
+    if (!ws.length && !ss.length) return `<div class="ccard2"><b>「${esc(q)}」</b> 의견 · 빈칸이 아직 없어요. 빈칸에 첫 의견을 남겨 보세요.</div>`;
     const wRow = (w, i) => {
       const likeLabel = store.liked(w) ? '♥ 공감함' : '♥ 공감';
-      return '<div class="citem"><span class="cn">' + (i + 1) + '</span><div><b>' + esc(w.title) + '</b> <small>♥' + store.likes(w) + ' · ' + esc(shortAddr(SP[w.space])) + (w.seed ? ' · 운영팀 바람' : '') + '</small><div class="cbrow">' + btn('like', likeLabel, ' data-id="' + w.id + '"') + btn('space', '지도에서 보기', ' data-id="' + w.space + '"') + '</div></div></div>';
+      return '<div class="citem"><span class="cn">' + (i + 1) + '</span><div><b>' + esc(w.title) + '</b> <small>♥' + store.likes(w) + ' · ' + esc(shortAddr(SP[w.space])) + (w.seed ? ' · 운영팀 의견' : '') + '</small><div class="cbrow">' + btn('like', likeLabel, ' data-id="' + w.id + '"') + btn('space', '지도에서 보기', ' data-id="' + w.space + '"') + '</div></div></div>';
     };
     const sRow = (s, i) => '<div class="citem"><span class="cn">' + (ws.length + i + 1) + '</span><div><b>' + esc(shortAddr(s)) + '</b> <small>직전 ' + esc(s.was) + '</small>' + spBtns(s.id) + '</div></div>';
-    return '<div class="ccard2">' + (ws.length ? '<b>「' + esc(q) + '」 바람</b>' + ws.map(wRow).join('') : '') + (ss.length ? '<b class="sub">직전 업종 · 주소로 찾은 빈칸</b>' + ss.map(sRow).join('') : '') + '</div>';
+    return '<div class="ccard2">' + (ws.length ? '<b>「' + esc(q) + '」 의견</b>' + ws.map(wRow).join('') : '') + (ss.length ? '<b class="sub">직전 업종 · 주소로 찾은 빈칸</b>' + ss.map(sRow).join('') : '') + '</div>';
   }
   function cardWish(a) {
     const sp = SP[a.space]; if (!sp) return '';
     const k = 'd' + Date.now(); drafts[k] = a;
-    return `<div class="ccard2 draft"><b>바람 초안</b><p>📍 ${esc(shortAddr(sp))} <small>직전 ${esc(sp.was)}</small></p><p class="dt">「${esc(a.title)}」 <small>${esc(a.cat)}</small></p>${a.why ? `<p>${esc(a.why)}</p>` : ''}<div class="cbrow">${btn('wishpost', '이대로 올리기', ` data-k="${k}"`)}${btn('space', '지도에서 보기', ` data-id="${a.space}"`)}</div><small>올리기는 회원만 · 비방 · 광고는 걸러져요</small></div>`;
+    return `<div class="ccard2 draft"><b>의견 초안</b><p>📍 ${esc(shortAddr(sp))} <small>직전 ${esc(sp.was)}</small></p><p class="dt">「${esc(a.title)}」 <small>${esc(a.cat)}</small></p>${a.why ? `<p>${esc(a.why)}</p>` : ''}<div class="cbrow">${btn('wishpost', '이대로 올리기', ` data-k="${k}"`)}${btn('space', '지도에서 보기', ` data-id="${a.space}"`)}</div><small>올리기는 회원만 · 비방 · 광고는 걸러져요</small></div>`;
   }
   function cardSupports(who) {
     return `<div class="ccard2"><b>${who === 'open' ? '운영 중인 가게' : '창업 준비'}에 볼 만한 지원</b><ul>${SUP.list.map(x => { const ok = x.who.includes(who); return `<li class="${ok ? '' : 'no'}"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${ok ? esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</li>`; }).join('')}<li><b>동행 프로젝트(시범 사업)</b> — 시범 지원금 + 대학생 4인 팀 + 지도교수</li></ul>${btn('owner', '사장님 상담 시작')}<small>${esc(SUP.checked)} 공고 · 보도로 확인 · 최종 자격은 공고 기관 판단</small></div>`;
@@ -218,7 +218,7 @@
       push(esc(u.reply) + cards + '<small class="aimark">AI 답 · 숫자 · 목록은 사이트 데이터로 계산</small>', u.reply + (shown.length ? ' [보여 준 것: ' + shown.map(x => x.id).join(', ') + ']' : ''));
     } else push((answer(text, understand(text)) || '') + note);
   }
-  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「동성로에 1인 샤브샤브집 어때?」 「두 번째 자리 창업 카드 보여 줘」 「거기 셀프 사진관 바람 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
+  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「동성로에 1인 샤브샤브집 어때?」 「두 번째 자리 창업 카드 보여 줘」 「거기 셀프 사진관 의견 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
   function close() { $('#chatBox').hidden = true; $('#chatFab').hidden = false; }
   $('#chatFab').onclick = open;
   $('#chatForm').onsubmit = e => { e.preventDefault(); const v = $('#chatIn').value; $('#chatIn').value = ''; say(v); };
@@ -235,15 +235,15 @@
     if (c === 'wishpost') {
       const d = drafts[b.dataset.k]; if (!d) return;
       A.needAuth(() => {
-        if (store.bySpace(d.space).some(w => w.title.replace(/\s/g, '') === d.title.replace(/\s/g, ''))) return push('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감해 주세요.');
-        if (A.checkText(d.title + ' ' + d.why)) return push('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 바람 쓰기와 같은 기준
+        if (store.bySpace(d.space).some(w => w.title.replace(/\s/g, '') === d.title.replace(/\s/g, ''))) return push('이 빈칸에 같은 의견이 이미 있어요. 그 의견에 공감해 주세요.');
+        if (A.checkText(d.title + ' ' + d.why)) return push('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 의견 쓰기와 같은 기준
         const w = { id: 'u' + Date.now(), space: d.space, cat: d.cat, title: d.title, why: d.why || '—', who: A.roleName(A.st.user.role), likes: 0, ago: 0, uid: A.st.user.id };
         delete drafts[b.dataset.k];
         store.add(w).then(x => {
           const w2 = x || w; A.go('space', { space: d.space });
           shown = [{ kind: 'wish', id: w2.id, label: wishLabel(w2) }];
-          push(`바람을 올렸어요 — 「${esc(w2.title)}」 @ ${esc(shortAddr(SP[w2.space]))}. 오픈 이벤트가 열리면 자동 응모돼요. 지도에서 그 빈칸을 열어 뒀어요.`);
-        }, () => push('바람을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.'));
+          push(`의견을 올렸어요 — 「${esc(w2.title)}」 @ ${esc(shortAddr(SP[w2.space]))}. 오픈 이벤트가 열리면 자동 응모돼요. 지도에서 그 빈칸을 열어 뒀어요.`);
+        }, () => push('의견을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.'));
       });
       return;
     }

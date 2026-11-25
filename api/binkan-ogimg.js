@@ -1,4 +1,4 @@
-// 동성로 빈칸 바람 공유 썸네일(1200×630 PNG). /api/binkan-ogimg?t=가게&a=주소&n=공감수
+// 동성로 빈칸 의견 공유 썸네일(1200×630 PNG). /api/binkan-ogimg?t=가게&a=주소&n=공감수
 // 카카오톡 · 메신저 링크 미리보기용. satori(화면 → SVG) + resvg(SVG → PNG). 글꼴은 사이트에 올린 Pretendard를 읽어 쓴다.
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       h('div', { marginTop: 'auto', alignItems: 'center', justifyContent: 'space-between', width: '1056px' },
         h('div', { alignItems: 'center' },
           a ? h('div', { fontSize: '30px', fontWeight: 600, marginRight: '18px' }, (/^동성로/.test(a) ? a : '동성로 ' + a)) : h('div', {}, ''),
-          h('div', { background: '#fff', color: ORANGE, fontSize: '30px', fontWeight: 800, padding: '8px 20px', borderRadius: '99px' }, '♥ ' + n + (u.searchParams.get('o') === '1' ? ' · 운영팀 바람' : '명이 공감'))),
+          h('div', { background: '#fff', color: ORANGE, fontSize: '30px', fontWeight: 800, padding: '8px 20px', borderRadius: '99px' }, '♥ ' + n + (u.searchParams.get('o') === '1' ? ' · 운영팀 의견' : '명이 공감'))),
         h('div', { background: INK, color: '#fff', fontSize: '28px', fontWeight: 800, padding: '14px 26px', borderRadius: '99px' }, '나도 공감하기 →'))));
   try {
     const svg = await satori(el, { width: 1200, height: 630, fonts: [{ name: 'P', data: xb, weight: 800, style: 'normal' }, { name: 'P', data: sb, weight: 600, style: 'normal' }] });

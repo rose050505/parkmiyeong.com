@@ -12,8 +12,8 @@
   const rerender = () => { const W = document.getElementById('work'), y = W.scrollTop; A.rerender(); W.scrollTop = y; };
   const LM = Object.entries(A.M.lm).map(([name, [x, y]]) => ({ name, x, y }));
 
-  // 바람 수요(계산): 창업 준비면 그 빈칸 바람, 운영 중이면 가게 위치(「내 가게」에서 찍은 곳 → 상담에서 고른 곳) 150m 안 바람(없으면 300m 안 가까운 3개 — 「내 가게」와 같은 계산)
-  // 운영팀이 넣어 둔 바람은 따로 센다(실제 시민 수요가 아님)
+  // 의견 수요(계산): 창업 준비면 그 빈칸 의견, 운영 중이면 가게 위치(「내 가게」에서 찍은 곳 → 상담에서 고른 곳) 150m 안 의견(없으면 300m 안 가까운 3개 — 「내 가게」와 같은 계산)
+  // 운영팀이 넣어 둔 의견은 따로 센다(실제 시민 수요가 아님)
   function demand(ap) {
     let ws = [];
     if (ap.space && SP[ap.space]) ws = store.bySpace(ap.space);
@@ -25,7 +25,7 @@
     return { n: ws.length, likes: ws.reduce((x, w) => x + real(w), 0), seed: ws.length - mem.length, memN: mem.length, memLikes: mem.reduce((x, w) => x + real(w), 0), top: ws.slice().sort((a, b) => store.likes(b) - store.likes(a))[0] };
   }
   const score = ap => ap.score || { ready: 0, fit: 0 };
-  const total = ap => { const s = score(ap), d = demand(ap); return s.ready + s.fit + Math.min(5, Math.floor(d.likes / 10)); };   // 바람 수요 점수 = 공감 10개당 1점(최대 5) [가정]
+  const total = ap => { const s = score(ap), d = demand(ap); return s.ready + s.fit + Math.min(5, Math.floor(d.likes / 10)); };   // 의견 수요 점수 = 공감 10개당 1점(최대 5) [가정]
 
   function decideOwner(id, v) {
     if (!A.hasRole('ops')) return null;
@@ -44,15 +44,15 @@
   function tOwner() {
     const L = ownerApps().slice().reverse();
     if (!L.length) return '<p class="emptyw">아직 들어온 사장님 지원서가 없어요. 사장님 상담 → 지원서를 내면 여기에 떠요.</p>';
-    return `<div class="tblwrap"><table class="otable"><thead><tr><th>가게 · 자리</th><th>상황 · 과제</th><th>바람 수요 <small>계산</small></th><th>준비 정도</th><th>과제 적합</th><th>합계</th><th>결과</th></tr></thead><tbody>
+    return `<div class="tblwrap"><table class="otable"><thead><tr><th>가게 · 자리</th><th>상황 · 과제</th><th>의견 수요 <small>계산</small></th><th>준비 정도</th><th>과제 적합</th><th>합계</th><th>결과</th></tr></thead><tbody>
       ${L.map(ap => { const d = demand(ap), s = score(ap); return `<tr><td><b>${esc(ap.item)}</b><br><small>${esc(ap.place)} · ${esc(ap.name)}</small></td>
         <td><small>${ap.status === 'pre' ? '창업 준비' : '운영 중'}${ap.trouble ? ' · ' + esc(ap.trouble) : ''} · ${esc(ap.when || '')}<br>${ap.tasks.map(t => esc(t.t)).join(' · ')}</small></td>
-        <td>${d.n}개 · 회원 공감 ♥${d.likes}${d.seed ? `<br><small>운영팀 바람 ${d.seed}개 포함 · 회원 바람 ${d.memN}개 ♥${d.memLikes}</small>` : ''}${d.top ? `<br><small>1위 「${esc(d.top.title)}」</small>` : ''}</td>
+        <td>${d.n}개 · 회원 공감 ♥${d.likes}${d.seed ? `<br><small>운영팀 의견 ${d.seed}개 포함 · 회원 의견 ${d.memN}개 ♥${d.memLikes}</small>` : ''}${d.top ? `<br><small>1위 「${esc(d.top.title)}」</small>` : ''}</td>
         ${['ready', 'fit'].map(k => `<td><select data-p-in="${k}" data-id="${ap.id}"${ap.result ? ' disabled' : ''}>${[0, 1, 2, 3, 4, 5].map(n => `<option value="${n}"${s[k] === n ? ' selected' : ''}>${n || '—'}</option>`).join('')}</select></td>`).join('')}
         <td><b>${total(ap)}</b><small> / 15</small></td>
         <td>${ap.result ? `<span class="tag ${ap.result === 'yes' ? 'real' : ''}">${ap.result === 'yes' ? '선정' : '미선정 · 비교군'}</span> <button class="link" data-p="undo" data-id="${ap.id}">되돌리기</button>` : `<button class="cta sm" data-p="oyes" data-id="${ap.id}">선정</button><button class="cta2 sm" data-p="ono" data-id="${ap.id}">미선정</button>`}</td></tr>`; }).join('')}
       </tbody></table></div>
-      <p class="fine">합계 = 준비 정도(0~5) + 과제 적합(0~5) + 바람 수요(공감 10개당 1점, 최대 5) — 배점은 [가정], 운영단이 정해요. 운영팀이 넣어 둔 바람은 실제 시민 수요가 아니니 회원 바람 수를 같이 보고, 공감은 회원이 누른 것만 세요. 미선정 가게는 같은 동의로 비교군이 되어 「내 가게」를 똑같이 쓰고, 합격선 근처 가게끼리 업종 · 개업 시기를 맞춰 비교해요 [제안].</p>`;
+      <p class="fine">합계 = 준비 정도(0~5) + 과제 적합(0~5) + 의견 수요(공감 10개당 1점, 최대 5) — 배점은 [가정], 운영단이 정해요. 운영팀이 넣어 둔 의견은 실제 시민 수요가 아니니 회원 의견 수를 같이 보고, 공감은 회원이 누른 것만 세요. 미선정 가게는 같은 동의로 비교군이 되어 「내 가게」를 똑같이 쓰고, 합격선 근처 가게끼리 업종 · 개업 시기를 맞춰 비교해요 [제안].</p>`;
   }
 
   function tStudent() {
@@ -97,25 +97,25 @@
     const reported = MY().db.answers().filter(a => a.reports > 0), repNotes = MY().db.answers().flatMap(a => (a.notes || []).filter(n => n.reports > 0).map(n => ({ a, n })));
     const rows = tracked.map(({ s, ap }) => ({ s, ap, risk: MY().risk(s), note: MY().areaNote(s), m: MY().monthly(s) }));
     const atRisk = rows.filter(r => r.risk.length).length;
-    // 효과 요약(설계서 §0 전체 지표): 선정 · 비교군의 이번 달 기록 지속 · 영업 유지, 그리고 바람 → 답 → 알림 → 보여 주기 → 방문 단계
+    // 효과 요약(설계서 §0 전체 지표): 선정 · 비교군의 이번 달 기록 지속 · 영업 유지, 그리고 의견 → 답 → 알림 → 보여 주기 → 방문 단계
     const cur = new Date().toISOString().slice(0, 7), grp = res => rows.filter(r => r.ap.result === res);
     const keep = L => { const sh = L.filter(r => MY().shareOf(r.s).open); return sh.length ? `${sh.filter(r => !r.risk.some(x => /기록 없음|문 닫았/.test(x))).length} / ${sh.length}곳` : '—'; };
     const live = MY().db.answers().filter(a => !a.hidden), F = live.map(a => MY().funnel(a)).reduce((t, f) => ({ sent: t.sent + f.sent, shows: t.shows + f.shows, went: t.went + f.went, came: t.came + f.came, ok: t.ok + f.ok }), { sent: 0, shows: 0, went: 0, came: 0, ok: 0 });
     const small = grp('yes').length < 5 || grp('no').length < 5;
-    // 매출 구간: 구간을 고른 최근 두 달을 비교(사장님이 매출 구간 공유를 켠 가게만). 바람 보고 온 손님: 바람 보고 온 손님 공유를 켠 가게만
+    // 매출 구간: 구간을 고른 최근 두 달을 비교(사장님이 매출 구간 공유를 켠 가게만). 의견 보고 온 손님: 의견 보고 온 손님 공유를 켠 가게만
     const moves = L => { let up = 0, eq = 0, dn = 0, n = 0; L.forEach(({ s }) => { if (!MY().shareOf(s).band) return; const b = s.months.filter(m => m.band).sort((p, q) => p.ym < q.ym ? -1 : 1).slice(-2).map(m => MY().BANDS.indexOf(m.band)); if (b.length < 2) return; n++; b[1] > b[0] ? up++ : b[1] < b[0] ? dn++ : eq++; }); return n ? `${up} / ${eq} / ${dn}` : '—'; };
     const guests = L => { const sh = L.filter(({ s }) => MY().shareOf(s).came); if (!sh.length) return '—'; const as = sh.flatMap(({ s }) => MY().myAnswers(s)); const f = as.map(a => MY().funnel(a)); return `${f.reduce((x, y) => x + y.came, 0)}명 (확인 ${f.reduce((x, y) => x + y.ok, 0)})`; };
     const cell = v => v == null ? '<td class="off">공유 안 함</td>' : `<td>${esc(v === '' ? '—' : v)}</td>`;
-    return `<div class="kpis"><div><b>${tracked.length}</b><small>추적 중인 가게 (선정 ${tracked.filter(r => r.ap.result === 'yes').length} · 비교군 ${tracked.filter(r => r.ap.result === 'no').length})</small></div><div><b class="${atRisk ? 'bad' : ''}">${atRisk}</b><small>「버티기 위험」 표시</small></div><div><b>${st.opsLog.length}</b><small>연결한 지원 · 학생 팀</small></div><div><b>${MY().db.answers().filter(a => !a.hidden).length}</b><small>근처 바람에 올라간 답</small></div></div>
+    return `<div class="kpis"><div><b>${tracked.length}</b><small>추적 중인 가게 (선정 ${tracked.filter(r => r.ap.result === 'yes').length} · 비교군 ${tracked.filter(r => r.ap.result === 'no').length})</small></div><div><b class="${atRisk ? 'bad' : ''}">${atRisk}</b><small>「버티기 위험」 표시</small></div><div><b>${st.opsLog.length}</b><small>연결한 지원 · 학생 팀</small></div><div><b>${MY().db.answers().filter(a => !a.hidden).length}</b><small>근처 의견에 올라간 답</small></div></div>
       <section class="oq"><h3>효과 요약 <small>${esc(cur.replace('-', '.'))} 기준${small ? ' · 표본 부족(선정 · 비교군 각 5곳 미만 — 비교는 참고만)' : ''}</small></h3>
-        <div class="tblwrap"><table class="otable"><thead><tr><th></th><th>가게</th><th>기록 · 영업 이어 가는 곳 <small>(한 달 넘게 기록 없음 · 문 닫음 제외)</small></th><th>매출 구간 <small>최근 두 달 · 오름 / 그대로 / 내림</small></th><th>바람 보고 온 손님 <small>(확인된 손님) · 공유한 가게만</small></th><th>올린 답</th></tr></thead><tbody>
+        <div class="tblwrap"><table class="otable"><thead><tr><th></th><th>가게</th><th>기록 · 영업 이어 가는 곳 <small>(한 달 넘게 기록 없음 · 문 닫음 제외)</small></th><th>매출 구간 <small>최근 두 달 · 오름 / 그대로 / 내림</small></th><th>의견 보고 온 손님 <small>(확인된 손님) · 공유한 가게만</small></th><th>올린 답</th></tr></thead><tbody>
           ${[['선정', 'yes'], ['비교군', 'no']].map(([t, k]) => `<tr><td>${t}</td><td>${grp(k).length}곳</td><td>${keep(grp(k))}</td><td>${moves(grp(k))}</td><td>${guests(grp(k))}</td><td>${grp(k).reduce((x, r) => x + MY().myAnswers(r.s).length, 0)}개</td></tr>`).join('')}</tbody></table></div>
-        <p class="funnel">바람에 올라간 답 <b>${live.length}</b> → 알림 받은 회원 <b>${F.sent}</b> → 보여 주기 연 회원 <b>${F.shows}</b> → 가 봤어요 <b>${F.went}</b> → 바람 보고 온 손님 <b>${F.came}</b> <small>(그중 시민 화면에서 사장님 확인 ${F.ok})</small></p>
-        <p class="fine">6 · 12개월 [가정] 영업 유지는 개업 뒤 추적이 쌓이면 이 표에 이어 붙어요. 바람 보고 온 손님이 보여 주기 연 회원보다 많으면 사장님 [＋]만으로 센 것이라 확인이 필요해요.</p></section>
+        <p class="funnel">의견에 올라간 답 <b>${live.length}</b> → 알림 받은 회원 <b>${F.sent}</b> → 보여 주기 연 회원 <b>${F.shows}</b> → 가 봤어요 <b>${F.went}</b> → 의견 보고 온 손님 <b>${F.came}</b> <small>(그중 시민 화면에서 사장님 확인 ${F.ok})</small></p>
+        <p class="fine">6 · 12개월 [가정] 영업 유지는 개업 뒤 추적이 쌓이면 이 표에 이어 붙어요. 의견 보고 온 손님이 보여 주기 연 회원보다 많으면 사장님 [＋]만으로 센 것이라 확인이 필요해요.</p></section>
       ${rows.length ? rows.map(({ s, ap, risk, note, m }) => `<section class="oq${risk.length ? ' risk1' : ''}"><h3>${esc(MY().storeLabel(s))} <small>${ap.result === 'yes' ? '선정' : ap.result === 'no' ? '비교군' : '심사 중'} · ${esc(s.sub)}</small></h3>
         ${risk.length ? `<p class="rflag"><b>버티기 위험</b> ${risk.map(esc).join(' · ')} <small>[가정 — 기준은 운영단이 정함]</small></p><div class="ochips"><button data-p="act" data-id="${esc(s.id)}" data-v="지원 안내 연결">지원 안내 연결</button><button data-p="act" data-id="${esc(s.id)}" data-v="학생 팀 연결">학생 팀 연결</button></div>` : ''}
         ${note ? `<p class="anote"><b>주변 변화</b> ${esc(note)} <small>위험 수에는 넣지 않음 · 사라진 업소는 이전 · 상호 변경일 수도 있음</small></p>` : ''}
-        <div class="tblwrap"><table class="otable"><thead><tr><th>달</th><th>영업 일수</th><th>매출 구간</th><th>답 수</th><th>판매 일수</th><th>누적 판매</th><th>바람 보고 온 손님</th><th>바꾼 것</th><th>유지</th><th>시험 결과</th></tr></thead>
+        <div class="tblwrap"><table class="otable"><thead><tr><th>달</th><th>영업 일수</th><th>매출 구간</th><th>답 수</th><th>판매 일수</th><th>누적 판매</th><th>의견 보고 온 손님</th><th>바꾼 것</th><th>유지</th><th>시험 결과</th></tr></thead>
         <tbody>${m.map(r => `<tr><td>${r.ym.replace('-', '.')}${r.alive ? ` <small>${esc(r.alive)}</small>` : ''}</td>${cell(r.open)}${cell(r.band)}${cell(r.answers)}${cell(r.soldDays)}${cell(r.sold)}${cell(r.came)}${cell(r.changes)}${cell(r.kept)}${cell(r.outcome)}</tr>`).join('')}</tbody></table></div>
         ${st.opsLog.filter(l => l.sid === s.id).map(l => `<small class="fine">${new Date(l.at).toLocaleDateString('ko-KR')} ${esc(l.what)}</small>`).join(' · ')}</section>`).join('')
         : '<p class="emptyw">추적할 가게가 아직 없어요. 지원서(추적 동의)를 낸 사장님이 「내 가게」를 설정하면 월 집계가 여기에 떠요.</p>'}

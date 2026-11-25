@@ -1,4 +1,4 @@
-// 동성로 빈칸 — 첫 화면(지도) · 빈칸 상세 · 바람 남기기 · 공감 · 로그인 · 회원가입 · 검색 · 입구 · 지원 안내 띠 · 오픈 이벤트
+// 동성로 빈칸 — 첫 화면(지도) · 빈칸 상세 · 의견 남기기 · 공감 · 로그인 · 회원가입 · 검색 · 입구 · 지원 안내 띠 · 오픈 이벤트
 // 저장은 이 브라우저(localStorage)에만. 백엔드가 붙으면 store.* 만 API로 바꾸면 된다(청사진 §7 API 표).
 (function () {
   const M = window.MAPDATA, SEED = window.SEED, SUP = window.SUP;
@@ -13,7 +13,7 @@
   const KEY = 'binkan.v1';
   const st = Object.assign({ user: null, wishes: [], liked: {}, entered: false }, JSON.parse(localStorage.getItem(KEY) || '{}'));
   const save = () => localStorage.setItem(KEY, JSON.stringify(st));
-  // 역할은 더하는 방식(청사진 §4-2): roles[]에 쌓고, role은 가장 최근에 더한 역할(지원 안내 · 바람 「쓴 사람」 표시용)
+  // 역할은 더하는 방식(청사진 §4-2): roles[]에 쌓고, role은 가장 최근에 더한 역할(지원 안내 · 의견 「쓴 사람」 표시용)
   const rolesOf = u => !u ? [] : Array.isArray(u.roles) && u.roles.length ? u.roles : [u.role || 'citizen'];
   if (st.user && !Array.isArray(st.user.roles)) st.user.roles = rolesOf(st.user);
   const hasRole = r => rolesOf(st.user).includes(r);
@@ -24,7 +24,7 @@
     save(); return true;
   }
   const MY = () => window.MYSTORE;
-  // 공감은 회원마다 1회: st.likedBy = { 회원 id: { 바람 id: true } }, st.liked = 지금 로그인한 회원의 것(같은 객체), 공감 수는 모든 회원 것을 더함
+  // 공감은 회원마다 1회: st.likedBy = { 회원 id: { 의견 id: true } }, st.liked = 지금 로그인한 회원의 것(같은 객체), 공감 수는 모든 회원 것을 더함
   if (!st.likedBy || typeof st.likedBy !== 'object') { st.likedBy = {}; if (st.liked && Object.keys(st.liked).length) st.likedBy[st.user ? st.user.id : '_old'] = st.liked; }
   const linkLikes = () => { st.liked = st.user ? (st.likedBy[st.user.id] || (st.likedBy[st.user.id] = {})) : {}; };
   linkLikes();
@@ -36,7 +36,7 @@
     delete st[k];
     Object.defineProperty(st, k, { get: () => by[ukey()], set: v => { by[ukey()] = v; }, enumerable: false, configurable: true });
   });
-  // 옛 상태 옮기기(처음 한 번): 주인 없는 공감 · 바람은 처음 로그인한 회원 것으로, 운영단 표가 없던 때 낸 지원서는 지원서 목록으로
+  // 옛 상태 옮기기(처음 한 번): 주인 없는 공감 · 의견은 처음 로그인한 회원 것으로, 운영단 표가 없던 때 낸 지원서는 지원서 목록으로
   function migrate() {
     if (!st.user) return;
     const old = st.likedBy._old; if (old) { Object.assign(st.liked, old); delete st.likedBy._old; }
@@ -50,11 +50,11 @@
     }
     save();
   }
-  // 바람 저장소: 팀 백엔드(backend.js, BK.on)가 살아 있으면 서버, 아니면 이 브라우저. 화면은 store.*만 부른다.
+  // 의견 저장소: 팀 백엔드(backend.js, BK.on)가 살아 있으면 서버, 아니면 이 브라우저. 화면은 store.*만 부른다.
   const SV = () => !!(window.BK && window.BK.on);
   const myServer = () => (st.user && st.myOps && st.myOps[st.user.id]) || [];
   const store = {
-    wishes: () => SV() ? window.BK.wishes.map(w => myServer().includes(w.op) ? Object.assign({}, w, { uid: st.user.id, who: roleName(st.user.role) }) : Object.assign({}, w)).concat(st.wishes.filter(w => w.pending))   // 서버가 깨어나기 전에 쓴 바람도 사라지지 않게
+    wishes: () => SV() ? window.BK.wishes.map(w => myServer().includes(w.op) ? Object.assign({}, w, { uid: st.user.id, who: roleName(st.user.role) }) : Object.assign({}, w)).concat(st.wishes.filter(w => w.pending))   // 서버가 깨어나기 전에 쓴 의견도 사라지지 않게
       : SEED.wishes.map(w => Object.assign({ seed: true }, w)).concat(st.wishes),
     likes: w => SV() ? w.likes : w.likes + Object.values(st.likedBy).filter(m => m && m[w.id]).length,
     liked: w => SV() ? !!w.liked : !!st.liked[w.id],
@@ -95,14 +95,14 @@
       const ws = store.bySpace(s.id), sel = view.space === s.id;
       if (!ws.length) return { id: s.id, x: s.x, y: s.y, cls: 'empty' + (sel ? ' sel' : ''), html: '<i class="sq"></i>', label: '빈칸 ' + shortAddr(s), z: sel ? 9000 : 1 };
       const w = ws[0], n = store.likes(w);
-      const na = MY() ? new Set(ws.flatMap(x => MY().answersFor(x.id)).map(a => a.sid)).size : 0;   // 이 빈칸 바람에 답한 근처 가게 수
+      const na = MY() ? new Set(ws.flatMap(x => MY().answersFor(x.id)).map(a => a.sid)).size : 0;   // 이 빈칸 의견에 답한 근처 가게 수
       return {
         id: s.id, x: s.x, y: s.y, z: sel ? 9999 : (hot.has(s.id) ? 2000 : 1000) + n,
         cls: 'wish' + (hot.has(s.id) ? ' hot' : '') + (sel ? ' sel' : '') + (na ? ' answered' : ''),
         html: `<span class="t">${esc(w.title)}</span><span class="n">♥ ${n}</span>${ws.length > 1 ? `<span class="more">+${ws.length - 1}</span>` : ''}${na ? `<i class="adot" title="근처 가게 ${na}곳이 답했어요"></i>` : ''}`,
-        label: `빈칸 ${shortAddr(s)} · 바람 ${ws.length}개 · 1위 ${w.title}${na ? ` · 근처 가게 ${na}곳이 답함` : ''}`,
+        label: `빈칸 ${shortAddr(s)} · 의견 ${ws.length}개 · 1위 ${w.title}${na ? ` · 근처 가게 ${na}곳이 답함` : ''}`,
       };
-    }).concat(MY() ? MY().storePins() : []);   // 근처 바람에 답하고 지금 하는 가게(끝나지 않은 답) — 시민이 찾아갈 수 있게
+    }).concat(MY() ? MY().storePins() : []);   // 근처 의견에 답하고 지금 하는 가게(끝나지 않은 답) — 시민이 찾아갈 수 있게
   }
   const redraw = () => map && map.draw(pins());
 
@@ -140,7 +140,7 @@
   function wishCard(w, withPlace) {
     const s = SP[w.space], on = store.liked(w);
     return `<article class="wcard" id="w-${esc(w.id)}">
-      <div class="wh"><span class="cat">${esc(w.cat)}</span>${w.seed ? '' : '<span class="tag mine">내 바람</span>'}</div>
+      <div class="wh"><span class="cat">${esc(w.cat)}</span>${w.seed ? '' : '<span class="tag mine">내 의견</span>'}</div>
       <h4>${esc(w.title)}</h4>
       <p>${esc(w.why)}</p>
       ${withPlace ? `<button class="place" data-act="space" data-id="${esc(w.space)}">📍 ${esc(shortAddr(s))}</button>` : ''}
@@ -150,12 +150,12 @@
       ${answersHTML(w)}
     </article>`;
   }
-  // 바람 카드 아래 「근처 가게가 답했어요」(누구나 봄) + 가 봤어요 · 신고 (회원)
+  // 의견 카드 아래 「근처 가게가 답했어요」(누구나 봄) + 가 봤어요 · 신고 (회원)
   function answersHTML(w) {
     const L = MY() ? MY().answersFor(w.id) : [];
     if (!L.length) return '';
     const uid = st.user && st.user.id;
-    return `<div class="wans"><p class="wansh">근처 가게 ${L.length}곳이 답했어요 <small>바람은 그대로 열려 있어요</small></p>${L.map(a => {
+    return `<div class="wans"><p class="wansh">근처 가게 ${L.length}곳이 답했어요 <small>의견은 그대로 열려 있어요</small></p>${L.map(a => {
       const end = a.state === '끝남', ready = a.state === '준비 중', went = MY().wentBy(a.id, uid), wanted = MY().wantBy(a.id, uid), rep = MY().reportedBy(a.id, uid), own = uid && a.uid === uid;
       const label = end ? '끝났어요' : a.outcome === '정식' ? '이제 늘 팔아요' : a.state, tl = MY().trialLabel(a), mineN = uid && MY().noteBy(a.id, uid), notes = MY().notesOf(a).slice(-3).reverse();
       // 「준비 중」이면 [먹어보고 싶어요](관심), 판매를 시작하면 [가 봤어요] + 가 본 시민 한 줄(모두에게 공개 · 신고는 운영단이 처리)
@@ -190,7 +190,7 @@
       if (ctx === 'student' && a.id === 'prog-student') { sc += 6; why.push('대학생 입구를 보고 있어서'); }
       if (ctx === 'owner' && a.kind === 'sup' && a.who.includes('pre')) { sc += 4; why.push('사장님 입구를 보고 있어서'); }
       if (ctx === 'owner' && a.id === 'prog-owner') { sc += 3; }
-      if (ctx === 'space' && a.id === 'prog-owner') { sc += hasWish ? 5 : 3; why.push(hasWish ? '시민 바람이 붙은 빈칸을 보고 있어서' : '빈칸을 보고 있어서'); }
+      if (ctx === 'space' && a.id === 'prog-owner') { sc += hasWish ? 5 : 3; why.push(hasWish ? '시민 의견이 붙은 빈칸을 보고 있어서' : '빈칸을 보고 있어서'); }
       if (ctx === 'space' && a.kind === 'sup' && a.who.includes('pre')) { sc += 3; why.push('이 자리에서 창업할 때 받을 수 있어서'); }
       if (ctx === 'home' && a.kind === 'prog') { sc += 2; why.push('1기 사전 신청을 받고 있어서'); }
       if (ctx === 'student' && a.id === 'sinsa') { sc += 4; why.push('창업을 꿈꾸는 학생이라면 볼 만해서'); }
@@ -219,7 +219,7 @@
     if (sp && (view.mode === 'space' || view.mode === 'write')) {
       const d = s2 => dist(s2, sp);
       const L = M.spaces.filter(x => x.id !== sp.id).map(x => ({ x, m: d(x) })).filter(o => o.m <= 200).sort((a, b) => a.m - b.m).slice(0, 3);
-      near = `<section class="near"><h3>이 근처 빈칸</h3>${L.length ? L.map(({ x, m }) => { const w = store.bySpace(x.id)[0]; return `<button class="nrow" data-act="space" data-id="${x.id}"><b>${esc(shortAddr(x))}</b><small>${Math.round(m / 10) * 10}m · ${w ? `「${esc(w.title)}」 ♥${store.likes(w)}` : '바람 아직 없음'}</small></button>`; }).join('') : '<p class="fine">200m 안에 다른 빈칸이 없어요.</p>'}</section>`;
+      near = `<section class="near"><h3>이 근처 빈칸</h3>${L.length ? L.map(({ x, m }) => { const w = store.bySpace(x.id)[0]; return `<button class="nrow" data-act="space" data-id="${x.id}"><b>${esc(shortAddr(x))}</b><small>${Math.round(m / 10) * 10}m · ${w ? `「${esc(w.title)}」 ♥${store.likes(w)}` : '의견 아직 없음'}</small></button>`; }).join('') : '<p class="fine">200m 안에 다른 빈칸이 없어요.</p>'}</section>`;
     }
     const ctx = WORKS.includes(view.mode) ? view.mode : view.mode === 'space' ? 'space' : 'home';
     el.innerHTML = near + adHTML(ctx, 'rail', lastAd.panel);
@@ -229,11 +229,11 @@
     const top = store.wishes().sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 5);
     return `<section class="hello">
         <h2>이 빈 가게에 뭐가 생기면 좋을까?</h2>
-        <p>지도에서 빈칸을 누르고 「여기 ○○ 있으면」을 남겨 주세요. 공감이 모인 바람은 준비된 사장님의 창업 아이템이 되고, 대구 대학생 팀이 개업 준비와 첫 운영을 돕습니다.</p>
-        <ol class="flow3"><li><b>시민</b>빈칸에 바람 · 공감</li><li><b>AI</b>바람 · 사장님 고민을 과제로, 학생 전공과 짝지음</li><li><b>대학생 4인 팀</b>한 학기 개업 준비 · 첫 운영</li></ol>
+        <p>지도에서 빈칸을 누르고 「여기 ○○ 있으면」을 남겨 주세요. 공감이 모인 의견은 준비된 사장님의 창업 아이템이 되고, 대구 대학생 팀이 개업 준비와 첫 운영을 돕습니다.</p>
+        <ol class="flow3"><li><b>시민</b>빈칸에 의견 · 공감</li><li><b>AI</b>의견 · 사장님 고민을 과제로, 학생 전공과 짝지음</li><li><b>대학생 4인 팀</b>한 학기 개업 준비 · 첫 운영</li></ol>
         <p class="fine">대구시 + 지역 대학 운영단의 시범 사업이에요. 숫자 · 거리는 공공데이터로 계산하고, 선정은 운영단이 해요. <button class="link" data-act="howto" data-to=".pilot">시범 사업 한 장 보기 →</button></p>
       </section>
-      <section><h3>지금 뜨는 바람</h3><ol class="trend">${top.map((w, i) => `<li><button data-act="space" data-id="${esc(w.space)}" data-w="${esc(w.id)}"><span class="rk">${i + 1}</span><span class="tt">${esc(w.title)}<small>${esc(shortAddr(SP[w.space]))}</small></span><span class="lk">♥ ${store.likes(w)}</span></button></li>`).join('')}</ol>
+      <section><h3>지금 뜨는 의견</h3><ol class="trend">${top.map((w, i) => `<li><button data-act="space" data-id="${esc(w.space)}" data-w="${esc(w.id)}"><span class="rk">${i + 1}</span><span class="tt">${esc(w.title)}<small>${esc(shortAddr(SP[w.space]))}</small></span><span class="lk">♥ ${store.likes(w)}</span></button></li>`).join('')}</ol>
       </section>
       ${notices('home')}`;
   }
@@ -248,8 +248,8 @@
         <p class="was">${esc(M.meta.q_prev)} 목록에 있던 <b>${esc(s.was)}</b> 자리가 ${esc(M.meta.q_now)}에 비었어요. <span class="tag">현장 확인 필요</span></p>
       </section>
       <button class="cta" data-act="write">＋ 여기 있으면 좋겠는 가게 남기기</button>
-      <section><h3>이 빈칸의 바람 <small>${ws.length}개 · 공감순</small></h3>
-        ${ws.length ? ws.map(w => wishCard(w)).join('') : '<p class="emptyw">아직 바람이 없어요. 첫 바람을 남겨 주세요!</p>'}
+      <section><h3>이 빈칸의 의견 <small>${ws.length}개 · 공감순</small></h3>
+        ${ws.length ? ws.map(w => wishCard(w)).join('') : '<p class="emptyw">아직 의견이 없어요. 첫 의견을 남겨 주세요!</p>'}
       </section>
       ${startCard(s, ws)}
       ${notices('space')}`;
@@ -266,9 +266,9 @@
       <h3>창업 카드 <span class="tag calc">계산 요약</span></h3>
       <dl>
         <dt>${R}m 안 업소</dt><dd><b>${near.length}곳</b> — ${top.map(([l, n]) => `${esc(l)} ${n}`).join(' · ')}${near.length - top.reduce((x, [, n]) => x + n, 0) > 0 ? ` · 그 밖 ${near.length - top.reduce((x, [, n]) => x + n, 0)}` : ''}</dd>
-        <dt>바람 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
+        <dt>의견 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
         <dt>직전 업종</dt><dd>${esc(s.was)} <small>(같은 업종이 다시 들어와도 되는지는 상담에서)</small></dd>
-        ${nA ? `<dt>근처 가게 답</dt><dd><b>${nA}곳</b>이 이 빈칸 바람에 답함 <small>(바람은 닫히지 않아요 · 상권 정보로 참고)</small></dd>` : ''}
+        ${nA ? `<dt>근처 가게 답</dt><dd><b>${nA}곳</b>이 이 빈칸 의견에 답함 <small>(의견은 닫히지 않아요 · 상권 정보로 참고)</small></dd>` : ''}
       </dl>
       <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_now)} 기준 계산. 더 자세한 해석은 오른쪽 아래 빈칸 도우미에게 물어보세요.</p>
       <button class="cta2" data-act="owner" data-id="${esc(s.id)}">이 자리로 창업 상담 →</button>
@@ -278,14 +278,14 @@
   function write() {
     const s = SP[view.space];
     return `${back('space', '빈칸으로')}
-      <section class="sphead"><p class="kick">바람 남기기</p><h2>${esc(shortAddr(s))}</h2><p class="was">직전: ${esc(s.was)}</p></section>
+      <section class="sphead"><p class="kick">의견 남기기</p><h2>${esc(shortAddr(s))}</h2><p class="was">직전: ${esc(s.was)}</p></section>
       <form class="wform" id="wform" novalidate>
         <fieldset><legend>어떤 종류인가요?</legend><div class="chips">${SEED.cats.map((c, i) => `<label><input type="radio" name="cat" value="${esc(c)}"${i === 0 ? ' checked' : ''}><span>${esc(c)}</span></label>`).join('')}</div></fieldset>
         <label class="fl">여기 있으면 좋겠는 가게<input name="title" maxlength="30" placeholder="예: 가성비 파스타집" required><small class="cnt" data-for="title">0 / 30</small></label>
         <label class="fl">왜 있으면 좋겠어요?<textarea name="why" maxlength="120" rows="3" placeholder="예: 혼자 와도 부담 없는 가격이면 자주 올 것 같아요"></textarea><small class="cnt" data-for="why">0 / 120</small></label>
         <p class="err" id="werr" hidden></p>
         <p class="rule">영업 중인 가게를 깎아내리는 글 · 광고 · 같은 글 반복은 올라가지 않아요.</p>
-        <button class="cta" type="submit">바람 올리기</button>
+        <button class="cta" type="submit">의견 올리기</button>
       </form>`;
   }
 
@@ -295,7 +295,7 @@
       <section class="sphead"><p class="kick">사장님 입구</p><h2>창업 · 경영 상담</h2>${s ? `<p class="was">고른 자리: <b>${esc(shortAddr(s))}</b></p>` : ''}</section>
       <ol class="steps">
         <li><b>상담</b> 열 예정이면 아이템 · 자리, 하고 있으면 어려움을 AI와 이야기해요</li>
-        <li><b>창업 카드</b> 업종 · 상권 · 받을 수 있는 지원 · 이 자리의 시민 바람</li>
+        <li><b>창업 카드</b> 업종 · 상권 · 받을 수 있는 지원 · 이 자리의 시민 의견</li>
         <li><b>과제 정리</b> 대학생 팀과 함께할 일을 AI가 초안으로 정리</li>
         <li><b>동행 프로젝트 지원서</b> 시 + 지역 대학 운영단이 심사해 선정</li>
       </ol>
@@ -304,26 +304,26 @@
   }
   function howto() {
     return `${back()}
-      <section class="sphead"><p class="kick">이용 방법</p><h2>빈칸 · 바람 · 공감</h2></section>
+      <section class="sphead"><p class="kick">이용 방법</p><h2>빈칸 · 의견 · 공감</h2></section>
       <dl class="terms">
         <dt>빈칸</dt><dd>동성로의 빈 1층 점포 후보. 공공데이터로 찾고 현장에서 확인해요.</dd>
-        <dt>바람</dt><dd>빈칸에 남기는 「여기 ○○ 있으면」 한 줄. 회원만 남길 수 있어요(본 서비스는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).</dd>
-        <dt>공감</dt><dd>마음에 드는 바람에 누르는 하트. 한 계정에 1번.</dd>
-        <dt>창업 카드</dt><dd>빈칸을 누르면 나오는 요약. 주변 업소 · 바람 1위 · 받을 수 있는 지원.</dd>
-        <dt>동행 프로젝트</dt><dd>바람을 보고 창업하는 사장님과 대학생 4인 팀 + 지도교수가 한 학기를 함께하는 시범 사업.</dd>
+        <dt>의견</dt><dd>빈칸에 남기는 「여기 ○○ 있으면」 한 줄. 회원만 남길 수 있어요(본 서비스는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).</dd>
+        <dt>공감</dt><dd>마음에 드는 의견에 누르는 하트. 한 계정에 1번.</dd>
+        <dt>창업 카드</dt><dd>빈칸을 누르면 나오는 요약. 주변 업소 · 의견 1위 · 받을 수 있는 지원.</dd>
+        <dt>동행 프로젝트</dt><dd>의견을 보고 창업하는 사장님과 대학생 4인 팀 + 지도교수가 한 학기를 함께하는 시범 사업.</dd>
       </dl>
       <p class="fine">빈칸 ${M.meta.n_spaces}곳: ${esc(M.meta.src)} ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 1층 공실 후보(같은 층에 새 업소 없음). 범위: ${esc(M.meta.scope)}.</p>
       <section class="pilot"><h3>시범 사업 한 장 <small>정책 초안 요약 · 숫자는 [가정] · [추정]</small></h3>
         <dl class="terms">
           <dt>누가</dt><dd>대구시 소상공인 · 상권 부서가 주관(동성로 상권활성화사업 2024~2028 위에 얹음). 대구시 대학인재혁신과 + 지역 대학이 운영단(심사 · 학생 선발 · 추적, 앵커사업 연계 교과로 학점 · 지도교수). 상인회 · 공인중개사가 빈칸 현장 확인 · 건물주 연결 [제안].</dd>
           <dt>자리</dt><dd>건물주가 동의한 빈칸과 상권활성화사업 빈 점포 팝업 자리에서만 골라요. 사이트는 임대 중개를 하지 않아요.</dd>
-          <dt>규모</dt><dd>0단계: 빈칸 61곳 중 30곳 이상에 회원 바람이 모이면 → 1단계: 동성로 10곳 [가정] · 학생 40명(4인 × 10팀) · 한 학기 16주.</dd>
+          <dt>규모</dt><dd>0단계: 빈칸 61곳 중 30곳 이상에 회원 의견이 모이면 → 1단계: 동성로 10곳 [가정] · 학생 40명(4인 × 10팀) · 한 학기 16주.</dd>
           <dt>비용</dt><dd>학생 장학금 월 30만 원 × 4개월 × 40명 = 4,800만 원 [추정]. 사장님 지원금 · 인테리어 · 임대료 일부 · 이벤트는 상권활성화사업 예산과 협의. 사장님 · 시민은 무료.</dd>
           <dt>성과</dt><dd>개업 6개월 영업 유지가 비교군(신청했지만 선정되지 않은 가게)보다 높은지 → 12개월 영업 유지 10곳 중 8곳 이상 [가정] 그리고 비교군보다 높으면 대구로 넓혀요.</dd>
-          <dt>AI가 하는 일</dt><dd>시민 · 사장님 · 학생의 문장을 업종 · 과제 · 전공으로 바꿔 서로 잇는 일(상담 문제 정리 · 과제 초안 · 학생 추천 · 질문 · 바람 묶기 · 답글 초안 · 빈칸 도우미). 숫자 · 거리 · 목록은 사이트가 공공데이터로 계산하고, 선정은 사람(운영단)이 해요.</dd>
+          <dt>AI가 하는 일</dt><dd>시민 · 사장님 · 학생의 문장을 업종 · 과제 · 전공으로 바꿔 서로 잇는 일(상담 문제 정리 · 과제 초안 · 학생 추천 · 질문 · 의견 묶기 · 답글 초안 · 빈칸 도우미). 숫자 · 거리 · 목록은 사이트가 공공데이터로 계산하고, 선정은 사람(운영단)이 해요.</dd>
           <dt>운영단 화면</dt><dd>회원가입 때 「운영단」을 고르면 심사 표 · 추적 표를 볼 수 있어요(본 서비스에서는 초대받은 운영단만).</dd>
         </dl></section>
-      <p class="fine">처음 화면의 바람 · 공감 수 · 공고 일부는 서비스 소개를 위해 운영팀이 넣어 둔 것이에요. 운영팀 바람에는 「운영팀」이라고 적혀 있어요.</p>`;
+      <p class="fine">처음 화면의 의견 · 공감 수 · 공고 일부는 서비스 소개를 위해 운영팀이 넣어 둔 것이에요. 운영팀 의견에는 「운영팀」이라고 적혀 있어요.</p>`;
   }
   function search() {
     const q = view.q.trim(), t = q.replace(/\s/g, '');
@@ -333,12 +333,12 @@
       : /학생|대학생|학점|장학|경력|인턴/.test(t) ? `<button class="ntc prog" data-act="student"><span class="nk">혹시</span><b>대학생 입구로 갈까요?</b><small>동행 프로젝트</small></button>` : '';
     return `${back()}
       <section class="sphead"><p class="kick">검색</p><h2>「${esc(q)}」</h2></section>${hint}
-      <section><h3>바람 <small>${ws.length}</small></h3>${ws.length ? ws.map(w => wishCard(w, true)).join('') : '<p class="emptyw">맞는 바람이 없어요. 빈칸을 골라 첫 바람을 남겨 보세요.</p>'}</section>
+      <section><h3>의견 <small>${ws.length}</small></h3>${ws.length ? ws.map(w => wishCard(w, true)).join('') : '<p class="emptyw">맞는 의견이 없어요. 빈칸을 골라 첫 의견을 남겨 보세요.</p>'}</section>
       <section><h3>빈칸 <small>직전 업종 · 주소 · ${ss.length}</small></h3>${ss.slice(0, 12).map(s => `<button class="srow" data-act="space" data-id="${esc(s.id)}"><b>${esc(shortAddr(s))}</b><small>직전 ${esc(s.was)}</small></button>`).join('') || '<p class="emptyw">없음</p>'}</section>`;
   }
   // 알림 문구(종류: 답 · 판매 시작 · 내일까지 · 정식 메뉴 · 끝남)
   function alertText(x) {
-    const st0 = `<b>${esc(x.a.store)}</b>`, src = x.why === 'wrote' ? '내가 쓴 바람' : x.why === 'liked' ? '내가 공감한 바람' : '「먹어보고 싶어요」 누른 메뉴', t = MY().trialLabel(x.a);
+    const st0 = `<b>${esc(x.a.store)}</b>`, src = x.why === 'wrote' ? '내가 쓴 의견' : x.why === 'liked' ? '내가 공감한 의견' : '「먹어보고 싶어요」 누른 메뉴', t = MY().trialLabel(x.a);
     if (x.kind === 'start') return `${st0}에서 「${esc(x.a.menu)}」 판매를 시작했어요${t ? ` · ${esc(t)}` : ''} <small>(${src})</small>`;
     if (x.kind === 'endsoon') return `${st0}의 「${esc(x.a.menu)}」 시험 판매가 내일까지예요`;
     if (x.kind === 'regular') return `${st0}의 「${esc(x.a.menu)}」가 이제 늘 파는 메뉴가 됐어요 <small>(${src})</small>`;
@@ -350,17 +350,17 @@
     const al = MY() ? MY().alertsFor(st.user) : [];
     const html = `${back()}
       <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · ${esc(rolesOf(st.user).map(roleName).join(' · '))}</p></section>
-      <section class="alert"><b>알림</b><p>내가 쓰거나 공감한 바람에 <b>근처 가게가 답하면</b> 여기에 알려 드려요. 시범 운영이 시작되면 내 바람과 같은 업종의 가게가 빈칸에 열릴 때 「내 바람이 가게로」 알림과 첫 방문 쿠폰도 보낼 예정이에요 [제안].</p>
+      <section class="alert"><b>알림</b><p>내가 쓰거나 공감한 의견에 <b>근처 가게가 답하면</b> 여기에 알려 드려요. 시범 운영이 시작되면 내 의견과 같은 업종의 가게가 빈칸에 열릴 때 「내 의견이 가게로」 알림과 첫 방문 쿠폰도 보낼 예정이에요 [제안].</p>
         ${al.length ? `<ul class="alist">${al.map(x => `<li class="${x.unread ? 'new' : ''}${x.kind === 'end' ? ' end' : ''}">
           <p>${x.unread ? '<span class="tag mine">새 알림</span> ' : ''}${alertText(x)}${x.self ? ' <small class="fine">(내 가게 답)</small>' : ''}</p>
           ${x.kind === 'end' ? '' : `<p class="am">${esc(x.a.menu)} — ${esc(x.a.reply)}</p>${x.a.state === '끝남' ? '<p class="fine">지금은 끝난 메뉴예요.</p>' : `<button class="cta2 sm" data-act="showcard" data-id="${esc(x.a.id)}">가게에서 이 화면 보여 주기</button> <button class="link" data-act="storemap" data-id="${esc(x.a.id)}">지도에서 가게 보기</button>`}`}</li>`).join('')}</ul>` : ''}</section>
-      <section><h3>내 바람 <small>${ws.length}</small></h3>${ws.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
-      <section><h3>공감한 바람 <small>${liked.length}</small></h3>${liked.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
+      <section><h3>내 의견 <small>${ws.length}</small></h3>${ws.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
+      <section><h3>공감한 의견 <small>${liked.length}</small></h3>${liked.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <button class="link" data-act="logout">로그아웃</button>`;
     if (MY()) MY().markSeen(st.user);   // 연 알림은 읽음으로(머리띠 숫자가 줄어듦)
     return html;
   }
-  // 내 바람: 쓴 사람(uid)이 있는 바람은 그 사람 것만, 예전 바람(uid 없음)은 이 브라우저 것으로
+  // 내 의견: 쓴 사람(uid)이 있는 의견은 그 사람 것만, 예전 의견(uid 없음)은 이 브라우저 것으로
   const myWishes = () => SV() ? store.wishes().filter(w => st.user && w.uid === st.user.id) : st.wishes.filter(w => !w.uid || (st.user && w.uid === st.user.id));
   const roleName = r => ({ citizen: '시민', pre: '예비 사장님', open: '기존 사장님', student: '대학생', ops: '운영단' }[r] || '시민');
 
@@ -368,7 +368,7 @@
   function renderMe() {
     const un = st.user && MY() ? MY().alertsFor(st.user).filter(x => x.unread).length : 0;
     $('#me').innerHTML = st.user
-      ? `<button class="topbtn${view.mode === 'mystore' ? ' on' : ''}" data-act="mystore">내 가게</button>${hasRole('ops') ? `<button class="topbtn${view.mode === 'ops' ? ' on' : ''}" data-act="ops">운영단 표</button>` : ''}<button class="mebtn" data-act="mine"><span class="av">${esc((st.user.name || '나').slice(0, 1))}</span>${esc(st.user.name || '')} · 내 바람 ${myWishes().length}${un ? `<span class="badge" title="새 알림">${un}</span>` : ''}</button>`
+      ? `<button class="topbtn${view.mode === 'mystore' ? ' on' : ''}" data-act="mystore">내 가게</button>${hasRole('ops') ? `<button class="topbtn${view.mode === 'ops' ? ' on' : ''}" data-act="ops">운영단 표</button>` : ''}<button class="mebtn" data-act="mine"><span class="av">${esc((st.user.name || '나').slice(0, 1))}</span>${esc(st.user.name || '')} · 내 의견 ${myWishes().length}${un ? `<span class="badge" title="새 알림">${un}</span>` : ''}</button>`
       : `<button class="mebtn ghost" data-act="login">로그인<span class="wide"> · 가입</span></button>`;
   }
 
@@ -405,7 +405,7 @@
     const roles = ['citizen', 'pre', 'open', 'student', 'ops'];
     openModal(`<div class="auth">
       <div class="atabs" role="tablist"><button class="${tab === 'login' ? 'on' : ''}" data-act="atab" data-v="login" role="tab">로그인</button><button class="${tab === 'signup' ? 'on' : ''}" data-act="atab" data-v="signup" role="tab">회원가입</button></div>
-      ${msg ? `<p class="amsg">${esc(msg)}</p>` : `<p class="amsg">바람 · 공감 · 지원은 회원만 할 수 있어요. 보기는 누구나 할 수 있어요.</p>`}
+      ${msg ? `<p class="amsg">${esc(msg)}</p>` : `<p class="amsg">의견 · 공감 · 지원은 회원만 할 수 있어요. 보기는 누구나 할 수 있어요.</p>`}
       <button class="cta quick" data-act="aquick">바로 시작하기 <small>아이디 없이</small></button>
       ${SV() ? '<button class="cta2 quick" data-act="aowner">가게 사장님으로 바로 시작 <small>동성로 시범 가게 계정</small></button>' : ''}
       <p class="aor"><span>또는 아이디로</span></p>
@@ -494,15 +494,15 @@
   const SHORT_BASE = 'https://parkmiyeong.com/b/';
   let lastShare = null;
   function share(w) {
-    // 공유 주소는 늘 실제 사이트. /s/빈칸?w=…로 보내야 카톡 · 메신저가 이 바람 썸네일을 보여 준다(api/binkan-share · binkan-ogimg)
-    // 짧은 주소: 처음부터 있던 바람은 번호(/b/w05), 새 바람은 빈칸.가게이름(base64url).공감수 — 서버(api/binkan-share)가 풀어서 썸네일을 그린다
+    // 공유 주소는 늘 실제 사이트. /s/빈칸?w=…로 보내야 카톡 · 메신저가 이 의견 썸네일을 보여 준다(api/binkan-share · binkan-ogimg)
+    // 짧은 주소: 처음부터 있던 의견은 번호(/b/w05), 새 의견은 빈칸.가게이름(base64url).공감수 — 서버(api/binkan-share)가 풀어서 썸네일을 그린다
     const b64 = t => btoa(unescape(encodeURIComponent(t))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const s = SP[w.space], url = SHORT_BASE + (w.seed ? w.id : `${w.space}.${b64(w.title)}.${store.likes(w)}`);
     const place = /^동성로/.test(shortAddr(s)) ? shortAddr(s) : '동성로 ' + shortAddr(s);
     const text = `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
     lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
     openModal(`<h3>공유 카드</h3>
-      <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}${w.seed ? ' · 운영팀 바람' : '명이 공감'}</p></div>
+      <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}${w.seed ? ' · 운영팀 의견' : '명이 공감'}</p></div>
       <textarea readonly rows="3" id="shareText">${esc(text)}</textarea>
       <div class="sharebtns">${navigator.share ? '<button class="cta" data-act="nshare">공유하기 (카카오톡 등)</button>' : ''}<button class="${navigator.share ? 'cta2' : 'cta'}" data-act="copy">문구 · 링크 복사</button></div>`);
   }
@@ -548,14 +548,14 @@
       }
       case 'aquick': if (SV()) { const n = '회원' + String(Date.now()).slice(-4); b.disabled = true; b.textContent = '가입 중…'; window.BK.signup(null, null, n).then(a => signedIn(Object.assign(a, { role: 'citizen' }), `가입 완료 · ${n}님, 반가워요`), () => { b.disabled = false; b.textContent = '바로 시작하기'; toast('서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'); }); return; } { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `가입 완료 · ${n}님, 반가워요`); }
       case 'averify': { b.classList.add('done'); b.textContent = '✓ 인증 완료'; b.disabled = true; const e = $('#aerr'); if (e) e.hidden = true; return; }
-      case 'join': return needAuth(() => { st.entered = true; save(); toast('이벤트 참여 신청 완료! 이벤트가 열리면 남긴 바람이 자동 응모돼요'); document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); render(); });
+      case 'join': return needAuth(() => { st.entered = true; save(); toast('이벤트 참여 신청 완료! 이벤트가 열리면 남긴 의견이 자동 응모돼요'); document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); render(); });
     }
   });
 
-  // 바람 올리기
+  // 의견 올리기
   P.addEventListener('input', e => { const c = P.querySelector(`.cnt[data-for="${e.target.name}"]`); if (c) c.textContent = `${e.target.value.length} / ${e.target.maxLength}`; if (e.target.closest('#wform')) $('#werr').hidden = true; });
   const BAD = /(망해|망했|최악|쓰레기|꺼져|씨발|시발(?!점)|씨바|ㅅㅂ|ㅆㅂ|병신|ㅂㅅ|개같|개새|새끼(?!손|발|줄|오리|돼지)|좆|존나|지랄|fuck|010-?\d|카톡|오픈채팅|https?:\/\/)/i;
-  // 바람 · 도우미 · 답글 · 한 줄이 같은 기준: 「가 본 시민 한 줄」 점검(욕설 변형 · 전화번호 꼴 · 메신저 아이디 · 링크)을 먼저, 그다음 비방(BAD)
+  // 의견 · 도우미 · 답글 · 한 줄이 같은 기준: 「가 본 시민 한 줄」 점검(욕설 변형 · 전화번호 꼴 · 메신저 아이디 · 링크)을 먼저, 그다음 비방(BAD)
   const checkText = t => { if (/(씨발|시발(?!점)|씨바|병신|새끼(?!손|발|줄|오리|돼지)|좆|존나|개새|지랄)/.test(String(t || '').replace(/[\d\s.\-_*!~^]/g, ''))) return '욕설은 올라가지 않아요'; const n = window.MYSTORE && window.MYSTORE.noteCheck ? window.MYSTORE.noteCheck(String(t || '').replace(/\s+/g, ' ') + ' ..') : ''; if (n && !/두 글자/.test(n)) return n; return BAD.test(String(t || '').replace(/\s/g, '')) || BAD.test(t) ? '욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어요' : ''; };   // 「학생 할인 되는 카페」 「이런 카페가 별로 없어서」 같은 평범한 말은 통과(연락처 · 링크 · 비방만 막음)
   P.addEventListener('submit', e => {
     if (e.target.id !== 'wform') return;
@@ -564,15 +564,15 @@
     const err = m => { const el = $('#werr'); el.textContent = m; el.hidden = false; };
     if (title.length < 2) return err('가게를 두 글자 이상 적어 주세요');
     { const bad = checkText(title + ' ' + why); if (bad) return err(bad + ' — 고쳐서 다시 올려 주세요'); }
-    if (store.bySpace(view.space).some(w => w.title.replace(/\s/g, '') === title.replace(/\s/g, ''))) return err('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감을 눌러 주세요');
+    if (store.bySpace(view.space).some(w => w.title.replace(/\s/g, '') === title.replace(/\s/g, ''))) return err('이 빈칸에 같은 의견이 이미 있어요. 그 의견에 공감을 눌러 주세요');
     const w = { id: 'u' + Date.now(), space: view.space, cat: f.get('cat'), title, why: why || '—', who: roleName(st.user.role), likes: 0, ago: 0, uid: st.user.id };
     const btn = e.target.querySelector('button[type=submit], .cta'); if (btn) { btn.disabled = true; btn.textContent = '올리는 중…'; }
     const sp0 = view.space;
     store.add(w).then(x => {
       go('space', { space: sp0 });
-      toast('바람이 올라갔어요');
+      toast('의견이 올라갔어요');
       setTimeout(() => share(x || w), 300);
-    }, e2 => { if (btn) { btn.disabled = false; btn.textContent = '바람 올리기'; } serverFail(e2, () => {}); });
+    }, e2 => { if (btn) { btn.disabled = false; btn.textContent = '의견 올리기'; } serverFail(e2, () => {}); });
   });
 
   // 검색
@@ -581,8 +581,8 @@
   // ---------------- owner.js 등에 내보내기 ----------------
   window.APP = { BAD, checkText, st, save, store, dist, KX, KY, SP, M, SUP, SEED, esc, shortAddr, roleName, rolesOf, hasRole, addRole, myWishes, openModal, closeModal, go, needAuth, toast, adHTML, wishCard, rerender: () => render(), refresh: () => { render(); redraw(); }, view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
 
-  // 팀 백엔드가 준비되면(늦게 깨어나도) 서버 바람으로 다시 그림
-  // 서버가 붙으면: 그동안 이 기기에 둔 내 바람을 서버로(로그인 토큰이 있을 때). 토큰이 없으면(서버 전에 만든 계정) 이 기기에만 보임
+  // 팀 백엔드가 준비되면(늦게 깨어나도) 서버 의견으로 다시 그림
+  // 서버가 붙으면: 그동안 이 기기에 둔 내 의견을 서버로(로그인 토큰이 있을 때). 토큰이 없으면(서버 전에 만든 계정) 이 기기에만 보임
   let flushing = false;
   async function flushPending() {
     if (flushing || !SV() || !st.user) return; flushing = true;
@@ -590,7 +590,7 @@
       // 서버가 깨어나기 전에 「바로 시작」 · 가입한 회원(토큰 없음): 서버 회원으로 조용히 이어 붙임(이 기기 회원 id는 그대로) — 첫 공감에서 「로그인 만료」로 튕기지 않게
       if (!st.user.token) { try { const acc = await window.BK.signup(null, null, st.user.name); st.user.token = acc.token; st.user.accountId = acc.accountId; save(); await window.BK.reload(); } catch (e) { console.warn('서버 회원 이어 붙이기 실패:', e.message); return; } }
       for (const w of st.wishes.filter(x => x.pending && x.uid === st.user.id)) {
-        try { const x = await window.BK.add(w); if (x) { const mo = st.myOps || (st.myOps = {}); (mo[st.user.id] || (mo[st.user.id] = [])).push(x.op); st.wishes = st.wishes.filter(y => y !== w); save(); } } catch (e) { console.warn('기다리던 바람 올리기 실패:', e.message); }
+        try { const x = await window.BK.add(w); if (x) { const mo = st.myOps || (st.myOps = {}); (mo[st.user.id] || (mo[st.user.id] = [])).push(x.op); st.wishes = st.wishes.filter(y => y !== w); save(); } } catch (e) { console.warn('기다리던 의견 올리기 실패:', e.message); }
       }
     } finally { flushing = false; }
     render(); redraw();
