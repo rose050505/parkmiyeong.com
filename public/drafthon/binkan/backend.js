@@ -3,7 +3,7 @@
 // 주소 바꾸기(개발): localStorage.setItem('binkan.api', 'http://127.0.0.1:8081')
 (function () {
   const BASE = localStorage.getItem('binkan.api') || 'https://v2v-drafthon-backend.onrender.com';
-  const BK = { on: false, base: BASE, spaces: {}, byB: {}, wishes: [], listeners: [] };
+  const BK = { on: false, base: BASE, spaces: {}, byB: {}, wishes: [], listeners: [], rawAnswers: [], ansVer: 0 };
   const days = iso => Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86400000));
 
   async function call(m, p, body, token, ms = 12000) {
@@ -34,6 +34,13 @@
     const next = [];
     await Promise.all(Array.from({ length: 8 }, async () => { while (i < ids.length) { const sid = ids[i++]; const list = await call('GET', `/api/buildings/${BK.spaces[sid].b}/opinions?limit=100`, null, token()); list.forEach(o => next.push(toWish(o, sid))); } }));
     BK.wishes = next;
+    await loadAnswers();
+  }
+  // 가게가 주민 바람에 단 답(PR #5). 서버가 아직 모르면(404 등) 조용히 빈 목록
+  async function loadAnswers() {
+    const L = BK.wishes.slice(), out = []; let i = 0;
+    await Promise.all(Array.from({ length: 8 }, async () => { while (i < L.length) { const w = L[i++]; try { (await call('GET', `/api/wishes/${w.op}/answers?limit=50`)).forEach(a => out.push(a)); } catch (e) { } } }));
+    BK.rawAnswers = out; BK.ansVer++;
   }
 
   async function init() {
@@ -58,7 +65,7 @@
 
   // ---------------- 계정 ----------------
   const rnd = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => (b % 36).toString(36)).join('');
-  const shape = j => ({ id: j.account.username || j.account.id, name: j.account.displayName, token: j.token, accountId: j.account.id });
+  const shape = j => ({ id: j.account.username || j.account.id, name: j.account.displayName, token: j.token, accountId: j.account.id, srvRole: j.account.role || null });
   BK.signup = async (username, password, name) => {
     const u = (username || 'm' + rnd(9)).toLowerCase(), pw = password && password.length >= 8 ? password : (password || '') + rnd(12);
     return shape(await call('POST', '/api/auth/signup', { email: u + '@members.binkan.invalid', username: u, password: pw, displayName: name || u }));
@@ -79,6 +86,22 @@
     w.liked = !!r.likedByMe; w.likes = w.base + (r.likeCount || 0);
     return w;
   };
+  // ---------------- 내 가게(가게 운영 API, OWNER만) ----------------
+  // 사장님 역할은 서버가 정함(사업자등록 확인 또는 지정된 시범 가게 계정). 아니면 「내 가게」는 브라우저 저장으로만 돈다
+  let ownerAt = 0, ownerOk = null, ownerTok = null;
+  BK.isOwner = async () => {
+    const t = token(); if (!BK.on || !t) return false;
+    if (ownerTok === t && ownerOk !== null && (ownerOk || Date.now() - ownerAt < 60000)) return ownerOk;
+    try { const me = await call('GET', '/api/me', null, t); ownerOk = me.role === 'OWNER'; } catch (e) { ownerOk = false; }
+    ownerTok = t; ownerAt = Date.now(); return ownerOk;
+  };
+  BK.putStore = body => call('PUT', '/api/stores/me', body, token());
+  BK.postAnswer = (op, body) => call('POST', `/api/wishes/${op}/answers`, body, token());
+  BK.patchAnswer = (id, body) => call('PATCH', `/api/answers/${id}`, body, token());
+  BK.went = id => call('POST', `/api/answers/${id}/went`, null, token());
+  BK.alerts = () => call('GET', '/api/me/alerts?limit=30', null, token());
+  BK.reloadAnswers = async () => { if (BK.on) { await loadAnswers(); BK.listeners.forEach(f => f()); } };
+
   BK.reload = async () => { if (BK.on) { await loadAll(); BK.listeners.forEach(f => f()); } };
   BK.onChange = f => BK.listeners.push(f);
   window.BK = BK;

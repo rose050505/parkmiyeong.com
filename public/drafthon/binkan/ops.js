@@ -21,8 +21,8 @@
       const ms = MY().storeOf(ap.uid), pt = (ms && ms.setup && ms.pt) || LM.find(l => l.name === ap.near);
       if (pt) ws = window.OWNER.tools.nearWishes(pt, ap.item).list.map(x => x.w);
     }
-    const mem = ws.filter(w => !w.seed);
-    return { n: ws.length, likes: ws.reduce((x, w) => x + store.likes(w), 0), seed: ws.length - mem.length, memN: mem.length, memLikes: mem.reduce((x, w) => x + store.likes(w), 0), top: ws.slice().sort((a, b) => store.likes(b) - store.likes(a))[0] };
+    const mem = ws.filter(w => !w.seed), real = w => store.likes(w) - (w.seed ? (w.base != null ? w.base : ((SEED.wishes.find(x => x.id === w.id) || {}).likes || 0)) : 0);   // 회원이 누른 공감만(운영팀이 넣은 처음 공감 수는 뺌)
+    return { n: ws.length, likes: ws.reduce((x, w) => x + real(w), 0), seed: ws.length - mem.length, memN: mem.length, memLikes: mem.reduce((x, w) => x + real(w), 0), top: ws.slice().sort((a, b) => store.likes(b) - store.likes(a))[0] };
   }
   const score = ap => ap.score || { ready: 0, fit: 0 };
   const total = ap => { const s = score(ap), d = demand(ap); return s.ready + s.fit + Math.min(5, Math.ceil(d.likes / 10)); };   // 바람 수요 점수 = 공감 10개당 1점(최대 5) [가정]
@@ -47,12 +47,12 @@
     return `<div class="tblwrap"><table class="otable"><thead><tr><th>가게 · 자리</th><th>상황 · 과제</th><th>바람 수요 <small>계산</small></th><th>준비 정도</th><th>과제 적합</th><th>합계</th><th>결과</th></tr></thead><tbody>
       ${L.map(ap => { const d = demand(ap), s = score(ap); return `<tr><td><b>${esc(ap.item)}</b><br><small>${esc(ap.place)} · ${esc(ap.name)}</small></td>
         <td><small>${ap.status === 'pre' ? '창업 준비' : '운영 중'}${ap.trouble ? ' · ' + esc(ap.trouble) : ''} · ${esc(ap.when || '')}<br>${ap.tasks.map(t => esc(t.t)).join(' · ')}</small></td>
-        <td>${d.n}개 · ♥${d.likes}${d.seed ? `<br><small>운영팀 바람 ${d.seed}개 포함 · 회원 바람 ${d.memN}개 ♥${d.memLikes}</small>` : ''}${d.top ? `<br><small>1위 「${esc(d.top.title)}」</small>` : ''}</td>
+        <td>${d.n}개 · 회원 공감 ♥${d.likes}${d.seed ? `<br><small>운영팀 바람 ${d.seed}개 포함 · 회원 바람 ${d.memN}개 ♥${d.memLikes}</small>` : ''}${d.top ? `<br><small>1위 「${esc(d.top.title)}」</small>` : ''}</td>
         ${['ready', 'fit'].map(k => `<td><select data-p-in="${k}" data-id="${ap.id}"${ap.result ? ' disabled' : ''}>${[0, 1, 2, 3, 4, 5].map(n => `<option value="${n}"${s[k] === n ? ' selected' : ''}>${n || '—'}</option>`).join('')}</select></td>`).join('')}
         <td><b>${total(ap)}</b><small> / 15</small></td>
         <td>${ap.result ? `<span class="tag ${ap.result === 'yes' ? 'real' : ''}">${ap.result === 'yes' ? '선정' : '미선정 · 비교군'}</span> <button class="link" data-p="undo" data-id="${ap.id}">되돌리기</button>` : `<button class="cta sm" data-p="oyes" data-id="${ap.id}">선정</button><button class="cta2 sm" data-p="ono" data-id="${ap.id}">미선정</button>`}</td></tr>`; }).join('')}
       </tbody></table></div>
-      <p class="fine">합계 = 준비 정도(0~5) + 과제 적합(0~5) + 바람 수요(공감 10개당 1점, 최대 5) — 배점은 [가정], 운영단이 정해요. 운영팀이 넣어 둔 바람은 실제 시민 수요가 아니니 회원 바람 수를 같이 봐요. 미선정 가게는 같은 동의로 비교군이 되어 「내 가게」를 똑같이 쓰고, 합격선 근처 가게끼리 업종 · 개업 시기를 맞춰 비교해요 [제안].</p>`;
+      <p class="fine">합계 = 준비 정도(0~5) + 과제 적합(0~5) + 바람 수요(공감 10개당 1점, 최대 5) — 배점은 [가정], 운영단이 정해요. 운영팀이 넣어 둔 바람은 실제 시민 수요가 아니니 회원 바람 수를 같이 보고, 공감은 회원이 누른 것만 세요. 미선정 가게는 같은 동의로 비교군이 되어 「내 가게」를 똑같이 쓰고, 합격선 근처 가게끼리 업종 · 개업 시기를 맞춰 비교해요 [제안].</p>`;
   }
 
   function tStudent() {

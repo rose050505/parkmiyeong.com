@@ -137,7 +137,7 @@
       <h4>${esc(w.title)}</h4>
       <p>${esc(w.why)}</p>
       ${withPlace ? `<button class="place" data-act="space" data-id="${esc(w.space)}">📍 ${esc(shortAddr(s))}</button>` : ''}
-      <div class="wf"><span class="who">${esc(w.who)} · ${ago(w.ago || 0)}</span>
+      <div class="wf"><span class="who">${w.seed ? '운영팀' : esc(w.who)} · ${ago(w.ago || 0)}</span>
         <button class="like${on ? ' on' : ''}" data-act="like" data-id="${esc(w.id)}" aria-pressed="${on}">♥ 공감 ${store.likes(w)}</button>
         <button class="share" data-act="share" data-id="${esc(w.id)}">공유</button></div>
       ${answersHTML(w)}
@@ -298,13 +298,13 @@
       <section class="sphead"><p class="kick">이용 방법</p><h2>빈칸 · 바람 · 공감</h2></section>
       <dl class="terms">
         <dt>빈칸</dt><dd>동성로의 빈 1층 점포 후보. 공공데이터로 찾고 현장에서 확인해요.</dd>
-        <dt>바람</dt><dd>빈칸에 남기는 「여기 ○○ 있으면」 한 줄. 본인인증한 회원만 남길 수 있어요.</dd>
+        <dt>바람</dt><dd>빈칸에 남기는 「여기 ○○ 있으면」 한 줄. 회원만 남길 수 있어요(본 서비스는 휴대폰 본인인증으로 한 사람 한 계정).</dd>
         <dt>공감</dt><dd>마음에 드는 바람에 누르는 하트. 1인 1회.</dd>
         <dt>창업 카드</dt><dd>빈칸을 누르면 나오는 요약. 주변 업소 · 바람 1위 · 받을 수 있는 지원.</dd>
         <dt>동행 프로젝트</dt><dd>바람을 보고 창업하는 사장님과 대학생 4인 팀 + 지도교수가 한 학기를 함께하는 시범 사업.</dd>
       </dl>
       <p class="fine">빈칸 ${M.meta.n_spaces}곳: ${esc(M.meta.src)} ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 1층 공실 후보(같은 층에 새 업소 없음). 범위: ${esc(M.meta.scope)}.</p>
-      <p class="fine">처음 화면의 바람 · 공고 일부는 서비스 소개를 위해 운영팀이 넣어 둔 글이에요.</p>`;
+      <p class="fine">처음 화면의 바람 · 공감 수 · 공고 일부는 서비스 소개를 위해 운영팀이 넣어 둔 것이에요. 운영팀 바람에는 「운영팀」이라고 적혀 있어요.</p>`;
   }
   function search() {
     const q = view.q.trim(), t = q.replace(/\s/g, '');
@@ -330,7 +330,7 @@
     const ws = myWishes().slice().reverse(), liked = store.wishes().filter(w => store.liked(w));
     const al = MY() ? MY().alertsFor(st.user) : [];
     const html = `${back()}
-      <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · 본인인증 완료 · ${esc(rolesOf(st.user).map(roleName).join(' · '))}</p></section>
+      <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · ${esc(rolesOf(st.user).map(roleName).join(' · '))}</p></section>
       <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림과 첫 방문 쿠폰을 보내 드려요. 내가 쓰거나 공감한 바람에 <b>근처 가게가 답하면</b> 여기에 알려 드려요.</p>
         ${al.length ? `<ul class="alist">${al.map(x => `<li class="${x.unread ? 'new' : ''}${x.kind === 'end' ? ' end' : ''}">
           <p>${x.unread ? '<span class="tag mine">새 알림</span> ' : ''}${alertText(x)}${x.self ? ' <small class="fine">(내 가게 답)</small>' : ''}</p>
@@ -388,6 +388,7 @@
       <div class="atabs" role="tablist"><button class="${tab === 'login' ? 'on' : ''}" data-act="atab" data-v="login" role="tab">로그인</button><button class="${tab === 'signup' ? 'on' : ''}" data-act="atab" data-v="signup" role="tab">회원가입</button></div>
       ${msg ? `<p class="amsg">${esc(msg)}</p>` : `<p class="amsg">바람 · 공감 · 지원은 회원만 할 수 있어요. 보기는 누구나 할 수 있어요.</p>`}
       <button class="cta quick" data-act="aquick">휴대폰 본인인증으로 바로 시작</button>
+      ${SV() ? '<button class="cta2 quick" data-act="aowner">가게 사장님으로 바로 시작 <small>동성로 시범 가게 계정</small></button>' : ''}
       <p class="aor"><span>또는 아이디로</span></p>
       ${tab === 'login' ? `<form id="loginForm" class="aform" novalidate>
         <label>아이디<input name="uid" autocomplete="username" maxlength="20" required></label>
@@ -482,7 +483,7 @@
     const text = `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
     lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
     openModal(`<h3>공유 카드</h3>
-      <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}명이 공감</p></div>
+      <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}명이 공감${w.seed ? ' · 운영팀 바람' : ''}</p></div>
       <textarea readonly rows="3" id="shareText">${esc(text)}</textarea>
       <div class="sharebtns">${navigator.share ? '<button class="cta" data-act="nshare">공유하기 (카카오톡 등)</button>' : ''}<button class="${navigator.share ? 'cta2' : 'cta'}" data-act="copy">문구 · 링크 복사</button></div>`);
   }
@@ -518,9 +519,17 @@
       case 'nshare': if (lastShare && navigator.share) navigator.share(lastShare).catch(() => {}); return;
       case 'close': return closeModal();
       case 'atab': return authForm(b.dataset.v);
-      case 'aquick': if (SV()) { const n = '회원' + String(Date.now()).slice(-4); b.disabled = true; b.textContent = '본인인증 중…'; window.BK.signup(null, null, n).then(a => signedIn(Object.assign(a, { role: 'citizen' }), `본인인증 완료 · ${n}님, 반가워요`), () => { b.disabled = false; b.textContent = '휴대폰 본인인증으로 바로 시작'; toast('서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'); }); return; } { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `본인인증 완료 · ${n}님, 반가워요`); }
+      case 'aowner': {   // 서버에 지정된 시범 가게 계정 — 비밀번호는 서버 함수(api/binkan-owner)에만 있음
+        const url = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/binkan-owner' : 'https://parkmiyeong.com/api/binkan-owner';
+        b.disabled = true; b.textContent = '가게 계정 여는 중…';
+        fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+          .then(j => { after = after || (() => { MY().start(); go('mystore'); }); signedIn({ id: j.account.username || j.account.id, name: j.account.displayName || '시범 가게', token: j.token, role: 'open', roles: ['open'] }, `${j.account.displayName || '시범 가게'} 사장님, 반가워요`); },
+            () => { b.disabled = false; b.textContent = '가게 사장님으로 바로 시작'; toast('가게 계정을 열지 못했어요. 잠시 뒤 다시 해 주세요'); });
+        return;
+      }
+      case 'aquick': if (SV()) { const n = '회원' + String(Date.now()).slice(-4); b.disabled = true; b.textContent = '본인인증 중…'; window.BK.signup(null, null, n).then(a => signedIn(Object.assign(a, { role: 'citizen' }), `가입 완료 · ${n}님, 반가워요`), () => { b.disabled = false; b.textContent = '휴대폰 본인인증으로 바로 시작'; toast('서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'); }); return; } { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `가입 완료 · ${n}님, 반가워요`); }
       case 'averify': { b.classList.add('done'); b.textContent = '✓ 인증 완료'; b.disabled = true; const e = $('#aerr'); if (e) e.hidden = true; return; }
-      case 'join': return needAuth(() => { st.entered = true; save(); toast('이벤트 참여! 빈칸을 골라 바람을 남기면 자동 응모돼요'); document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); render(); });
+      case 'join': return needAuth(() => { st.entered = true; save(); toast('이벤트 참여 신청 완료! 이벤트가 열리면 남긴 바람이 자동 응모돼요'); document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); render(); });
     }
   });
 
@@ -540,7 +549,7 @@
     const sp0 = view.space;
     store.add(w).then(x => {
       go('space', { space: sp0 });
-      toast('바람이 올라갔어요 · 오픈 이벤트 자동 응모');
+      toast('바람이 올라갔어요');
       setTimeout(() => share(x || w), 300);
     }, e2 => { if (btn) { btn.disabled = false; btn.textContent = '바람 올리기'; } serverFail(e2, () => {}); });
   });

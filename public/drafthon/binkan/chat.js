@@ -213,7 +213,7 @@
       push(esc(u.reply) + cards + '<small class="aimark">AI 답 · 숫자 · 목록은 사이트 데이터로 계산</small>', u.reply + (shown.length ? ' [보여 준 것: ' + shown.map(x => x.id).join(', ') + ']' : ''));
     } else push((answer(text, understand(text)) || '') + note);
   }
-  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「새우깡 전문점 어때?」 「두 번째 자리 창업 카드 보여 줘」 「거기 셀프 사진관 바람 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
+  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「동성로에 1인 샤브샤브집 어때?」 「두 번째 자리 창업 카드 보여 줘」 「거기 셀프 사진관 바람 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
   function close() { $('#chatBox').hidden = true; $('#chatFab').hidden = false; }
   $('#chatFab').onclick = open;
   $('#chatForm').onsubmit = e => { e.preventDefault(); const v = $('#chatIn').value; $('#chatIn').value = ''; say(v); };
