@@ -241,8 +241,10 @@ body.pulse .pin.empty .sq { animation: pulse 0.8s ease-in-out 3; }
   .event { display: none; }
   .top { gap: 8px; padding: 0 10px; }
   .logo .name { display: none; }
-  .search { min-width: 0; }
-  .search input { padding: 8px 12px; }
+  .search { min-width: 0; flex: 1 1 0; }
+  .search input { padding: 8px 10px; width: 0; flex: 1 1 0; }
+  .search button { padding: 0 10px; flex: none; }
+  .logo .mark { font-size: 12px; }
   .mebtn { padding: 4px; font-size: 0; }
   .mebtn .av { font-size: 11px; }
   .mebtn.ghost { font-size: 13px; padding: 6px 10px; white-space: nowrap; }
