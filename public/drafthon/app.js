@@ -623,8 +623,8 @@
     if (n < upto && !busy) {
       const q = script[n];
       h += qBubble(q) + `
-<div class="chips">${q.ex ? `<button class="chip ex" data-chat="${name}" data-ex="1"><span class="tag ex">예시 답</span> ${esc(q.ex)}</button>` : ''}</div>
-        <form class="askform" data-chat="${name}"><input type="text" placeholder="직접 입력 (예시와 다르면 실시간 연결 때만 AI 답)"><button class="btn">보내기</button></form>`;
+<div class="chips">${q.ex && st.ans.every((x, i) => x === script[i].ex) ? `<button class="chip ex" data-chat="${name}" data-ex="1"><span class="tag ex">예시 답</span> ${esc(q.ex)}</button>` : ''}</div>
+        <form class="askform" data-chat="${name}"><input type="text" placeholder="직접 입력"><button class="btn">보내기</button></form>`;
     }
     if (busy) h += '<div class="msg ai"><span class="who">AI</span><span class="spin">답을 읽고 정리하는 중…</span></div>';
     return h + '<p class="note">「질문」은 정해진 질문, 「AI 질문」은 답을 읽고 AI가 만든 질문입니다. 분류 · 진단 · 설계는 AI가 합니다.</p></div>';
