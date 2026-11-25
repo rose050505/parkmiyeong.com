@@ -96,6 +96,7 @@
     ownerTok = t; ownerAt = Date.now(); return ownerOk;
   };
   BK.putStore = body => call('PUT', '/api/stores/me', body, token());
+  BK.getStore = () => call('GET', '/api/stores/me', null, token()).catch(e => { if (e.status === 404) return null; throw e; });
   BK.postAnswer = (op, body) => call('POST', `/api/wishes/${op}/answers`, body, token());
   BK.patchAnswer = (id, body) => call('PATCH', `/api/answers/${id}`, body, token());
   BK.went = id => call('POST', `/api/answers/${id}/went`, null, token());

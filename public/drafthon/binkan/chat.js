@@ -205,7 +205,7 @@
   async function say(text) {
     if (!text.trim() || busy) return;
     log.push({ who: 'me', html: esc(text), text });
-    if (FAQ[text]) { push(FAQ[text]); return; }
+    if (FAQ[text]) { aiOk = null; push(FAQ[text]); return; }   // 정해 둔 답이라 「AI 연결됨」을 끔
     let u = null, note = '';
     if (live()) {
       busy = true; log.push({ who: 'bot wait', html: '<span class="dots">AI가 읽는 중</span>' }); draw();
@@ -230,13 +230,13 @@
     if (c === 'say') return say(b.dataset.v);
     if (c === 'space') { A.go('space', { space: id }); return; }
     if (c === 'card') { push(cardSpace(id, b.dataset.item)); return; }
-    if (c === 'consult') { const item = b.dataset.item || ''; window.OWNER.startWith({ status: 'pre', known: item ? 'both' : 'place', item, space: id }); A.go('owner'); push(`<small>${esc(shortAddr(SP[id]))} 자리로 창업 상담을 열었어요${item ? ` (아이템 「${esc(item)}」)` : ''}.</small>`); return; }
+    if (c === 'consult') { const item = b.dataset.item || ''; const fresh = window.OWNER.startWith({ status: 'pre', known: item ? 'both' : 'place', item, space: id }) !== false; A.go('owner'); if (!fresh) { push('<small>하던 상담을 열었어요.</small>'); return; } push(`<small>${esc(shortAddr(SP[id]))} 자리로 창업 상담을 열었어요${item ? ` (아이템 「${esc(item)}」)` : ''}.</small>`); return; }
     if (c === 'like') { push(like(id)); return; }
     if (c === 'wishpost') {
       const d = drafts[b.dataset.k]; if (!d) return;
       A.needAuth(() => {
         if (store.bySpace(d.space).some(w => w.title.replace(/\s/g, '') === d.title.replace(/\s/g, ''))) return push('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감해 주세요.');
-        if (/(망해|망했|최악|쓰레기|010-?\d|카톡|오픈채팅|https?:\/\/)/.test(d.title + d.why)) return push('비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 바람 쓰기와 같은 기준
+        if (A.BAD.test(d.title + d.why)) return push('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 바람 쓰기와 같은 기준
         const w = { id: 'u' + Date.now(), space: d.space, cat: d.cat, title: d.title, why: d.why || '—', who: A.roleName(A.st.user.role), likes: 0, ago: 0, uid: A.st.user.id };
         delete drafts[b.dataset.k];
         store.add(w).then(x => {

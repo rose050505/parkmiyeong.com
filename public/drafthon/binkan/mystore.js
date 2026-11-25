@@ -48,7 +48,7 @@
     const body = storeBody(s); if (!body) return Promise.resolve(null);
     const sig = JSON.stringify(body); if (s.srvSig === sig && s.srvId) return Promise.resolve(s.srvId);
     if (pending.store) return pending.store;
-    return pending.store = window.BK.isOwner().then(ok => ok ? window.BK.putStore(body).then(j => { if (s.srvId !== j.id) mergedVer = -1; s.srvId = j.id; s.srvSig = sig; save(); return j.id; }) : null)
+    return pending.store = window.BK.isOwner().then(ok => ok ? window.BK.putStore(body).then(j => { const nw = s.srvId !== j.id; s.srvId = j.id; s.srvSig = sig; save(); if (nw) { mergedVer = -1; rerender(); } return j.id; }) : null)
       .catch(e => { console.warn('가게 설정 서버 저장 실패:', e.message); return null; }).finally(() => { delete pending.store; });
   }
   function syncAnswer(a) {
@@ -59,18 +59,34 @@
     pending[a.id] = syncStore(s).then(async sid => {
       if (!sid) return;
       if (!a.srv) {
-        try { const j = await window.BK.postAnswer(w.op, { storeId: sid, menuName: (a.menu || a.item || '메뉴').slice(0, 120), message: a.reply.slice(0, 1000) }); a.srv = j.id; a.srvState = '준비 중'; }
+        try { const j = await window.BK.postAnswer(w.op, { storeId: sid, menuName: (a.menu || a.item || '메뉴').slice(0, 120), message: a.reply.slice(0, 1000) }); a.srv = j.id; a.srvState = '준비 중'; a.srvMenu = j.menuName || a.menu; }
         catch (e) {   // 같은 가게가 이 바람에 이미 답함(다른 기기에서 올림) → 그 답에 이어 붙여 고치기로
           if (e.status !== 409) throw e;
           const had = (await window.BK.storeAnswers(sid)).find(x => x.wishId === w.op); if (!had) throw e;
-          a.srv = had.id; a.srvState = ST2[had.status] || '준비 중'; a.srvSig = [had.menuName, had.message, a.srvState].join('|');
+          a.srv = had.id; a.srvState = ST2[had.status] || '준비 중'; a.srvMenu = had.menuName; a.srvSig = [had.menuName, had.message, a.srvState].join('|');
         }
       }
+      const ORD = ['준비 중', '판매 중', '끝남'];
+      if (a.srvState && ORD.indexOf(a.state) < ORD.indexOf(a.srvState)) { a.state = a.srvState; save(); A.toast('서버에 올라간 답은 앞 단계로 되돌릴 수 없어요 — 「' + a.srvState + '」로 두었어요'); rerender(); }
+      if (a.srvMenu && a.menu !== a.srvMenu) { a.menu = a.srvMenu; save(); A.toast('메뉴 이름은 처음 올린 이름으로 보여요 — 바꾸려면 끝내고 새로 답해 주세요'); rerender(); }
       const ch = {}; if (!a.srvSig || a.srvSig.split('|')[1] !== a.reply) ch.message = a.reply.slice(0, 1000);
       if (a.state !== (a.srvState || '준비 중')) ch.status = TS2[a.state];
       if (Object.keys(ch).length) { await window.BK.patchAnswer(a.srv, ch); if (ch.status) a.srvState = a.state; }
-      a.srvSig = sig; delete a.srvFail; save();
+      a.srvSig = [a.menu, a.reply, a.state].join('|'); a.srvAt = Date.now(); delete a.srvFail; save();
     }).catch(e => { console.warn('답 서버 저장 실패:', e.message); a.srvFail = Date.now(); save(); A.toast('답은 이 기기에 저장했어요 — 서버에는 아직 못 올렸어요(잠시 뒤 다시 저장하면 올라가요)'); }).finally(() => { delete pending[a.id]; });
+  }
+  // 서버의 내 가게 설정 → 이 기기 「내 가게」(설정 화면을 건너뜀). 여럿이 같은 계정을 써도 가게 · 확인 번호가 하나로 맞음
+  function fromServer(s0) {
+    window.BK.isOwner().then(ok => ok ? window.BK.getStore() : null).then(j => {
+      if (!j || !j.id || !j.name) return;
+      const s = db.store(s0.uid); if (!s || s.setup) return;
+      const x = +j.longitude, y = +j.latitude;
+      Object.assign(s, { name: j.name, item: j.category || s.item, sub: M.subs.includes(j.category) ? j.category : s.sub, pt: Number.isFinite(x) && Number.isFinite(y) ? { x, y, label: (j.roadAddress || '').replace(/^대구(광역시)?\s*중구\s*/, '') || '가게 위치' } : s.pt,
+        perk: j.firstVisitBenefit || '', offer: j.offerDetails || '', menus: (j.menus || []).length ? j.menus.map(m => ({ name: m.name, price: m.priceKrw != null ? String(m.priceKrw) : '' })) : s.menus, setup: true, srvId: j.id });
+      s.srvSig = JSON.stringify(storeBody(s)); st.mystores[s.uid] = s; save(); mergedVer = -1;
+      if (ui.view === 'k1') ui.view = 'k';
+      A.toast('이 계정의 가게 설정을 불러왔어요'); rerender();
+    }).catch(e => console.warn('가게 설정 불러오기 실패:', e.message));
   }
   // 다른 가게(서버)의 답을 이 브라우저 목록에 합침 — 시민 쪽 「근처 가게가 답했어요」 · 알림 · 가게 카드가 그대로 씀. 이 브라우저에서 올린 답(srv 같음)은 건너뜀
   let mergedVer = -1;
@@ -83,14 +99,19 @@
     const me = st.user && st.user.id, myS = me && db.store(me), myStore = myS && myS.srvId;
     const rem = [];
     for (const r of window.BK.rawAnswers) {
-      if (mine[r.id]) { mine[r.id].went = Math.max(mine[r.id].went || 0, r.visitCount || 0); continue; }   // 내가 올린 답: 다른 기기 시민의 「가 봤어요」 수를 합침
+      if (mine[r.id]) {   // 내가 올린 답: 다른 기기 시민의 「가 봤어요」 수를 합치고, 다른 기기에서 고친 상태 · 문장이 더 새로우면 받음
+        const a = mine[r.id]; a.went = Math.max(a.went || 0, r.visitCount || 0);
+        const up = Date.parse(r.updatedAt || r.createdAt) || 0, state = ST2[r.status] || a.state;
+        if (up > (a.srvAt || 0) + 2000 && !pending[a.id]) { Object.assign(a, { state, reply: r.message, menu: r.menuName || a.menu, srvState: state, srvMenu: r.menuName || a.menu, srvAt: up }); a.srvSig = [a.menu, a.reply, a.state].join('|'); }
+        continue;
+      }
       const w = window.BK.wishes.find(x => x.op === r.wishId); if (!w || !SP[w.space]) continue;
       if (myStore && r.storeId === myStore) {   // 같은 가게 계정이 다른 기기에서 올린 답 → 이 기기에서도 내 답으로(중복 답 방지)
         const state = ST2[r.status] || '준비 중', sig = [r.menuName || '', r.message, state].join('|');
         const loc = st.answers.find(a => !a.remote && a.uid === me && a.wish === w.id && !a.srv);
-        if (loc) Object.assign(loc, { srv: r.id, srvState: state, srvSig: sig === [loc.menu, loc.reply, loc.state].join('|') ? sig : undefined, went: Math.max(loc.went || 0, r.visitCount || 0) });
+        if (loc) Object.assign(loc, { srv: r.id, srvState: state, srvMenu: r.menuName, srvAt: Date.parse(r.updatedAt || r.createdAt) || 0, srvSig: sig === [loc.menu, loc.reply, loc.state].join('|') ? sig : undefined, went: Math.max(loc.went || 0, r.visitCount || 0) });
         else st.answers.push({ id: 'a' + r.id.replace(/-/g, '').slice(0, 12), wish: w.id, sid: myS.id, uid: me, store: myS.name || r.storeName, item: myS.item || r.storeCategory || '', menu: r.menuName || '', reply: r.message, state,
-          at: Date.parse(r.createdAt) || Date.now(), went: r.visitCount || 0, reports: 0, reportWhy: [], hidden: false, ing: { name: '', per: 0, unit: 'g' }, days: [], notes: [], trial: { on: false }, dist: dist(SP[w.space], ptOf(myS) || SP[w.space]), srv: r.id, srvState: state, srvSig: sig });
+          at: Date.parse(r.createdAt) || Date.now(), went: r.visitCount || 0, reports: 0, reportWhy: [], hidden: false, ing: { name: '', per: 0, unit: 'g' }, days: [], notes: [], trial: { on: false }, dist: dist(SP[w.space], ptOf(myS) || SP[w.space]), srv: r.id, srvState: state, srvMenu: r.menuName, srvAt: Date.parse(r.updatedAt || r.createdAt) || 0, srvSig: sig });
         continue;
       }
       const pt = { x: +r.longitude, y: +r.latitude, label: (r.roadAddress || '').replace(/^대구(광역시)?\s*중구\s*/, '') };
@@ -131,7 +152,7 @@
   const placeOf = s => (s.pt && s.pt.label) || (s.space && SP[s.space] ? shortAddr(SP[s.space]) : s.near ? s.near + ' 근처' : '');
   const storeLabel = s => `${s.name || s.item} @ ${placeOf(s)}`;
   // 오늘 손님 확인 번호(가게마다 날마다 바뀌는 4자리): 사장님 화면에만 보이고, 손님 화면의 [사장님 확인]에 이 번호를 넣어야 「확인된 손님」으로 셈
-  const codeKey = s => 'n:' + ((s && (s.name || s.item)) || '');   // 가게 이름으로 — 서버에서 온 답(다른 기기 손님 화면)도 같은 번호, 서버 저장 전후로 번호가 안 바뀜
+  const codeKey = s => s && s.srvId ? 'srv:' + s.srvId : s ? s.id : '';   // 서버 가게 id로 — 같은 가게를 여러 기기에서 써도, 다른 기기 손님 화면(a.sid = 'srv:' + 가게 id)에서도 같은 번호
   const dayCode = (sid, date) => { let h = 7; for (const ch of sid + '|' + (date || today())) h = (h * 31 + ch.charCodeAt(0)) % 1000003; return String(h % 10000).padStart(4, '0'); };
   const aiTag = ai => T().aiTag(ai);
 
@@ -146,6 +167,7 @@
     }
     ui.view = c.mode === 'owner' && !c.s.setup ? 'k1' : 'k';
     ui.open = null; ui.pending = opts.wish || null;
+    if (c.mode === 'owner' && !c.s.setup && BKon()) fromServer(c.s);   // 이 계정 가게가 서버에 이미 있으면(같은 시범 가게 계정을 다른 기기에서 씀) 그 설정으로 채움
     if (c.s) myAnswers(c.s).forEach(x => ui.extra.add(x.wish));   // 내가 답한 바람은 150m 밖이어도 목록에 남김
     if (opts.view && c.mode === 'owner' && c.s.setup) ui.view = opts.view;
     if (c.mode === 'owner' && c.s.setup) { ui.since = c.s.lastSeen || 0; c.s.lastSeen = Date.now(); db.putStore(c.s); }   // 지난번 연 뒤 새로 생긴 회원 바람에 「새 바람」
@@ -993,7 +1015,7 @@
   function confirmVisit(aid, code) {
     const u = st.user, a = db.answer(aid); if (!u || !a || a.state === '끝남') return '';
     if (a.uid === u.id) return '내 가게 답이에요 — 손님 화면에서 눌러 주세요';
-    const ks = db.stores().find(x => x.id === a.sid); if (String(code || '').trim() !== dayCode(ks ? codeKey(ks) : 'n:' + (a.store || ''))) return { err: '확인 번호가 맞지 않아요 — 사장님 「내 가게」 위쪽의 오늘 번호를 넣어 주세요' };
+    const ks = db.stores().find(x => x.id === a.sid); if (String(code || '').trim() !== dayCode(ks ? codeKey(ks) : a.sid)) return { err: '확인 번호가 맞지 않아요 — 사장님 「내 가게」 위쪽의 오늘 번호를 넣어 주세요' };
     const key = aid + ':' + today(); if (db.got('visits', u.id, key)) return '오늘은 이미 확인했어요';
     db.mark('visits', u.id, key, Date.now());
     const d = dayOf(a, today(), true); d.came = (d.came || 0) + 1; d.ok = (d.ok || 0) + 1; db.putAnswer(a);

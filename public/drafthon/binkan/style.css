@@ -782,3 +782,5 @@ body.work-open .work { padding-bottom: 110px; }
   .chatbox * { max-width: 100%; }
   .k1grid select, .k1grid input { max-width: 100%; min-width: 0; }
 }
+@media (max-width: 640px) { body.work-open .chatfab { top: auto; bottom: 16px; left: auto; right: 12px; } }   /* 작업 화면에선 「← 지도로」를 가리지 않게 오른쪽 아래로 */
+.fine .link { margin: 0; font-size: inherit; }

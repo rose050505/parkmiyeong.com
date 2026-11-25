@@ -54,14 +54,14 @@
   const SV = () => !!(window.BK && window.BK.on);
   const myServer = () => (st.user && st.myOps && st.myOps[st.user.id]) || [];
   const store = {
-    wishes: () => SV() ? window.BK.wishes.map(w => myServer().includes(w.op) ? Object.assign({}, w, { uid: st.user.id, who: roleName(st.user.role) }) : Object.assign({}, w))
+    wishes: () => SV() ? window.BK.wishes.map(w => myServer().includes(w.op) ? Object.assign({}, w, { uid: st.user.id, who: roleName(st.user.role) }) : Object.assign({}, w)).concat(st.wishes.filter(w => w.pending))   // 서버가 깨어나기 전에 쓴 바람도 사라지지 않게
       : SEED.wishes.map(w => Object.assign({ seed: true }, w)).concat(st.wishes),
     likes: w => SV() ? w.likes : w.likes + Object.values(st.likedBy).filter(m => m && m[w.id]).length,
     liked: w => SV() ? !!w.liked : !!st.liked[w.id],
     bySpace: id => store.wishes().filter(w => w.space === id).sort((a, b) => store.likes(b) - store.likes(a)),
     // 둘 다 Promise. 서버 모드에서 실패하면 throw(401이면 로그인 만료)
     async add(w) {
-      if (!SV()) { st.wishes.push(w); save(); return w; }
+      if (!SV()) { w.pending = !!window.BK; st.wishes.push(w); save(); return w; }   // 서버가 아직(깨어나는 중) → 이 기기에 두고 서버가 붙으면 올림(flushPending)
       const x = await window.BK.add(w); if (!x) return null;
       const m = st.myOps || (st.myOps = {}); (m[st.user.id] || (m[st.user.id] = [])).push(x.op); save();
       return Object.assign({}, x, { uid: st.user.id });
@@ -121,11 +121,12 @@
   }
   // 화면을 옮길 때마다 방문 기록을 하나 쌓는다 → 폰의 「뒤로」가 사이트를 나가지 않고 앞 화면으로 감(popstate가 되돌림)
   let popping = false;
+  const urlOf = v => location.pathname + location.search + (v.mode === 'space' && v.space ? '#s=' + v.space : v.mode === 'home' ? '' : location.hash);
   const jsonable = o => { try { return JSON.parse(JSON.stringify(o)); } catch (e) { return { mode: o.mode, space: o.space || null }; } };
   function go(mode, extra) {
     const was = view.mode, wasSpace = view.space;
     view = Object.assign({ mode, space: null, q: '' }, extra || {});
-    const url = mode === 'space' && view.space ? '#s=' + view.space : mode === 'home' ? location.pathname : location.pathname + location.hash;
+    const url = urlOf(view);
     if (!popping && (mode !== was || view.space !== wasSpace)) history.pushState({ bk: jsonable(view) }, '', url);
     else if (!popping) history.replaceState({ bk: jsonable(view) }, '', url);
     if (mode === 'space' && view.space) map && map.focus(SP[view.space]);
@@ -229,7 +230,7 @@
     return `<section class="hello">
         <h2>이 빈 가게에 뭐가 생기면 좋을까?</h2>
         <p>지도에서 빈칸을 누르고 「여기 ○○ 있으면」을 남겨 주세요. 공감이 모인 바람은 준비된 사장님의 창업 아이템이 되고, 대구 대학생 팀이 개업 준비와 첫 운영을 돕습니다.</p>
-        <p class="fine">대구시 + 지역 대학 운영단의 시범 사업 · AI가 시민 · 사장님 · 학생의 문장을 업종 · 과제 · 전공으로 바꿔 잇습니다. <button class="link" data-act="howto">시범 사업 한 장 보기</button></p>
+        <p class="fine">대구시 + 지역 대학 운영단의 시범 사업 · AI가 시민 · 사장님 · 학생의 문장을 업종 · 과제 · 전공으로 바꿔 잇습니다. <button class="link" data-act="howto" data-to=".pilot">시범 사업 한 장 보기</button></p>
       </section>
       <section><h3>지금 뜨는 바람</h3><ol class="trend">${top.map((w, i) => `<li><button data-act="space" data-id="${esc(w.space)}" data-w="${esc(w.id)}"><span class="rk">${i + 1}</span><span class="tt">${esc(w.title)}<small>${esc(shortAddr(SP[w.space]))}</small></span><span class="lk">♥ ${store.likes(w)}</span></button></li>`).join('')}</ol>
       </section>
@@ -516,7 +517,7 @@
       case 'write': return needAuth(() => go('write', { space: view.space }));
       case 'owner': window.OWNER.start(id || null); return go('owner');
       case 'student': window.STUDENT.start(id || null); return go('student');
-      case 'howto': case 'mine': return go(a);
+      case 'howto': case 'mine': go(a); if (b.dataset.to) setTimeout(() => { const el = document.querySelector(b.dataset.to); if (el) el.scrollIntoView({ block: 'start' }); }, 50); return;
       case 'mystore': return needAuth(() => { MY().start(); go('mystore'); });
       case 'ops': return needAuth(() => go('ops'));
       case 'went': return needAuth(() => { const r = MY().went(id); toast(r); render(); redraw(); });
@@ -552,14 +553,14 @@
 
   // 바람 올리기
   P.addEventListener('input', e => { const c = P.querySelector(`.cnt[data-for="${e.target.name}"]`); if (c) c.textContent = `${e.target.value.length} / ${e.target.maxLength}`; if (e.target.closest('#wform')) $('#werr').hidden = true; });
-  const BAD = /(망해|망했|최악|쓰레기|010-?\d|카톡|오픈채팅|https?:\/\/)/;   // 「학생 할인 되는 카페」 「이런 카페가 별로 없어서」 같은 평범한 말은 통과(연락처 · 링크 · 비방만 막음)
+  const BAD = /(망해|망했|최악|쓰레기|꺼져|씨발|시발|ㅅㅂ|ㅆㅂ|병신|ㅂㅅ|개같|개새|좆|존나|지랄|fuck|010-?\d|카톡|오픈채팅|https?:\/\/)/i;   // 「학생 할인 되는 카페」 「이런 카페가 별로 없어서」 같은 평범한 말은 통과(연락처 · 링크 · 비방만 막음)
   P.addEventListener('submit', e => {
     if (e.target.id !== 'wform') return;
     e.preventDefault();
     const f = new FormData(e.target), title = (f.get('title') || '').trim(), why = (f.get('why') || '').trim();
     const err = m => { const el = $('#werr'); el.textContent = m; el.hidden = false; };
     if (title.length < 2) return err('가게를 두 글자 이상 적어 주세요');
-    if (BAD.test(title + why)) return err('비방 · 연락처 · 링크로 보이는 말이 있어요. 고쳐서 다시 올려 주세요');
+    if (BAD.test(title + why)) return err('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어요. 고쳐서 다시 올려 주세요');
     if (store.bySpace(view.space).some(w => w.title.replace(/\s/g, '') === title.replace(/\s/g, ''))) return err('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감을 눌러 주세요');
     const w = { id: 'u' + Date.now(), space: view.space, cat: f.get('cat'), title, why: why || '—', who: roleName(st.user.role), likes: 0, ago: 0, uid: st.user.id };
     const btn = e.target.querySelector('button[type=submit], .cta'); if (btn) { btn.disabled = true; btn.textContent = '올리는 중…'; }
@@ -575,10 +576,21 @@
   $('#search').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q) go('search', { q }); });
 
   // ---------------- owner.js 등에 내보내기 ----------------
-  window.APP = { st, save, store, dist, KX, KY, SP, M, SUP, SEED, esc, shortAddr, roleName, rolesOf, hasRole, addRole, myWishes, openModal, closeModal, go, needAuth, toast, adHTML, wishCard, rerender: () => render(), refresh: () => { render(); redraw(); }, view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
+  window.APP = { BAD, st, save, store, dist, KX, KY, SP, M, SUP, SEED, esc, shortAddr, roleName, rolesOf, hasRole, addRole, myWishes, openModal, closeModal, go, needAuth, toast, adHTML, wishCard, rerender: () => render(), refresh: () => { render(); redraw(); }, view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
 
   // 팀 백엔드가 준비되면(늦게 깨어나도) 서버 바람으로 다시 그림
-  if (window.BK) window.BK.onChange(() => { render(); redraw(); });
+  // 서버가 붙으면: 그동안 이 기기에 둔 내 바람을 서버로(로그인 토큰이 있을 때). 토큰이 없으면(서버 전에 만든 계정) 이 기기에만 보임
+  let flushing = false;
+  async function flushPending() {
+    if (flushing || !SV() || !st.user || !st.user.token) return; flushing = true;
+    try {
+      for (const w of st.wishes.filter(x => x.pending && x.uid === st.user.id)) {
+        try { const x = await window.BK.add(w); if (x) { const mo = st.myOps || (st.myOps = {}); (mo[st.user.id] || (mo[st.user.id] = [])).push(x.op); st.wishes = st.wishes.filter(y => y !== w); save(); } } catch (e) { console.warn('기다리던 바람 올리기 실패:', e.message); }
+      }
+    } finally { flushing = false; }
+    render(); redraw();
+  }
+  if (window.BK) window.BK.onChange(() => { render(); redraw(); flushPending(); });
 
   // ---------------- 시작 ----------------
   migrate();
@@ -587,12 +599,15 @@
     if (map.why) { const m = $('#mapmsg'); m.textContent = map.why; m.hidden = false; }
     document.body.dataset.map = map.kind;
     const fromHash = () => { const h = location.hash.match(/^#s=(V\d+)/); if (h && SP[h[1]]) { go('space', { space: h[1] }); return true; } };
-    if (!fromHash()) { render(); redraw(); map.fitTo(M.spaces.filter(s => store.bySpace(s.id).length)); }
+    popping = true; let opened; try { opened = fromHash(); } finally { popping = false; }   // 처음 연 주소(공유 링크)는 기록을 하나 더 쌓지 않음 → 첫 「뒤로」가 제자리에 머물지 않게
+    if (!opened) { render(); redraw(); map.fitTo(M.spaces.filter(s => store.bySpace(s.id).length)); }
     window.addEventListener('hashchange', () => { if (!fromHash() && !location.hash) go('home'); });
     history.replaceState({ bk: jsonable(view) }, '', location.href);
     let rz = 0; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (!map || WORKS.includes(view.mode)) return; map.relayout(); if (view.space) map.focus(SP[view.space]); else if (view.mode === 'home') map.fitTo(M.spaces.filter(s => store.bySpace(s.id).length)); }, 250); });   // 창 크기를 바꾸면 핀이 다시 화면 안으로
     if (window.innerWidth <= 640) { const q = document.querySelector('input[type="search"]'); if (q) q.placeholder = '가게 · 업종 찾기'; }
-    window.addEventListener('popstate', e => {   // 「뒤로」: 쌓아 둔 화면으로(기록이 없으면 첫 화면)
+    window.addEventListener('popstate', e => {   // 「뒤로」: 열린 창 · 도우미가 있으면 그것만 닫고, 아니면 쌓아 둔 화면으로(기록이 없으면 첫 화면)
+      const cb = $('#chatBox');
+      if (!modal.hidden || (cb && !cb.hidden)) { if (!modal.hidden) closeModal(); else { cb.hidden = true; const f = $('#chatFab'); if (f) f.hidden = false; } history.pushState({ bk: jsonable(view) }, '', urlOf(view)); return; }
       const v = e.state && e.state.bk; popping = true;
       try { if (v && v.mode && (v.mode !== 'space' || SP[v.space])) { const { mode, ...rest } = v; go(mode, rest); } else if (!fromHash()) go('home'); } finally { popping = false; }
     });

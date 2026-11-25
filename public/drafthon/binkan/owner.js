@@ -24,7 +24,8 @@
   const tokens = t => t.replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|전문점|매장)$/, '')).filter(w => w.length >= 2);
   // 흔한 말(카페 · 1인 · 전문 …)만 겹친 것은 같은 바람으로 보지 않는다(「디저트 카페」가 「보드게임 카페」에 붙던 문제). 흔한 말뿐이면 그대로 씀
   const COMMON = new Set(['카페', '1인', '전문', '가게', '맛집', '작은', '조용한', '동성로', '대구', '바', '샵', '숍', '하우스', '스토어', '느낌', '분위기', '가성비', '저렴한', '혼자']);
-  const wishMatch = (item, w) => { const all = tokens(item), tk = all.filter(k => !COMMON.has(k)); return (tk.length ? tk : all).some(k => w.title.includes(k) || w.why.includes(k)); };
+  const split = k => { for (const c of COMMON) if (k.length > c.length + 1 && k.endsWith(c)) return [k.slice(0, -c.length), c]; return [k]; };   // 「디저트카페」 → 디저트 + 카페
+  const wishMatch = (item, w) => { const all = tokens(item).flatMap(split), tk = all.filter(k => !COMMON.has(k)), hay = (w.title + ' ' + w.why).replace(/\s+/g, ''); return (tk.length ? tk : all).some(k => hay.includes(k)); };
   function around(pt, cat) {
     const near = M.bg.filter(([x, y]) => dist({ x, y }, pt) <= 100);
     return { all: near.length, same: near.filter(b => b[2] === cat).length, vacant: M.spaces.filter(s => s !== pt && dist(s, pt) <= 100).length };
@@ -322,12 +323,15 @@
     // 빈칸에서 들어오면 그 자리를 고른 채로 시작. 진행 중인 상담이 있으면 이어서.
     // 챗봇이 대화로 채워서 시작: patch = { status, trouble, story, item, known }
     startWith(patch) {   // 하던 상담(2단계 이상 · 지원서 전)이 있으면 지우지 않고 이어서 보여 줌
-      const cur = st.owner; if (cur && (cur.step || 1) >= 2 && !cur.app) { window.APP.toast('하던 상담을 이어서 보여 드려요'); return; }
-      st.owner = Object.assign(blank(), patch); save(); },
+      const cur = st.owner; if (cur && (cur.step || 1) >= 2 && !confirm(`하던 상담${cur.item ? `(「${cur.item}」)` : ''}이 있어요. 새 상담으로 시작할까요?\n(취소하면 하던 상담을 이어서 봐요)`)) { window.APP.toast('하던 상담을 이어서 보여 드려요'); return false; }
+      st.owner = Object.assign(blank(), patch); save(); return true; },
     tools: { combos, riskList, bigCat, wishMatch, nearWishes, aiTag, tokens },
     start(spaceId) {
       // 빈칸에서 들어왔는데 지금 상담이 다른 자리 것이면 새로 시작(같은 자리면 이어서)
-      if (spaceId && O().space !== spaceId) { st.owner = Object.assign(blank(), { status: 'pre', known: 'place', space: spaceId }); save(); }
+      if (spaceId && O().space !== spaceId) {
+        if ((O().step || 1) >= 2 && !confirm(`하던 상담${O().item ? `(「${O().item}」)` : ''}이 있어요. 이 자리로 새 상담을 시작할까요?\n(취소하면 하던 상담을 이어서 봐요)`)) return;
+        st.owner = Object.assign(blank(), { status: 'pre', known: 'place', space: spaceId }); save();
+      }
     },
   };
 })();
