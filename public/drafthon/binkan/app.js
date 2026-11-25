@@ -328,9 +328,10 @@
   let lastShare = null;
   function share(w) {
     // 공유 주소는 늘 실제 사이트. /s/빈칸?w=…로 보내야 카톡 · 메신저가 이 바람 썸네일을 보여 준다(api/binkan-share · binkan-ogimg)
-    const s = SP[w.space], url = SHARE_BASE + 's/' + w.space + '?' + new URLSearchParams({ w: w.title, a: shortAddr(s), n: String(store.likes(w)) }).toString();
-    const text = `동성로 ${shortAddr(s)} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
-    lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `동성로 ${shortAddr(s)} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
+    const s = SP[w.space], url = SHARE_BASE + 's/' + w.space + '?' + new URLSearchParams({ w: w.title, n: String(store.likes(w)) }).toString();
+    const place = /^동성로/.test(shortAddr(s)) ? shortAddr(s) : '동성로 ' + shortAddr(s);
+    const text = `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
+    lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
     openModal(`<h3>공유 카드</h3>
       <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}명이 공감</p></div>
       <textarea readonly rows="3" id="shareText">${esc(text)}</textarea>
