@@ -1,6 +1,5 @@
-import { createRequire } from 'node:module';
-
-const spaces = createRequire(import.meta.url)('./_binkan_spaces.json');
+// JSON은 import로 불러야 Vercel이 함수 묶음에 넣는다(createRequire로 부르면 배포본에서 「Cannot find module」). binkan-share.js와 같은 방식
+import spaces from './_binkan_spaces.json' with { type: 'json' };
 const ANALYSIS_URL = 'https://v2v-dongseongro-risk.onrender.com/api/startup-risk/direct';
 const allowedOrigin = /^https:\/\/(?:(?:www\.)?parkmiyeong\.com|parkmiyeong-[a-z0-9-]+\.vercel\.app)$|^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
 const inputFields = ['depositKrw', 'monthlyRentKrw'];
