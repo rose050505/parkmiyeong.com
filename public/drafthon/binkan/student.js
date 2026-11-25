@@ -165,7 +165,7 @@
   function s5() {
     const s = S(), tp = teamPost(), p = tp || P(s.sel), r = (tp ? p.roles[slotOf()] : null) || P(s.sel).roles[s.role], pf = s.prof;
     return `<section class="ccard">
-        <p class="ck">동성로 빈칸 · 동행 프로젝트 1기 · 직무 경력 카드</p>
+        <p class="ck">같이가게 · 동행 프로젝트 1기 · 직무 경력 카드</p>
         <h2>${esc(r.t)}</h2>
         <p class="cw">${esc(p.item)} @ ${esc(where(p))} · 한 학기 16주 · 4인 팀 + 지도교수</p>
         <dl><dt>이름</dt><dd>${esc(st.user ? st.user.name : '')} · ${esc(pf.school)} ${esc(pf.major)}</dd>

@@ -433,7 +433,7 @@
     if (noRecord(s) && !(mo && mo.alive)) L.push(`<div class="mban warn"><b>한 달 넘게 기록이 없어요. 지금 영업 중이세요?</b><span><button class="cta2 sm" data-m="alive" data-v="영업 중이에요">영업 중이에요</button><button class="cta2 sm" data-m="alive" data-v="잠시 쉬고 있어요">잠시 쉬고 있어요</button><button class="cta2 sm" data-m="alive" data-v="문 닫았어요">문 닫았어요</button></span></div>`);
     if (appOf(s) && s.share.band && !(mo && mo.band)) L.push(`<div class="mban"><b>이번 달 매출 구간을 아직 안 골랐어요</b> <small>월 1회 · 운영단에는 구간만 가요</small><button class="cta2 sm" data-m="v" data-v="k4">고르기</button></div>`);
     if (ui.msg) L.push(`<div class="mban ok">${ui.msg}</div>`);
-    L.push(`<p class="mhint">이용료 없음(동행 프로젝트 선정 · 함께 살펴보는 가게, [제안]) · 첫 설정은 운영단이 같이 해요 · 막히면 오른쪽 아래 빈칸 도우미에게 · <button class="link" data-m="guide">사용법 한 장</button></p>`);
+    L.push(`<p class="mhint">이용료 없음(동행 프로젝트 선정 · 함께 살펴보는 가게, [제안]) · 첫 설정은 운영단이 같이 해요 · 막히면 오른쪽 아래 같이가게 도우미에게 · <button class="link" data-m="guide">사용법 한 장</button></p>`);
     return L.join('');
   }
 
@@ -723,7 +723,7 @@
   // 과제 1-2 ② 「도입하고 계속 쓰게」: 쓰는 법 · 비용 · 교육 · 막힐 때 (설계서 §8)
   const helpCard = s => `<section class="mhelp"><div><b>쓰는 법</b><ol><li>근처 의견에 「우리 가게에서 해 볼게요」라고 답해요</li><li>알림을 받은 손님이 가게에서 화면을 보여 주면 확인해요</li><li>답한 메뉴를 하루 한 줄 적어요 — 분기마다 상권 변화도 와요</li></ol></div>
       <div><b>비용 · 교육</b><p>동행 프로젝트 선정 가게와 함께 살펴보는 가게는 무료 [제안]. AI 비용은 운영단 예산으로 [확인 필요]. 선정 가게는 학생 팀이 한 학기 같이 쓰고 사용법 한 장을 남겨요.</p></div>
-      <div><b>막히면</b><p>오른쪽 아래 빈칸 도우미에게 물어보세요. 기록이 한 달 넘게 끊기면 「지금 영업 중이세요?」를 먼저 여쭤봐요. <button class="link" data-m="guide">사용법 한 장</button></p></div></section>`;
+      <div><b>막히면</b><p>오른쪽 아래 같이가게 도우미에게 물어보세요. 기록이 한 달 넘게 끊기면 「지금 영업 중이세요?」를 먼저 여쭤봐요. <button class="link" data-m="guide">사용법 한 장</button></p></div></section>`;
   const guideHTML = () => `<div class="guide"><h3>「내 가게」 사용법 한 장</h3><ol>
       <li><b>가게 설정</b> — 가게 이름 · 업종 · 메뉴 3개 이상 · 지도에서 위치. 가격 · 행사와 첫 방문 혜택은 여기에 적은 것만 답글에 쓸 수 있어요.</li>
       <li><b>근처 의견에 답하기</b> — 가게 150m(없으면 300m) 안 빈칸 의견을 보고 [답하기]. AI가 「채울 수 있나 · 메뉴 · 답글」 초안을 내면 고쳐서 올려요. 연락처 · 링크 · 남 깎아내리는 말은 안 올라가요.</li>
@@ -1005,7 +1005,7 @@
     if (u && u.id !== a.uid && !db.got('shows', u.id, aid)) { db.mark('shows', u.id, aid, Date.now()); a.shows = (a.shows || 0) + 1; db.putAnswer(a); }
     const done = u && db.got('visits', u.id, aid + ':' + today());
     return `<div class="showcard${end ? ' end' : ''}">
-      ${end ? '<p class="send">이 메뉴는 끝났어요</p>' : '<p class="sk">동성로 빈칸 · 의견 보고 왔어요</p>'}
+      ${end ? '<p class="send">이 메뉴는 끝났어요</p>' : '<p class="sk">같이가게 · 의견 보고 왔어요</p>'}
       <p class="ss">${esc(a.store)}</p><p class="si">${esc(a.item)} · ${esc(s.id ? placeOf(s) : (a.pt && a.pt.label) || '')}</p>
       <p class="sm">${esc(a.menu)}</p>
       <p class="sr">「${esc(a.reply)}」</p>

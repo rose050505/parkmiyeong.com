@@ -1,4 +1,4 @@
-// 빈칸 도우미 (챗봇) — 모든 화면 오른쪽 아래. 말로 물으면 맞는 화면으로 데려가고(길 안내), 의견 · 빈칸을 찾고, 지원사업 · 이용 방법을 답한다.
+// 같이가게 도우미 (챗봇) — 모든 화면 오른쪽 아래. 말로 물으면 맞는 화면으로 데려가고(길 안내), 의견 · 빈칸을 찾고, 지원사업 · 이용 방법을 답한다.
 // AI(assist.js · /api/binkan-assist)가 답과 할 일을 고르면 run()이 사이트 데이터로 계산해 채팅 카드로 보여 준다. AI가 안 되면 규칙(understand · answer)으로.
 (function () {
   const A = window.APP, { store, SP, M, SUP, esc, shortAddr } = A;
@@ -6,9 +6,9 @@
   const log = [];   // { who: 'bot' | 'me', html }
 
   document.body.insertAdjacentHTML('beforeend', `
-    <button class="chatfab" id="chatFab" aria-label="빈칸 도우미 열기"><span class="cf-i">💬</span><span class="cf-t">빈칸 도우미</span></button>
-    <section class="chatbox" id="chatBox" hidden role="dialog" aria-label="빈칸 도우미">
-      <header><b>빈칸 도우미</b><span class="caimode" id="chatMode"></span><button class="cx" data-c="close" aria-label="닫기">×</button></header>
+    <button class="chatfab" id="chatFab" aria-label="같이가게 도우미 열기"><span class="cf-i">💬</span><span class="cf-t">같이가게 도우미</span></button>
+    <section class="chatbox" id="chatBox" hidden role="dialog" aria-label="같이가게 도우미">
+      <header><b>같이가게 도우미</b><span class="caimode" id="chatMode"></span><button class="cx" data-c="close" aria-label="닫기">×</button></header>
       <div class="clog" id="chatLog" aria-live="polite"></div>
       <div class="cchips" id="chatChips"></div>
       <form class="cform" id="chatForm"><input id="chatIn" type="text" placeholder="편하게 물어보세요" autocomplete="off" aria-label="도우미에게 묻기"><button type="button" class="cmic" id="chatMic" aria-label="말로 묻기" hidden>🎤</button><button class="csend">보내기</button></form>
@@ -98,7 +98,7 @@
     '상권 변화 숫자는 어디서 나와요?': '빈칸을 찾은 것과 같은 <b>소진공 상가(상권)정보 분기 파일</b>(2026년 2분기 · 3분기)에서, 가게 100m 안 같은 업종(소분류) 업소를 분기마다 직접 세요. AI는 그 숫자를 한 줄로 풀기만 하고 숫자를 만들지 않아요.',
     '의견 보고 온 손님은 어떻게 세요?': '시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 가게에서 보여 주면, 사장님이 그 화면의 <b>[사장님 확인]</b>에 「내 가게」 위쪽의 <b>오늘 손님 확인 번호</b>를 넣어요(확인된 손님으로 따로 셈). 바쁠 땐 답한 메뉴 카드의 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.',
     '내 가게 쓰는 데 돈 들어요?': '동행 프로젝트에 선정된 가게와, 신청했지만 선정되지 않아 함께 살펴보는 가게는 <b>이용료가 없어요</b> [제안]. AI를 부르는 비용은 운영단 예산으로 잡는 방안이고, 학기 뒤 누가 낼지는 아직 정하는 중이에요 [확인 필요].',
-    '누가 쓰는 법을 알려 줘요?': '선정 가게는 <b>학생 팀이 한 학기 같이 쓰면서</b> 사용법 한 장을 남겨요. 함께 살펴보는 가게는 <b>운영단이 첫 설정을 한 번 같이</b> 해요 [제안]. 막히면 저(빈칸 도우미)에게 물어보시거나 「내 가게」 위쪽 「사용법 한 장」을 보세요.',
+    '누가 쓰는 법을 알려 줘요?': '선정 가게는 <b>학생 팀이 한 학기 같이 쓰면서</b> 사용법 한 장을 남겨요. 함께 살펴보는 가게는 <b>운영단이 첫 설정을 한 번 같이</b> 해요 [제안]. 막히면 저(같이가게 도우미)에게 물어보시거나 「내 가게」 위쪽 「사용법 한 장」을 보세요.',
     '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 장학금은 월 30만 원 [추정], 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
 
   // ---------------- 실시간 AI (전용 창구 /api/binkan-assist: 지시문 서버 고정, { reply, do } JSON만 받음) ----------------

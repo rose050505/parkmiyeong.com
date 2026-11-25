@@ -1,4 +1,4 @@
-// 동성로 빈칸 — 첫 화면(지도) · 빈칸 상세 · 의견 남기기 · 공감 · 로그인 · 회원가입 · 검색 · 입구 · 지원 안내 띠 · 오픈 이벤트
+// 같이가게 — 첫 화면(지도) · 빈칸 상세 · 의견 남기기 · 공감 · 로그인 · 회원가입 · 검색 · 입구 · 지원 안내 띠 · 오픈 이벤트
 // 저장은 이 브라우저(localStorage)에만. 백엔드가 붙으면 store.* 만 API로 바꾸면 된다(청사진 §7 API 표).
 (function () {
   const M = window.MAPDATA, SEED = window.SEED, SUP = window.SUP;
@@ -270,7 +270,7 @@
         <dt>직전 업종</dt><dd>${esc(s.was)} <small>(같은 업종이 다시 들어와도 되는지는 상담에서)</small></dd>
         ${nA ? `<dt>근처 가게 답</dt><dd><b>${nA}곳</b>이 이 빈칸 의견에 답함 <small>(의견은 닫히지 않아요 · 상권 정보로 참고)</small></dd>` : ''}
       </dl>
-      <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_now)} 기준 계산. 더 자세한 해석은 오른쪽 아래 빈칸 도우미에게 물어보세요.</p>
+      <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_now)} 기준 계산. 더 자세한 해석은 오른쪽 아래 같이가게 도우미에게 물어보세요.</p>
       <button class="cta2" data-act="owner" data-id="${esc(s.id)}">이 자리로 창업 상담 →</button>
     </section>`;
   }
@@ -320,7 +320,7 @@
           <dt>규모</dt><dd>0단계: 빈칸 61곳 중 30곳 이상에 회원 의견이 모이면 → 1단계: 동성로 10곳 [가정] · 학생 40명(4인 × 10팀) · 한 학기 16주.</dd>
           <dt>비용</dt><dd>학생 장학금 월 30만 원 × 4개월 × 40명 = 4,800만 원 [추정]. 사장님 지원금 · 인테리어 · 임대료 일부 · 이벤트는 상권활성화사업 예산과 협의. 사장님 · 시민은 무료.</dd>
           <dt>성과</dt><dd>개업 6개월 영업 유지가 비교군(신청했지만 선정되지 않은 가게)보다 높은지 → 12개월 영업 유지 10곳 중 8곳 이상 [가정] 그리고 비교군보다 높으면 대구로 넓혀요.</dd>
-          <dt>AI가 하는 일</dt><dd>시민 · 사장님 · 학생의 문장을 업종 · 과제 · 전공으로 바꿔 서로 잇는 일(상담 문제 정리 · 과제 초안 · 학생 추천 · 질문 · 의견 묶기 · 답글 초안 · 빈칸 도우미). 숫자 · 거리 · 목록은 사이트가 공공데이터로 계산하고, 선정은 사람(운영단)이 해요.</dd>
+          <dt>AI가 하는 일</dt><dd>시민 · 사장님 · 학생의 문장을 업종 · 과제 · 전공으로 바꿔 서로 잇는 일(상담 문제 정리 · 과제 초안 · 학생 추천 · 질문 · 의견 묶기 · 답글 초안 · 같이가게 도우미). 숫자 · 거리 · 목록은 사이트가 공공데이터로 계산하고, 선정은 사람(운영단)이 해요.</dd>
           <dt>운영단 화면</dt><dd>회원가입 때 「운영단」을 고르면 심사 표 · 추적 표를 볼 수 있어요(본 서비스에서는 초대받은 운영단만).</dd>
         </dl></section>
       <p class="fine">처음 화면의 의견 · 공감 수 · 공고 일부는 서비스 소개를 위해 운영팀이 넣어 둔 것이에요. 운영팀 의견에는 「운영팀」이라고 적혀 있어요.</p>`;
@@ -500,9 +500,9 @@
     const s = SP[w.space], url = SHORT_BASE + (w.seed ? w.id : `${w.space}.${b64(w.title)}.${store.likes(w)}`);
     const place = /^동성로/.test(shortAddr(s)) ? shortAddr(s) : '동성로 ' + shortAddr(s);
     const text = `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
-    lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
+    lastShare = { title: `「${w.title}」 있으면 좋겠다 — 같이가게`, text: `${place} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
     openModal(`<h3>공유 카드</h3>
-      <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}${w.seed ? ' · 운영팀 의견' : '명이 공감'}</p></div>
+      <div class="sharecard"><p class="sk">같이가게</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}${w.seed ? ' · 운영팀 의견' : '명이 공감'}</p></div>
       <textarea readonly rows="3" id="shareText">${esc(text)}</textarea>
       <div class="sharebtns">${navigator.share ? '<button class="cta" data-act="nshare">공유하기 (카카오톡 등)</button>' : ''}<button class="${navigator.share ? 'cta2' : 'cta'}" data-act="copy">문구 · 링크 복사</button></div>`);
   }

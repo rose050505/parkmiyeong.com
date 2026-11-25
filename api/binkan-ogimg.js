@@ -1,4 +1,4 @@
-// 동성로 빈칸 의견 공유 썸네일(1200×630 PNG). /api/binkan-ogimg?t=가게&a=주소&n=공감수
+// 같이가게 의견 공유 썸네일(1200×630 PNG). /api/binkan-ogimg?t=가게&a=주소&n=공감수
 // 카카오톡 · 메신저 링크 미리보기용. satori(화면 → SVG) + resvg(SVG → PNG). 글꼴은 사이트에 올린 Pretendard를 읽어 쓴다.
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     h('div', { position: 'absolute', left: '72px', top: '58px', width: '1056px', height: '514px', flexDirection: 'column' },
       h('div', { alignItems: 'center' },
         h('div', { background: '#fff', color: ORANGE, fontWeight: 800, fontSize: '28px', padding: '8px 14px', borderRadius: '14px' }, '빈칸'),
-        h('div', { marginLeft: '14px', fontSize: '30px', fontWeight: 800 }, '동성로 빈칸')),
+        h('div', { marginLeft: '14px', fontSize: '30px', fontWeight: 800 }, '같이가게')),
       h('div', { marginTop: '54px', fontSize: '36px', fontWeight: 600, opacity: 0.92 }, '이 빈칸에'),
       h('div', { marginTop: '6px', fontSize: size + 'px', fontWeight: 800, lineHeight: 1.12, maxWidth: '900px', letterSpacing: '-2px' }, '「' + t + '」'),
       h('div', { marginTop: '10px', fontSize: '44px', fontWeight: 800, letterSpacing: '-1px' }, '있으면 좋겠다!'),
