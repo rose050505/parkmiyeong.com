@@ -173,7 +173,7 @@
       }
       case 'student': window.STUDENT.startWith({ filter: a.group || null }); A.go('student'); return '';
       case 'supports': return cardSupports(a.who);
-      case 'page': A.go(a.to === 'mine' && !A.st.user ? 'home' : a.to); return '';
+      case 'page': if (a.to === 'login' || (a.to === 'mine' && !A.st.user)) { A.needAuth(() => A.refresh()); return ''; } A.go(a.to); return '';
     }
     return '';
   }
