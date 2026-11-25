@@ -16,8 +16,9 @@ export default function handler(req, res) {
   const self = c ? SITE + '/b/' + c : SITE + '/drafthon/binkan/s/' + s + '?' + new URLSearchParams({ w, n: String(n) }).toString();
   const title = w ? `「${w}」 있으면 좋겠다 — 동성로 빈칸` : '동성로 빈칸 — 이 빈 가게에 뭐가 생기면 좋을까?';
   const place = /^동성로/.test(a) ? a : '동성로 ' + a;
-  const desc = w ? `${place} 빈칸 · ${n}명이 공감했어요. 나도 공감하고, 원하는 가게를 남겨 보세요.` : '동성로 빈 점포에 「여기 ○○ 있으면」을 남기면, 사장님과 대구 대학생 팀이 창업으로 이어 가요.';
-  const img = w ? SITE + '/api/binkan-ogimg?' + new URLSearchParams({ t: w, a, n: String(n) }).toString() : SITE + '/drafthon/binkan/og/home.png';
+  const op = /^w\d{1,3}$/.test(c);   // 처음부터 있던 바람 = 운영팀이 넣은 바람(공감 수도 운영팀이 넣은 것)
+  const desc = w ? `${place} 빈칸 · 공감 ${n}${op ? ' · 운영팀 바람' : ''}. 나도 공감하고, 원하는 가게를 남겨 보세요.` : '동성로 빈 점포에 「여기 ○○ 있으면」을 남기면, 준비된 사장님이 가게를 열고 대구 대학생 팀이 개업 준비를 도와요.';
+  const img = w ? SITE + '/api/binkan-ogimg?' + new URLSearchParams(Object.assign({ t: w, a, n: String(n) }, op ? { o: '1' } : {})).toString() : SITE + '/drafthon/binkan/og/home.png';
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.status(200).send(`<!doctype html><html lang="ko"><head><meta charset="utf-8">

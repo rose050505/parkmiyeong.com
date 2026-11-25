@@ -48,34 +48,51 @@
     const body = storeBody(s); if (!body) return Promise.resolve(null);
     const sig = JSON.stringify(body); if (s.srvSig === sig && s.srvId) return Promise.resolve(s.srvId);
     if (pending.store) return pending.store;
-    return pending.store = window.BK.isOwner().then(ok => ok ? window.BK.putStore(body).then(j => { s.srvId = j.id; s.srvSig = sig; save(); return j.id; }) : null)
+    return pending.store = window.BK.isOwner().then(ok => ok ? window.BK.putStore(body).then(j => { if (s.srvId !== j.id) mergedVer = -1; s.srvId = j.id; s.srvSig = sig; save(); return j.id; }) : null)
       .catch(e => { console.warn('가게 설정 서버 저장 실패:', e.message); return null; }).finally(() => { delete pending.store; });
   }
   function syncAnswer(a) {
     if (!BKon() || a.remote || !st.user || a.uid !== st.user.id) return;
     const w = wishById(a.wish); if (!w || !w.op) return;
-    const sig = [a.menu, a.reply, a.state].join('|'); if (a.srvSig === sig || pending[a.id]) return;
+    const sig = [a.menu, a.reply, a.state].join('|'); if (a.srvSig === sig || pending[a.id] || (a.srvFail && Date.now() - a.srvFail < 30000)) return;   // 실패하면 30초 뒤 다음 저장 때 다시
     const s = db.store(a.uid); if (!s) return;
     pending[a.id] = syncStore(s).then(async sid => {
       if (!sid) return;
-      if (!a.srv) { const j = await window.BK.postAnswer(w.op, { storeId: sid, menuName: (a.menu || a.item || '메뉴').slice(0, 120), message: a.reply.slice(0, 1000) }); a.srv = j.id; a.srvState = '준비 중'; }
-      const ch = {}; if (a.srvSig && a.srvSig.split('|')[1] !== a.reply) ch.message = a.reply.slice(0, 1000);
+      if (!a.srv) {
+        try { const j = await window.BK.postAnswer(w.op, { storeId: sid, menuName: (a.menu || a.item || '메뉴').slice(0, 120), message: a.reply.slice(0, 1000) }); a.srv = j.id; a.srvState = '준비 중'; }
+        catch (e) {   // 같은 가게가 이 바람에 이미 답함(다른 기기에서 올림) → 그 답에 이어 붙여 고치기로
+          if (e.status !== 409) throw e;
+          const had = (await window.BK.storeAnswers(sid)).find(x => x.wishId === w.op); if (!had) throw e;
+          a.srv = had.id; a.srvState = ST2[had.status] || '준비 중'; a.srvSig = [had.menuName, had.message, a.srvState].join('|');
+        }
+      }
+      const ch = {}; if (!a.srvSig || a.srvSig.split('|')[1] !== a.reply) ch.message = a.reply.slice(0, 1000);
       if (a.state !== (a.srvState || '준비 중')) ch.status = TS2[a.state];
       if (Object.keys(ch).length) { await window.BK.patchAnswer(a.srv, ch); if (ch.status) a.srvState = a.state; }
-      a.srvSig = sig; save();
-    }).catch(e => console.warn('답 서버 저장 실패:', e.message)).finally(() => { delete pending[a.id]; });
+      a.srvSig = sig; delete a.srvFail; save();
+    }).catch(e => { console.warn('답 서버 저장 실패:', e.message); a.srvFail = Date.now(); save(); A.toast('답은 이 기기에 저장했어요 — 서버에는 아직 못 올렸어요(잠시 뒤 다시 저장하면 올라가요)'); }).finally(() => { delete pending[a.id]; });
   }
   // 다른 가게(서버)의 답을 이 브라우저 목록에 합침 — 시민 쪽 「근처 가게가 답했어요」 · 알림 · 가게 카드가 그대로 씀. 이 브라우저에서 올린 답(srv 같음)은 건너뜀
   let mergedVer = -1;
   function mergeRemote() {
     if (!BKon() || mergedVer === window.BK.ansVer) return;
     mergedVer = window.BK.ansVer;
-    const mine = new Set(st.answers.filter(a => !a.remote && a.srv).map(a => a.srv)), old = {};
+    const mine = {}, old = {};
+    st.answers.filter(a => !a.remote && a.srv).forEach(a => mine[a.srv] = a);
     st.answers.filter(a => a.remote).forEach(a => old[a.srv] = a);
+    const me = st.user && st.user.id, myS = me && db.store(me), myStore = myS && myS.srvId;
     const rem = [];
     for (const r of window.BK.rawAnswers) {
-      if (mine.has(r.id)) continue;
+      if (mine[r.id]) { mine[r.id].went = Math.max(mine[r.id].went || 0, r.visitCount || 0); continue; }   // 내가 올린 답: 다른 기기 시민의 「가 봤어요」 수를 합침
       const w = window.BK.wishes.find(x => x.op === r.wishId); if (!w || !SP[w.space]) continue;
+      if (myStore && r.storeId === myStore) {   // 같은 가게 계정이 다른 기기에서 올린 답 → 이 기기에서도 내 답으로(중복 답 방지)
+        const state = ST2[r.status] || '준비 중', sig = [r.menuName || '', r.message, state].join('|');
+        const loc = st.answers.find(a => !a.remote && a.uid === me && a.wish === w.id && !a.srv);
+        if (loc) Object.assign(loc, { srv: r.id, srvState: state, srvSig: sig === [loc.menu, loc.reply, loc.state].join('|') ? sig : undefined, went: Math.max(loc.went || 0, r.visitCount || 0) });
+        else st.answers.push({ id: 'a' + r.id.replace(/-/g, '').slice(0, 12), wish: w.id, sid: myS.id, uid: me, store: myS.name || r.storeName, item: myS.item || r.storeCategory || '', menu: r.menuName || '', reply: r.message, state,
+          at: Date.parse(r.createdAt) || Date.now(), went: r.visitCount || 0, reports: 0, reportWhy: [], hidden: false, ing: { name: '', per: 0, unit: 'g' }, days: [], notes: [], trial: { on: false }, dist: dist(SP[w.space], ptOf(myS) || SP[w.space]), srv: r.id, srvState: state, srvSig: sig });
+        continue;
+      }
       const pt = { x: +r.longitude, y: +r.latitude, label: (r.roadAddress || '').replace(/^대구(광역시)?\s*중구\s*/, '') };
       const o = old[r.id] || { notes: [], wants: 0, shows: 0, reports: 0, reportWhy: [], days: [], ing: { name: '', per: 0, unit: 'g' } };
       rem.push(Object.assign(o, { id: 'r' + r.id.replace(/-/g, ''), srv: r.id, remote: true, wish: w.id, sid: 'srv:' + r.storeId, uid: 'srv:' + r.storeId, store: r.storeName, item: r.storeCategory || '',
@@ -114,6 +131,7 @@
   const placeOf = s => (s.pt && s.pt.label) || (s.space && SP[s.space] ? shortAddr(SP[s.space]) : s.near ? s.near + ' 근처' : '');
   const storeLabel = s => `${s.name || s.item} @ ${placeOf(s)}`;
   // 오늘 손님 확인 번호(가게마다 날마다 바뀌는 4자리): 사장님 화면에만 보이고, 손님 화면의 [사장님 확인]에 이 번호를 넣어야 「확인된 손님」으로 셈
+  const codeKey = s => 'n:' + ((s && (s.name || s.item)) || '');   // 가게 이름으로 — 서버에서 온 답(다른 기기 손님 화면)도 같은 번호, 서버 저장 전후로 번호가 안 바뀜
   const dayCode = (sid, date) => { let h = 7; for (const ch of sid + '|' + (date || today())) h = (h * 31 + ch.charCodeAt(0)) % 1000003; return String(h % 10000).padStart(4, '0'); };
   const aiTag = ai => T().aiTag(ai);
 
@@ -377,7 +395,7 @@
 
   // ---------------- 화면 조각 ----------------
   const bar = (c, s) => `<div class="mtop"><button class="back" data-m="map">← 지도로</button><p class="kick">내 가게 · 경영 도우미</p>
-      ${s && s.setup ? `<div class="mhead"><h2>${esc(s.name || s.item)} <small>${esc(s.item)} @ ${esc(placeOf(s))}</small>${c.mode === 'owner' || c.mode === 'team' ? ` <span class="mcode" title="손님이 「가게에서 이 화면 보여 주기」를 보여 주면 그 화면의 [사장님 확인]에 넣어요">오늘 손님 확인 번호 <b>${dayCode(s.id)}</b></span>` : ''}</h2>
+      ${s && s.setup ? `<div class="mhead"><h2>${esc(s.name || s.item)} <small>${esc(s.item)} @ ${esc(placeOf(s))}</small>${c.mode === 'owner' || c.mode === 'team' ? ` <span class="mcode" title="손님이 「가게에서 이 화면 보여 주기」를 보여 주면 그 화면의 [사장님 확인]에 넣어요">오늘 손님 확인 번호 <b>${dayCode(codeKey(s))}</b></span>` : ''}</h2>
         <div class="mbtns">${c.mode === 'owner' ? `<button class="mb${s.openDays.includes(today()) ? ' on' : ''}" data-m="openday">${s.openDays.includes(today()) ? '✓ 오늘 영업했어요' : '오늘 영업했어요'}</button>
           <button class="mb${ui.view === 'k' ? ' on' : ''}" data-m="v" data-v="k">근처 바람 · 기록</button><button class="mb${ui.view === 'k1' ? ' on' : ''}" data-m="v" data-v="k1">가게 설정</button><button class="mb${ui.view === 'k4' ? ' on' : ''}" data-m="v" data-v="k4">공유 항목 · 이번 달</button><button class="mb${ui.view === 'k5' ? ' on' : ''}" data-m="v" data-v="k5">학생 팀</button>` : ''}</div></div>` : ''}</div>`;
 
@@ -938,11 +956,11 @@
   // 알림: 내가 쓴 · 공감한 바람에 답이 옴 / 「먹어보고 싶어요」 누른 답이 판매를 시작함 · 내일 끝남 / 정식 메뉴가 됨 / 끝남
   function alertsFor(u) {
     if (!u) return [];
-    const mineW = new Set(A.myWishes().map(w => w.id)), wants = st.wants[u.id] || {}, out = [], tm = addDays(today(), 1);
+    const mineW = new Set(A.myWishes().map(w => w.id)), wants = st.wants[u.id] || {}, out = [], tm = addDays(today(), 1), srvAl = new Set(BKon() ? (window.BK.srvAlerts || []).filter(x => x.kind === 'ANSWER_POSTED').map(x => x.answerId) : []);
     for (const a of db.answers()) {
       if (a.hidden) continue;
       const w = wishById(a.wish); if (!w) continue;
-      const why = mineW.has(a.wish) ? 'wrote' : (store.liked ? store.liked(w) : st.liked[a.wish]) ? 'liked' : null, wanted = !!wants[a.id];   // 서버 모드에서도 store.liked
+      const why = mineW.has(a.wish) ? 'wrote' : (store.liked ? store.liked(w) : st.liked[a.wish]) ? 'liked' : srvAl.has(a.srv) ? 'wrote' : null, wanted = !!wants[a.id];   // srvAl: 서버가 보낸 내 알림(다른 기기에서 쓴 바람)   // 서버 모드에서도 store.liked
       if (!why && !wanted) continue;
       const base = { a, w, why: why || 'wanted', self: a.uid === u.id }, t = trialOf(a), add = (kind, key, at) => out.push(Object.assign({ kind, key: a.id + ':' + key, at }, base));
       if (why) add('answer', 'ans', a.at);
@@ -967,18 +985,19 @@
       <p class="sr">「${esc(a.reply)}」</p>
       ${w ? `<p class="sw">바람 「${esc(w.title)}」에 답한 메뉴</p>` : ''}
       ${!end && s.perk ? `<div class="sperk"><b>첫 방문 혜택</b><span>${esc(s.perk)}</span></div>` : ''}
-      ${end || a.remote ? '' : u && u.id !== a.uid ? `<div class="svisit">${done ? '<b>✓ 오늘 사장님이 확인했어요</b>' : `<div class="vrow"><input id="vcode-${esc(aid)}" inputmode="numeric" maxlength="4" placeholder="확인 번호 4자리"><button class="cta" data-act="visitok" data-id="${esc(aid)}">사장님 확인</button></div><small>가게에서 사장님이 오늘 손님 확인 번호를 넣어 주세요 (하루 한 번)</small><p class="err" id="verr-${esc(aid)}" hidden></p>`}</div>` : ''}
+      ${end ? '' : u && u.id !== a.uid ? `<div class="svisit">${done ? '<b>✓ 오늘 사장님이 확인했어요</b>' : `<div class="vrow"><input id="vcode-${esc(aid)}" inputmode="numeric" maxlength="4" placeholder="확인 번호 4자리"><button class="cta" data-act="visitok" data-id="${esc(aid)}">사장님 확인</button></div><small>가게에서 사장님이 오늘 손님 확인 번호를 넣어 주세요 (하루 한 번)</small><p class="err" id="verr-${esc(aid)}" hidden></p>`}</div>` : ''}
       ${end ? '' : `<button class="link" data-act="storemap" data-id="${esc(aid)}">지도에서 가게 보기</button>`}
       <p class="fine">이름 · 연락처는 사장님께 가지 않아요.</p></div>`;
   }
   // 「사장님 확인」: 시민 화면에서 사장님이 누르면 그날 「바람 보고 온 손님」 +1 (시민 1명 · 답 1개당 하루 한 번)
   function confirmVisit(aid, code) {
-    const u = st.user, a = db.answer(aid); if (!u || !a || a.state === '끝남' || a.remote) return '';
+    const u = st.user, a = db.answer(aid); if (!u || !a || a.state === '끝남') return '';
     if (a.uid === u.id) return '내 가게 답이에요 — 손님 화면에서 눌러 주세요';
-    if (String(code || '').trim() !== dayCode(a.sid)) return { err: '확인 번호가 맞지 않아요 — 사장님 「내 가게」 위쪽의 오늘 번호를 넣어 주세요' };
+    const ks = db.stores().find(x => x.id === a.sid); if (String(code || '').trim() !== dayCode(ks ? codeKey(ks) : 'n:' + (a.store || ''))) return { err: '확인 번호가 맞지 않아요 — 사장님 「내 가게」 위쪽의 오늘 번호를 넣어 주세요' };
     const key = aid + ':' + today(); if (db.got('visits', u.id, key)) return '오늘은 이미 확인했어요';
     db.mark('visits', u.id, key, Date.now());
     const d = dayOf(a, today(), true); d.came = (d.came || 0) + 1; d.ok = (d.ok || 0) + 1; db.putAnswer(a);
+    if (a.remote && BKon() && a.state === '판매 중' && !db.got('went', u.id, aid)) { db.mark('went', u.id, aid, Date.now()); a.went = (a.went || 0) + 1; window.BK.went(a.srv).catch(e => console.warn('방문 서버 저장 실패:', e.message)); }   // 다른 기기 가게: 서버 「가 봤어요」로 사장님 화면에 셈
     return '확인했어요 · 「바람 보고 온 손님」에 하나 더했어요';
   }
   // 시민 지도: 근처 바람에 답하고 지금 하는(끝나지 않은) 가게 핀

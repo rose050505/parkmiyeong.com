@@ -57,7 +57,7 @@
       relayout() { map.relayout(); },
       fitTo(list) {
         if (!list.length) return;
-        const bd = new kakao.maps.LatLngBounds(); list.forEach(p => bd.extend(new kakao.maps.LatLng(p.y, p.x))); const phone = window.innerWidth <= 640; map.setBounds(bd, 70, phone ? 30 : 300, phone ? Math.round(window.innerHeight * 0.45) : 40, phone ? 30 : 40);   // 폰은 아래 패널, 큰 화면은 오른쪽 안내 자리만큼 비움
+        const bd = new kakao.maps.LatLngBounds(); list.forEach(p => bd.extend(new kakao.maps.LatLng(p.y, p.x))); const phone = window.innerWidth <= 640; map.setBounds(bd, 70, phone ? 30 : 60, phone ? Math.round(window.innerHeight * 0.45) : 40, phone ? 30 : 40);   // 폰은 아래 패널, 큰 화면은 오른쪽 안내 자리만큼 비움
       },
     };
   }

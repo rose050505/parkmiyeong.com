@@ -85,14 +85,14 @@
     s.ans = ['', '']; save();
   }
   const postCard = p => `<button class="pcard" data-s="open" data-id="${p.id}">
-      <span class="pk">${p.ex ? '' : '<span class="tag mine">새로 선정</span> '}${p.kind === 'pre' ? '창업 준비' : '운영 중 가게'}</span>
+      <span class="pk">${p.ex ? '<span class="tag">운영팀 공고</span> ' : '<span class="tag mine">새로 선정</span> '}${p.kind === 'pre' ? '창업 준비' : '운영 중 가게'}</span>
       <b>${esc(p.item)}</b><small>📍 ${esc(where(p))}${p.wish ? ' · ' + esc(p.wish) : ''}</small>
       <span class="roles">${p.roles.map(r => `<i>${esc(r.t)}</i>`).join('')}</span>
       <span class="pg">${groupsOfPost(p).map(g => `<em>${esc(g)}</em>`).join('')}</span></button>`;
 
   function s1() {
     const s = S(), L = posts().filter(p => !s.filter || groupsOfPost(p).includes(s.filter));
-    return `<section class="oq hero"><h2>동성로 가게의 창업부터 운영까지, 한 학기 동안</h2>
+    return `<section class="oq hero"><h2>동성로 가게의 개업 준비와 첫 운영을, 한 학기 동안 돕기</h2>
         <div class="gets"><div><b>장학금</b><small>참여 학생 지원</small></div><div><b>전공 학점</b><small>지역 대학 연계 교과 · 대구 앵커사업(옛 RISE)</small></div><div><b>실무 경력</b><small>경력 카드로 남음</small></div></div>
         <p class="was">4인 팀 + 지도교수 · 16주 · 사장님 가게의 실제 과제. 알바가 아니라 내 직무 경력이 돼요.</p></section>
       <section class="oq"><h3>올라온 과제 <small>로그인 없이 볼 수 있어요</small></h3>
@@ -120,7 +120,7 @@
     const recBusy = pf.groups.length && !aiRec && s.recoBusy === rk;
     return `<section class="ocard"><div class="ohead"><p class="kick">지원서</p><h2>${esc(r.t)} <small>@ ${esc(p.item)}</small></h2></div>
       <form id="sform" novalidate>
-        <h3>내 정보 <small>처음 한 번 저장 · 재학 확인은 본인인증 때</small></h3>
+        <h3>내 정보 <small>처음 한 번 저장 · 재학 확인은 운영단이 재학증명서로 [제안]</small></h3>
         <div class="orow"><label class="ofl">학교<input name="school" value="${esc(pf.school)}" placeholder="예: ○○대학교" maxlength="30"></label><label class="ofl">학과<input name="major" value="${esc(pf.major)}" placeholder="예: 경영학과" maxlength="30"></label></div>
         <fieldset class="ofs"><legend>관심 직무 <small>(여러 개)</small></legend><div class="ochips">${GROUPS.map(g => `<label><input type="checkbox" name="groups" value="${g}"${pf.groups.includes(g) ? ' checked' : ''}><span>${g}</span></label>`).join('')}</div></fieldset>
         <fieldset class="ofs"><legend>가능 시간</legend><div class="ochips">${TIMES.map(t => `<label><input type="checkbox" name="time" value="${t}"${pf.time.includes(t) ? ' checked' : ''}><span>${t}</span></label>`).join('')}</div></fieldset>
@@ -229,7 +229,9 @@
   window.STUDENT = {
     render,
     ensure: () => { S(); },
-    startWith(patch) { const prof = S().prof; st.stu = Object.assign(blank(), { prof }, patch); save(); },
+    startWith(patch) {   // 쓰던 지원서(2단계 이상 · 아직 안 냄)가 있으면 지우지 않고 과제 필터만 바꿈
+      const cur = S(); if (cur && cur.step >= 2 && !cur.status) { if (patch.filter !== undefined) cur.filter = patch.filter; save(); window.APP.toast('쓰던 지원서를 이어서 보여 드려요'); return; }
+      const prof = cur.prof; st.stu = Object.assign(blank(), { prof }, patch); save(); },
     start(postId) { if (postId && P(postId)) { S().sel = postId; S().role = null; S().step = 2; save(); } },
   };
 })();

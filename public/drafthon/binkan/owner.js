@@ -22,7 +22,9 @@
   ];
   const bigCat = t => CAT.find(([, re]) => re.test(t))[0];
   const tokens = t => t.replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|전문점|매장)$/, '')).filter(w => w.length >= 2);
-  const wishMatch = (item, w) => { const tk = tokens(item); return tk.some(k => w.title.includes(k) || w.why.includes(k)); };
+  // 흔한 말(카페 · 1인 · 전문 …)만 겹친 것은 같은 바람으로 보지 않는다(「디저트 카페」가 「보드게임 카페」에 붙던 문제). 흔한 말뿐이면 그대로 씀
+  const COMMON = new Set(['카페', '1인', '전문', '가게', '맛집', '작은', '조용한', '동성로', '대구', '바', '샵', '숍', '하우스', '스토어', '느낌', '분위기', '가성비', '저렴한', '혼자']);
+  const wishMatch = (item, w) => { const all = tokens(item), tk = all.filter(k => !COMMON.has(k)); return (tk.length ? tk : all).some(k => w.title.includes(k) || w.why.includes(k)); };
   function around(pt, cat) {
     const near = M.bg.filter(([x, y]) => dist({ x, y }, pt) <= 100);
     return { all: near.length, same: near.filter(b => b[2] === cat).length, vacant: M.spaces.filter(s => s !== pt && dist(s, pt) <= 100).length };
@@ -90,7 +92,7 @@
       M.spaces.map(s => {
         const ws = W.filter(w => w.space === s.id && wishMatch(o.item, w)), likes = ws.reduce((a, w) => a + store.likes(w), 0), ar = around(s, cat);
         return { s, ws, likes, ar, sc: (ws.length ? 10 : 0) + likes / 8 - ar.same / 15 };
-      }).sort((a, b) => b.sc - a.sc).slice(0, 3).forEach(r => out.push({ space: r.s.id, item: o.item, why: [r.ws.length ? `이 빈칸에 비슷한 바람 「${r.ws[0].title}」 공감 ${r.likes}` : '맞는 바람은 아직 없음', `100m 안 같은 업종대(${cat}) ${r.ar.same}곳`] }));
+      }).sort((a, b) => b.sc - a.sc).slice(0, 3).forEach(r => out.push({ space: r.s.id, item: o.item, why: [r.ws.length ? (r.ws.length > 1 ? `이 빈칸에 비슷한 바람 ${r.ws.length}개(「${r.ws[0].title}」 외) · 공감 합 ${r.likes}` : `이 빈칸에 비슷한 바람 「${r.ws[0].title}」 · 공감 ${r.likes}`) : '맞는 바람은 아직 없음', `100m 안 같은 업종대(${cat}) ${r.ar.same}곳`] }));
     } else if (o.known === 'place') {
       const s = SP[o.space], ws = W.filter(w => w.space === s.id).sort((a, b) => store.likes(b) - store.likes(a));
       ws.slice(0, 3).forEach(w => out.push({ space: s.id, item: w.title, why: [`이 빈칸 바람 · 공감 ${store.likes(w)}`, `100m 안 같은 업종대 ${around(s, bigCat(w.title)).same}곳`] }));
@@ -151,10 +153,10 @@
     const risk = [];
     risk.push(`<li class="${lc}"><b>같은 업종대 경쟁 ${lv}</b> 100m 안 ${cat} ${ar.same}곳 (전체 ${ar.all}곳)</li>`);
     if (sp && sp.wasL === cat) risk.push(`<li class="mid"><b>같은 업종대가 나간 자리</b> 직전 ${esc(sp.was)} — 나간 이유(임대료 · 위치 · 운영) 확인</li>`);
-    if (sp) risk.push(`<li class="${ar.vacant >= 4 ? 'mid' : 'lo'}"><b>주변 빈칸 ${ar.vacant}곳</b> ${ar.vacant >= 4 ? '골목 전체가 비고 있을 수 있음 — 현장 확인' : '골목 공실은 많지 않음'}</li>`);
+    if (sp) risk.push(`<li class="${ar.vacant >= 4 ? 'mid' : 'lo'}"><b>주변 빈칸 ${ar.vacant}곳</b> ${ar.vacant >= 4 ? '골목 전체가 비고 있을 수 있음 — 현장 확인' : '이번 분기 새로 빈 1층 후보 기준(오래된 공실 · 위층은 안 셈) — 현장 확인'}</li>`);
     if (!sp) {
       const nb = nearWishes(pt, o.item), mine = nb.list.filter(x => x.hit);
-      risk.push(`<li class="${ar.vacant >= 4 ? 'mid' : 'lo'}"><b>주변 빈칸 ${ar.vacant}곳</b> ${ar.vacant >= 4 ? '골목 공실이 늘고 있을 수 있음' : '골목 공실은 많지 않음'}</li>`);
+      risk.push(`<li class="${ar.vacant >= 4 ? 'mid' : 'lo'}"><b>주변 빈칸 ${ar.vacant}곳</b> ${ar.vacant >= 4 ? '골목 공실이 늘고 있을 수 있음' : '이번 분기 새로 빈 1층 후보 기준(오래된 공실 · 위층은 안 셈)'}</li>`);
       risk.push(nb.near
         ? `<li class="lo"><b>가게 근처(150m) 바람 ${nb.list.length}개</b> ${nb.list.slice(0, 3).map(x => `「${esc(x.w.title)}」 ♥${store.likes(x.w)}`).join(' · ')}${mine.length ? ` — 우리 업종과 닿는 바람 ${mine.length}개` : ''}</li>`
         : `<li class="lo"><b>가게 150m 안 바람 없음</b> ${nb.list.length ? '300m 안 가까운 바람: ' + nb.list.map(x => `「${esc(x.w.title)}」 약 ${Math.round(x.m / 10) * 10}m`).join(' · ') : '300m 안에도 아직 없음'}</li>`);
@@ -223,7 +225,7 @@
       ${!r ? `<p class="was">지원서가 접수됐어요. 운영단(대구시 + 지역 대학)이 준비 정도 · 이 자리 시민 바람 수(공감 포함) · 과제 적합성을 봐요.</p>${A.hasRole('ops') ? `<div class="onav"><button class="cta2" data-o="opsres" data-v="no">운영단 처리: 다음 기회</button><button class="cta2" data-o="opsgo">운영단 표에서 점수 매기기</button><button class="cta" data-o="opsres" data-v="yes">운영단 처리: 선정</button></div>` : '<p class="fine">운영단 심사 중이에요 — 운영단 표에서 처리되면 여기 진행 상태가 바뀌어요.</p>'}` : ''}
       ${r === 'yes' ? `<div class="okpost"><p class="kick">선정! 학생 모집 공고가 올라갔어요</p><h3>[동행 프로젝트 1기] ${esc(o.item)} @ ${esc(placeName(o))}</h3>
         <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)} · ${t.wk}주 · ${esc(t.out)}</li>`).join('')}</ul>
-        <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요. 선발은 운영단 → 사장님 면담 순서예요.</p>
+        <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요 [제안]. 선발은 운영단 → 사장님 면담 순서예요.</p>
         <p class="note2">「내 가게」에서 근처 바람에 답하고, 답한 메뉴를 기록해요. 학기 중엔 학생 팀이 같이 쓰고, 학기가 끝나면 사장님 혼자 다음 바람에 답해요. 이 기록이 개업 뒤 추적 자료도 돼요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
       ${r === 'no' ? `<div class="okpost no"><p class="kick">이번 기수에는 선정되지 않았어요</p><p>다음 기수에 우선 검토해요. 그 사이 받을 수 있는 지원을 확인해 보세요. 같은 시기에 신청했지만 선정되지 않은 가게도 같은 기록으로 함께 살펴봐요(동의한 경우). 「내 가게」(근처 바람에 답하기 · 상권 변화)는 똑같이 쓸 수 있어요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
       </section>
@@ -319,7 +321,9 @@
     ensure: () => { O(); },
     // 빈칸에서 들어오면 그 자리를 고른 채로 시작. 진행 중인 상담이 있으면 이어서.
     // 챗봇이 대화로 채워서 시작: patch = { status, trouble, story, item, known }
-    startWith(patch) { st.owner = Object.assign(blank(), patch); save(); },
+    startWith(patch) {   // 하던 상담(2단계 이상 · 지원서 전)이 있으면 지우지 않고 이어서 보여 줌
+      const cur = st.owner; if (cur && (cur.step || 1) >= 2 && !cur.app) { window.APP.toast('하던 상담을 이어서 보여 드려요'); return; }
+      st.owner = Object.assign(blank(), patch); save(); },
     tools: { combos, riskList, bigCat, wishMatch, nearWishes, aiTag, tokens },
     start(spaceId) {
       // 빈칸에서 들어왔는데 지금 상담이 다른 자리 것이면 새로 시작(같은 자리면 이어서)

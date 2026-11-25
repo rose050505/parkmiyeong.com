@@ -25,7 +25,7 @@
     return { n: ws.length, likes: ws.reduce((x, w) => x + real(w), 0), seed: ws.length - mem.length, memN: mem.length, memLikes: mem.reduce((x, w) => x + real(w), 0), top: ws.slice().sort((a, b) => store.likes(b) - store.likes(a))[0] };
   }
   const score = ap => ap.score || { ready: 0, fit: 0 };
-  const total = ap => { const s = score(ap), d = demand(ap); return s.ready + s.fit + Math.min(5, Math.ceil(d.likes / 10)); };   // 바람 수요 점수 = 공감 10개당 1점(최대 5) [가정]
+  const total = ap => { const s = score(ap), d = demand(ap); return s.ready + s.fit + Math.min(5, Math.floor(d.likes / 10)); };   // 바람 수요 점수 = 공감 10개당 1점(최대 5) [가정]
 
   function decideOwner(id, v) {
     if (!A.hasRole('ops')) return null;
@@ -120,7 +120,7 @@
         ${st.opsLog.filter(l => l.sid === s.id).map(l => `<small class="fine">${new Date(l.at).toLocaleDateString('ko-KR')} ${esc(l.what)}</small>`).join(' · ')}</section>`).join('')
         : '<p class="emptyw">추적할 가게가 아직 없어요. 지원서(추적 동의)를 낸 사장님이 「내 가게」를 설정하면 월 집계가 여기에 떠요.</p>'}
       ${stores.length > tracked.length ? `<p class="fine">지원서 없이 「내 가게」를 쓰는 가게 ${stores.length - tracked.length}곳은 공유 동의가 없어 보이지 않아요.</p>` : ''}
-      <p class="fine">공유 항목은 사장님이 「내 가게 → 공유 항목」에서 켠 것만 보여요. 메뉴 가격 · 정확한 매출 · 답글 밖의 메모 · 손님 정보는 이 표에 나오지 않게 만들었어요(백엔드에서도 같은 항목만 내보내요).</p>
+      <p class="fine">공유 항목은 사장님이 「내 가게 → 공유 항목」에서 켠 것만 보여요. 메뉴 가격 · 정확한 매출 · 답글 밖의 메모 · 손님 정보는 이 표에 나오지 않게 만들었어요(서버에 붙일 때도 같은 항목만 내보내요 [제안]).</p>
       <h3 style="margin-top:18px">신고된 가 본 시민 한 줄 <small>${repNotes.length}건 · 사장님은 지울 수 없고 운영단이 숨김을 정해요</small></h3>
       ${repNotes.length ? `<div class="tlist">${repNotes.map(({ a, n }) => `<div class="trow"><span>「${esc(n.t)}」 <small>${n.gone ? '쓴 사람이 내림 · ' : ''}${esc(a.store)} 「${esc(a.menu)}」 · 신고 ${n.reports}건 · ${esc((n.reportWhy || []).join(', '))}</small></span>${n.gone ? '<small>공개 안 됨</small>' : `<button class="cta2 sm" data-p="${n.hidden ? 'nunhide' : 'nhide'}" data-id="${a.id}" data-n="${n.id}">${n.hidden ? '다시 보이기' : '숨기기'}</button>`}</div>`).join('')}</div>` : '<p class="fine">신고된 한 줄이 없어요.</p>'}
       <h3 style="margin-top:18px">신고된 답 <small>${reported.length}건</small></h3>

@@ -48,7 +48,7 @@
       case 'hello': return `안녕하세요! 동성로 빈 점포에 <b>원하는 가게</b>를 남기거나, <b>창업 · 경영 상담</b>, <b>대학생 동행 프로젝트</b>로 안내해 드려요. 무엇이 궁금하세요?`;
       case 'student':
         window.STUDENT.startWith({ filter: u.g || null }); A.go('student');
-        return R(`대학생 <b>동행 프로젝트</b>로 안내했어요. 장학금 · 전공 학점 · 실무 경력을 받으면서 동성로 가게의 창업부터 운영까지 한 학기 함께해요.${u.g ? ` <b>${esc(u.g)}</b> 과제만 골라 뒀어요.` : ''}`);
+        return R(`대학생 <b>동행 프로젝트</b>로 안내했어요. 장학금 · 전공 학점 · 실무 경력을 받으면서 동성로 가게의 개업 준비와 첫 운영을 한 학기 동안 도와요.${u.g ? ` <b>${esc(u.g)}</b> 과제만 골라 뒀어요.` : ''}`);
       case 'open':
         window.OWNER.startWith({ status: 'open', trouble: u.trouble || '기타', story: text, item: u.item }); A.go('owner');
         return R(`운영 중인 가게 고민으로 정리해 뒀어요 — 어려움: <b>${esc(u.trouble)}</b>${u.item ? `, 업종: <b>${esc(u.item)}</b>` : ''}. 화면에서 ${u.item ? '가게 위치만' : '업종 · 가게 위치를'} 확인하고 「AI와 문제 정리하기」를 눌러 주세요.`);
@@ -59,13 +59,13 @@
       }
       case 'support': {
         const L = SUP.list.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${esc(x.target)}</li>`).join('');
-        return `${R('동성로 창업 · 가게 운영 때 볼 만한 지원이에요.')}<ul>${L}</ul>그리고 우리 시범 사업 <b>동행 프로젝트</b>는 사장님께 시범 지원금 + 대학생 팀을 연결해요. ${btn('owner', '사장님 상담 시작')}<small>최종 자격은 공고 기관이 판단해요. (${esc(SUP.checked)} 확인)</small>`;
+        return `${R('동성로 창업 · 가게 운영 때 볼 만한 지원이에요.')}<ul>${L}</ul>그리고 시범 사업 <b>동행 프로젝트</b>는 사장님께 시범 지원금 + 대학생 팀을 연결해요. ${btn('owner', '사장님 상담 시작')}<small>최종 자격은 공고 기관이 판단해요. (${esc(SUP.checked)} 확인)</small>`;
       }
       case 'wish':
-        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 바람을 남기는 화면을 열었어요. 공감을 많이 받은 바람에는 오픈 이벤트 경품도 있어요.`); }
+        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 바람을 남기는 화면을 열었어요. 시범 운영이 시작되면 공감을 많이 받은 바람에 오픈 이벤트 상품권도 걸려요.`); }
         A.go('home'); A.pulse();
         return R(`지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 바람은 공유 카드로 친구에게 보낼 수 있어요.`);
-      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 회원(휴대폰 본인인증)이 할 수 있어요. 한 사람이 한 계정이에요.')} ${btn('login', '로그인 · 가입')}`;
+      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 회원이 할 수 있어요. 로그인 창의 「바로 시작하기」로 바로 가입돼요(본 서비스에서는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).')} ${btn('login', '로그인 · 가입')}`;
       case 'data': return `<small>출처</small>빈칸 ${M.meta.n_spaces}곳은 소상공인시장진흥공단 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 <b>1층 공실 후보</b>예요(같은 층에 새 업소 없음). 실제 공실인지는 현장 확인이 필요하고, 본 사업에서는 시가 상가 매물 플랫폼과 공실 정보를 연동하는 방안을 제안해요.`;
       case 'mystore': openStore(); return R(`<b>「내 가게」</b>를 열었어요. 가게 근처(150m, 없으면 300m) 빈칸에 붙은 시민 바람을 보고 「우리 가게에서 해 볼게요」라고 답하면, 바람을 남기고 공감한 분들께 알림이 가요. 답한 메뉴 기록 · 분기 상권 변화도 같은 화면에 있어요.`);
       case 'howto': A.go('howto'); return R(`<b>빈칸</b>(공실 후보)에 시민이 <b>바람</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 바람을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`);
@@ -99,7 +99,7 @@
     '바람 보고 온 손님은 어떻게 세요?': '시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 가게에서 보여 주면, 사장님이 그 화면의 <b>[사장님 확인]</b>에 「내 가게」 위쪽의 <b>오늘 손님 확인 번호</b>를 넣어요(확인된 손님으로 따로 셈). 바쁠 땐 답한 메뉴 카드의 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.',
     '내 가게 쓰는 데 돈 들어요?': '동행 프로젝트에 선정된 가게와, 신청했지만 선정되지 않아 함께 살펴보는 가게는 <b>이용료가 없어요</b> [제안]. AI를 부르는 비용은 운영단 예산으로 잡는 방안이고, 학기 뒤 누가 낼지는 아직 정하는 중이에요 [확인 필요].',
     '누가 쓰는 법을 알려 줘요?': '선정 가게는 <b>학생 팀이 한 학기 같이 쓰면서</b> 사용법 한 장을 남겨요. 함께 살펴보는 가게는 <b>운영단이 첫 설정을 한 번 같이</b> 해요 [제안]. 막히면 저(빈칸 도우미)에게 물어보시거나 「내 가게」 위쪽 「사용법 한 장」을 보세요.',
-    '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 금액 · 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
+    '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 장학금은 월 30만 원 [추정], 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
 
   // ---------------- 실시간 AI (전용 창구 /api/binkan-assist: 지시문 서버 고정, { reply, do } JSON만 받음) ----------------
   const live = () => navigator.onLine !== false;
@@ -197,7 +197,9 @@
   }
   function push(html, text) { log.push({ who: 'bot', html, text: text || html.replace(/<[^>]+>/g, '').slice(0, 200) }); draw(); }
 
-  function modeBtn() { const b = $('#chatMode'); b.textContent = live() ? 'AI' : '오프라인'; b.classList.toggle('on', live()); b.title = live() ? 'Claude가 문장을 읽고 안내 · 실행해요. 연결이 안 되면 정해 둔 말로 답해요' : '인터넷이 없어 정해 둔 말로 답해요'; }
+  // 머리 표시: 마지막 대화를 실제 AI가 답했을 때만 초록 「AI 연결됨」(인터넷만 켜져 있다고 켜지 않음)
+  let aiOk = null;
+  function modeBtn() { const b = $('#chatMode'); const ok = live() && aiOk === true; b.textContent = !live() ? '오프라인' : aiOk === false ? '기본 답' : ok ? 'AI 연결됨' : 'AI'; b.classList.toggle('on', ok); b.title = ok ? '방금 답은 Claude가 문장을 읽고 고른 거예요. 숫자 · 목록은 사이트 데이터로 계산해요' : aiOk === false ? '실시간 AI 연결이 안 돼 정해 둔 말로 답했어요' : '말을 걸면 Claude가 읽고 안내 · 실행해요. 연결이 안 되면 정해 둔 말로 답해요'; }
   function draw() { $('#chatLog').innerHTML = log.map(m => `<div class="cm ${m.who}">${m.html}</div>`).join(''); $('#chatLog').scrollTop = 1e6; chips(); modeBtn(); }
   let busy = false;
   async function say(text) {
@@ -207,11 +209,12 @@
     let u = null, note = '';
     if (live()) {
       busy = true; log.push({ who: 'bot wait', html: '<span class="dots">AI가 읽는 중</span>' }); draw();
-      try { u = await aiTurn(text); } catch (e) { note = `<small>실시간 AI 연결 실패(${esc(e.name === 'AbortError' ? '응답 시간 초과' : e instanceof TypeError ? '인터넷 · 서버 연결 안 됨' : e.message)}) — 정해 둔 말로 답했어요.</small>`; }
+      try { u = await aiTurn(text); aiOk = !!u; } catch (e) { aiOk = false; note = `<small>실시간 AI 연결 실패(${esc(e.name === 'AbortError' ? '응답 시간 초과' : e instanceof TypeError ? '인터넷 · 서버 연결 안 됨' : e.message)}) — 정해 둔 말로 답했어요.</small>`; }
       log.pop(); busy = false;
     }
     if (u) {
       const cards = (u.do || []).map(a => run(a, text)).filter(Boolean).join('');
+      u.reply = String(u.reply || '').replace(/\s?[(（]?\b(V\d{3}|w\d{2,3}|o[0-9a-f]{32})\b[)）]?/g, '');   // 내부 id(V005 · w15)는 화면에 안 보이게
       push(esc(u.reply) + cards + '<small class="aimark">AI 답 · 숫자 · 목록은 사이트 데이터로 계산</small>', u.reply + (shown.length ? ' [보여 준 것: ' + shown.map(x => x.id).join(', ') + ']' : ''));
     } else push((answer(text, understand(text)) || '') + note);
   }
@@ -233,13 +236,13 @@
       const d = drafts[b.dataset.k]; if (!d) return;
       A.needAuth(() => {
         if (store.bySpace(d.space).some(w => w.title.replace(/\s/g, '') === d.title.replace(/\s/g, ''))) return push('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감해 주세요.');
-        if (/(망해|최악|쓰레기|광고|홍보|할인|010-?\d|카톡|https?:\/\/)/.test(d.title + d.why)) return push('비방 · 광고 · 연락처로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');
+        if (/(망해|망했|최악|쓰레기|010-?\d|카톡|오픈채팅|https?:\/\/)/.test(d.title + d.why)) return push('비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 바람 쓰기와 같은 기준
         const w = { id: 'u' + Date.now(), space: d.space, cat: d.cat, title: d.title, why: d.why || '—', who: A.roleName(A.st.user.role), likes: 0, ago: 0, uid: A.st.user.id };
         delete drafts[b.dataset.k];
         store.add(w).then(x => {
           const w2 = x || w; A.go('space', { space: d.space });
           shown = [{ kind: 'wish', id: w2.id, label: wishLabel(w2) }];
-          push(`바람을 올렸어요 — 「${esc(w2.title)}」 @ ${esc(shortAddr(SP[w2.space]))}. 오픈 이벤트에 자동 응모됐어요. 지도에서 그 빈칸을 열어 뒀어요.`);
+          push(`바람을 올렸어요 — 「${esc(w2.title)}」 @ ${esc(shortAddr(SP[w2.space]))}. 오픈 이벤트가 열리면 자동 응모돼요. 지도에서 그 빈칸을 열어 뒀어요.`);
         }, () => push('바람을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.'));
       });
       return;

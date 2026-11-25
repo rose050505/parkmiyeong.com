@@ -101,6 +101,16 @@
   BK.went = id => call('POST', `/api/answers/${id}/went`, null, token());
   BK.alerts = () => call('GET', '/api/me/alerts?limit=30', null, token());
   BK.reloadAnswers = async () => { if (BK.on) { await loadAnswers(); BK.listeners.forEach(f => f()); } };
+  BK.storeAnswers = sid => call('GET', `/api/stores/${sid}/answers?limit=100`, null, token());
+  // 내 알림(서버가 셈: 내가 쓴 · 공감한 바람에 가게가 답함) — 다른 기기에서 쓴 바람의 답도 알림에 뜨게
+  BK.srvAlerts = [];
+  let freshAt = 0;
+  BK.refresh = async (force) => {   // 「내 페이지」 · 「내 가게」를 열 때: 새 답 + 내 알림 다시 받기(15초에 한 번)
+    if (!BK.on || (!force && Date.now() - freshAt < 15000)) return; freshAt = Date.now();
+    try { await loadAnswers(); } catch (e) { }
+    if (token()) { try { BK.srvAlerts = await BK.alerts(); } catch (e) { } } else BK.srvAlerts = [];
+    BK.listeners.forEach(f => f());
+  };
 
   BK.reload = async () => { if (BK.on) { await loadAll(); BK.listeners.forEach(f => f()); } };
   BK.onChange = f => BK.listeners.push(f);
