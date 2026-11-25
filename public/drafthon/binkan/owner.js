@@ -1,8 +1,8 @@
-// 사장님 흐름 (청사진 §4-3): 상담 → 창업 카드 → 과제 정리 → 동행 프로젝트 지원서 → 진행 상태
+// 사장님 흐름 (청사진 §4-3): 상담 → 자리 분석 → 과제 정리 → 동행 프로젝트 지원서 → 진행 상태
 // 「AI 초안」 칸은 지금 규칙으로 만든 시연판. 실시간 AI가 붙으면 AI.* 세 함수만 바꾼다.
 (function () {
   const A = window.APP, { st, save, store, SP, M, SUP, esc, shortAddr } = A;
-  const STEPS = ['상담', '창업 카드', '과제 정리', '지원서', '진행 상태'];
+  const STEPS = ['상담', '자리 분석', '과제 정리', '지원서', '진행 상태'];
   const blank = () => ({ step: 1, status: null, known: null, item: '', space: null, near: null, trouble: null, story: '', problem: null, tasks: null, app: null, result: null });
   // st.owner = 지금 회원의 상담(app.js가 회원마다 나눠 둠). 없으면 새로
   const O = () => st.owner || (st.owner = blank());
@@ -142,12 +142,12 @@
       if (o.problem) h += `<section class="oq aiout"><h3>정리한 문제 ${aiTag(o.problem.ai)}</h3>
         <label class="ofl">문제 한 줄 <small>(고쳐도 돼요)</small><input data-o-in="problem.one" value="${esc(o.problem.one)}"></label>
         <div class="two"><div><b>원인 후보</b><ul>${o.problem.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div><div><b>먼저 확인할 숫자</b><ul>${o.problem.check.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div></div>
-        <button class="cta" data-o="go2">이대로 확인 → 가게 카드</button></section>`;
+        <button class="cta" data-o="go2">이대로 확인 → 가게 분석</button></section>`;
     }
     return h;
   }
 
-  // 위험과 근거 줄들 (창업 카드 · 챗봇이 같이 씀). o = { status, item, space, near }
+  // 위험과 근거 줄들 (자리 분석 · 챗봇이 같이 씀). o = { status, item, space, near }
   function riskList(o) {
     const pt = ptOf(o), cat = bigCat(o.item), ar = around(pt, cat), [lv, lc] = level(ar.same);
     const sp = o.space && SP[o.space], ws = sp ? store.bySpace(sp.id) : [], match = ws.filter(w => wishMatch(o.item, w));
@@ -167,7 +167,7 @@
     if (nA) risk.push(`<li class="lo"><b>근처 가게 ${nA}곳이 이 빈칸 의견에 일부 답함</b> 의견은 그대로 열려 있음 — 같은 의견을 노린다면 그 가게 메뉴도 확인</li>`);
     return risk;
   }
-  // 가게 카드의 「근처 의견에 답하기」 줄 — riskList 밖에 둔다(riskList 글은 AI tasks 입력으로 감)
+  // 가게 분석의 「근처 의견에 답하기」 줄 — riskList 밖에 둔다(riskList 글은 AI tasks 입력으로 감)
   function ansRow(o) {
     if (o.status !== 'open' || !o.near) return '';
     const nb = nearWishes(ptOf(o), o.item);
@@ -183,7 +183,7 @@
     const o = O(), risk = riskList(o), who = o.status === 'pre' ? 'pre' : 'open';
     const sup = SUP.list.map(x => { const ok = x.who.includes(who); return `<a class="sup${ok ? '' : ' no'}" href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b>${x.closed ? ' <em>마감</em>' : ''}<small>${esc(x.org)} · ${esc(x.what)}</small><small>${ok ? '대상: ' + esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</small></a>`; }).join('');
     return `<section class="ocard">
-        <div class="ohead"><p class="kick">${o.status === 'pre' ? '창업 카드' : '가게 카드'}</p><h2>${esc(o.item)} <small>@ ${esc(placeName(o))}</small></h2></div>
+        <div class="ohead"><p class="kick">${o.status === 'pre' ? '자리 분석' : '가게 분석'}</p><h2>${esc(o.item)} <small>@ ${esc(placeName(o))}</small></h2></div>
         ${o.problem ? `<p class="oprob"><b>정리한 문제</b> ${esc(o.problem.one)}</p>` : ''}
         <div class="ogrid">
           <div><h3>위험과 근거 <span class="tag calc">계산</span></h3><ul class="risk">${risk.join('')}</ul><p class="fine">소진공 상가정보 ${esc(M.meta.q_now)} 기준. 높음 · 보통 · 낮음 기준(60 · 30곳)은 [가정].</p>${ansRow(o)}</div>
@@ -199,7 +199,7 @@
       <div class="tasks">${T.list.map(t => `<label class="task${t.on ? ' on' : ''}"><input type="checkbox" data-o="task" data-id="${t.id}"${t.on ? ' checked' : ''}><div><b>${esc(t.t)}</b><small>필요한 전공: ${esc(t.major)} · ${t.wk}주</small><small>결과물: ${esc(t.out)}</small></div></label>`).join('')}</div>
       <div class="expert"><b>학생 팀이 할 일이 아니에요 → 전문가 · 기관으로</b><ul>${T.expert.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>
       <p class="err" id="oerr" hidden></p></section>
-      <div class="onav"><button class="cta2" data-o="step" data-v="2">← 카드로</button><button class="cta" data-o="go4"${n >= 1 && n <= 4 ? '' : ' disabled'}>동행 프로젝트 지원서 →</button></div>`;
+      <div class="onav"><button class="cta2" data-o="step" data-v="2">← 분석으로</button><button class="cta" data-o="go4"${n >= 1 && n <= 4 ? '' : ' disabled'}>동행 프로젝트 지원서 →</button></div>`;
   }
 
   function s4() {

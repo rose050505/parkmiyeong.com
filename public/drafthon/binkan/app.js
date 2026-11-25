@@ -255,7 +255,7 @@
       ${notices('space')}`;
   }
 
-  // 창업 카드: 지금은 계산으로 만든 요약. 실시간 AI가 붙으면 업종 · 상권 해석 문장이 여기에 들어간다.
+  // 자리 분석: 지금은 계산으로 만든 요약. 실시간 AI가 붙으면 업종 · 상권 해석 문장이 여기에 들어간다.
   function startCard(s, ws) {
     const R = 100;
     const near = M.bg.filter(([x, y]) => dist({ x, y }, s) <= R);
@@ -263,7 +263,7 @@
     const top = Object.entries(byL).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const w1 = ws[0], nA = MY() ? new Set(ws.flatMap(w => MY().answersFor(w.id)).map(a => a.sid)).size : 0;
     return `<section class="scard">
-      <h3>창업 카드 <span class="tag calc">계산 요약</span></h3>
+      <h3>자리 분석 <span class="tag calc">계산 요약</span></h3>
       <dl>
         <dt>${R}m 안 업소</dt><dd><b>${near.length}곳</b> — ${top.map(([l, n]) => `${esc(l)} ${n}`).join(' · ')}${near.length - top.reduce((x, [, n]) => x + n, 0) > 0 ? ` · 그 밖 ${near.length - top.reduce((x, [, n]) => x + n, 0)}` : ''}</dd>
         <dt>의견 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
@@ -295,7 +295,7 @@
       <section class="sphead"><p class="kick">사장님 입구</p><h2>창업 · 경영 상담</h2>${s ? `<p class="was">고른 자리: <b>${esc(shortAddr(s))}</b></p>` : ''}</section>
       <ol class="steps">
         <li><b>상담</b> 열 예정이면 아이템 · 자리, 하고 있으면 어려움을 AI와 이야기해요</li>
-        <li><b>창업 카드</b> 업종 · 상권 · 받을 수 있는 지원 · 이 자리의 시민 의견</li>
+        <li><b>자리 분석</b> 업종 · 상권 · 받을 수 있는 지원 · 이 자리의 시민 의견</li>
         <li><b>과제 정리</b> 대학생 팀과 함께할 일을 AI가 초안으로 정리</li>
         <li><b>동행 프로젝트 지원서</b> 시 + 지역 대학 운영단이 심사해 선정</li>
       </ol>
@@ -309,7 +309,7 @@
         <dt>빈칸</dt><dd>동성로의 빈 1층 점포 후보. 공공데이터로 찾고 현장에서 확인해요.</dd>
         <dt>의견</dt><dd>빈칸에 남기는 「여기 ○○ 있으면」 한 줄. 회원만 남길 수 있어요(본 서비스는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).</dd>
         <dt>공감</dt><dd>마음에 드는 의견에 누르는 하트. 한 계정에 1번.</dd>
-        <dt>창업 카드</dt><dd>빈칸을 누르면 나오는 요약. 주변 업소 · 의견 1위 · 받을 수 있는 지원.</dd>
+        <dt>자리 분석</dt><dd>빈칸을 누르면 나오는 요약. 주변 업소 · 의견 1위 · 받을 수 있는 지원.</dd>
         <dt>동행 프로젝트</dt><dd>의견을 보고 창업하는 사장님과 대학생 4인 팀 + 지도교수가 한 학기를 함께하는 시범 사업.</dd>
       </dl>
       <p class="fine">빈칸 ${M.meta.n_spaces}곳: ${esc(M.meta.src)} ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 1층 공실 후보(같은 층에 새 업소 없음). 범위: ${esc(M.meta.scope)}.</p>

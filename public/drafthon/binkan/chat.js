@@ -135,7 +135,7 @@
   // ---------------- 할 일 실행: 사이트 데이터로 계산해 채팅 카드로 ----------------
   const T = () => window.OWNER.tools;
   const drafts = {};
-  const spBtns = (id, item) => `<div class="cbrow">${btn('space', '지도에서 보기', ` data-id="${id}"`)}${item ? btn('card', '창업 카드', ` data-id="${id}" data-item="${esc(item)}"`) + btn('consult', '이 자리로 상담', ` data-id="${id}" data-item="${esc(item)}"`) : btn('consult', '이 자리로 상담', ` data-id="${id}"`)}</div>`;
+  const spBtns = (id, item) => `<div class="cbrow">${btn('space', '지도에서 보기', ` data-id="${id}"`)}${item ? btn('card', '자리 분석', ` data-id="${id}" data-item="${esc(item)}"`) + btn('consult', '이 자리로 상담', ` data-id="${id}" data-item="${esc(item)}"`) : btn('consult', '이 자리로 상담', ` data-id="${id}"`)}</div>`;
   function cardRecommend(item) {
     const L = T().combos({ known: 'item', item });
     shown = L.map(c => ({ kind: 'space', id: c.space, label: spaceLabel(SP[c.space]) }));
@@ -146,7 +146,7 @@
     shown = [{ kind: 'space', id, label: spaceLabel(sp) }];
     const it = item || sp.was, risk = T().riskList({ status: 'pre', item: it, space: id });
     const sup = SUP.list.filter(x => x.who.includes('pre')).map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.needCheck ? ' <small>공고 확인 필요</small>' : ''}</li>`).join('');
-    return `<div class="ccard2"><b>창업 카드 · ${esc(it)} @ ${esc(shortAddr(sp))}</b><ul class="risk">${risk.join('')}</ul><b class="sub">받을 수 있는 지원</b><ul>${sup}</ul>${spBtns(id, item)}<small>소진공 상가정보 ${esc(M.meta.q_now)} 기준 계산 · 경쟁 기준 [가정]</small></div>`;
+    return `<div class="ccard2"><b>자리 분석 · ${esc(it)} @ ${esc(shortAddr(sp))}</b><ul class="risk">${risk.join('')}</ul><b class="sub">받을 수 있는 지원</b><ul>${sup}</ul>${spBtns(id, item)}<small>소진공 상가정보 ${esc(M.meta.q_now)} 기준 계산 · 경쟁 기준 [가정]</small></div>`;
   }
   function cardFind(q) {
     const tk = q.replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2);
@@ -218,7 +218,7 @@
       push(esc(u.reply) + cards + '<small class="aimark">AI 답 · 숫자 · 목록은 사이트 데이터로 계산</small>', u.reply + (shown.length ? ' [보여 준 것: ' + shown.map(x => x.id).join(', ') + ']' : ''));
     } else push((answer(text, understand(text)) || '') + note);
   }
-  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「동성로에 1인 샤브샤브집 어때?」 「두 번째 자리 창업 카드 보여 줘」 「거기 셀프 사진관 의견 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
+  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「동성로에 1인 샤브샤브집 어때?」 「두 번째 자리 분석해 줘」 「거기 셀프 사진관 의견 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
   function close() { $('#chatBox').hidden = true; $('#chatFab').hidden = false; }
   $('#chatFab').onclick = open;
   $('#chatForm').onsubmit = e => { e.preventDefault(); const v = $('#chatIn').value; $('#chatIn').value = ''; say(v); };

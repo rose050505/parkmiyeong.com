@@ -91,7 +91,7 @@
       A.toast(was ? '다른 기기에서 고친 가게 설정을 받았어요' : '이 계정의 가게 설정을 불러왔어요'); if (!typing()) rerender();
     }).catch(e => console.warn('가게 설정 불러오기 실패:', e.message));
   }
-  // 다른 가게(서버)의 답을 이 브라우저 목록에 합침 — 시민 쪽 「근처 가게가 답했어요」 · 알림 · 가게 카드가 그대로 씀. 이 브라우저에서 올린 답(srv 같음)은 건너뜀
+  // 다른 가게(서버)의 답을 이 브라우저 목록에 합침 — 시민 쪽 「근처 가게가 답했어요」 · 알림 · 가게 분석이 그대로 씀. 이 브라우저에서 올린 답(srv 같음)은 건너뜀
   let mergedVer = -1;
   function mergeRemote() {
     if (!BKon() || mergedVer === window.BK.ansVer) return;
@@ -177,7 +177,7 @@
   }
 
   // ---------------- 계산 ----------------
-  // 근처 의견 목록. 150m 목록 밖이어도 300m 안이면 답할 수 있다 — 가게 카드 · 상권 변화에서 고른 의견(ui.extra)은 뒤에 붙인다
+  // 근처 의견 목록. 150m 목록 밖이어도 300m 안이면 답할 수 있다 — 가게 분석 · 상권 변화에서 고른 의견(ui.extra)은 뒤에 붙인다
   function nearList(s) {
     const pt = ptOf(s); if (!pt) return { list: [], near: true };
     const r = T().nearWishes(pt, s.item), L = r.list.slice();
