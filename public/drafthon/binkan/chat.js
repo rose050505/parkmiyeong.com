@@ -8,7 +8,7 @@
   document.body.insertAdjacentHTML('beforeend', `
     <button class="chatfab" id="chatFab" aria-label="빈칸 도우미 열기"><span class="cf-i">💬</span><span class="cf-t">빈칸 도우미</span></button>
     <section class="chatbox" id="chatBox" hidden role="dialog" aria-label="빈칸 도우미">
-      <header><b>빈칸 도우미</b><span class="tag ai" title="지금은 규칙으로 답하는 시연판. 실시간 AI 연결 때 자유 대화">시연판</span><button class="cx" data-c="close" aria-label="닫기">×</button></header>
+      <header><b>빈칸 도우미</b><button class="caimode" id="chatMode" data-c="mode"></button><button class="cx" data-c="close" aria-label="닫기">×</button></header>
       <div class="clog" id="chatLog" aria-live="polite"></div>
       <div class="cchips" id="chatChips"></div>
       <form class="cform" id="chatForm"><input id="chatIn" type="text" placeholder="편하게 물어보세요" autocomplete="off" aria-label="도우미에게 묻기"><button type="button" class="cmic" id="chatMic" aria-label="말로 묻기" hidden>🎤</button><button class="csend">보내기</button></form>
@@ -37,38 +37,42 @@
 
   // ---------------- 답하기 (동작은 실제 화면을 움직인다) ----------------
   const btn = (c, label, extra = '') => `<button class="cbtn" data-c="${c}"${extra}>${esc(label)}</button>`;
-  function answer(text) {
-    const u = understand(text), v = A.view(), sp = v.space && SP[v.space];
+  function answer(text, u0) {
+    const u = u0 || understand(text), v = A.view(), sp = v.space && SP[v.space];
+    const ai = !!u.ai, R = s => ai ? '' : s;   // AI 답이면 정해 둔 문장 대신 AI 문장을 쓰고, 목록 · 버튼만 덧붙인다
     switch (u.k) {
+      case 'other': return '';
       case 'hello': return `안녕하세요! 동성로 빈 점포에 <b>원하는 가게</b>를 남기거나, <b>창업 · 경영 상담</b>, <b>대학생 동행 프로젝트</b>로 안내해 드려요. 무엇이 궁금하세요?`;
       case 'student':
         window.STUDENT.startWith({ filter: u.g || null }); A.go('student');
-        return `대학생 <b>동행 프로젝트</b>로 안내했어요. 장학금 · 전공 학점 · 실무 경력을 받으면서 동성로 가게의 창업부터 운영까지 한 학기 함께해요.${u.g ? ` <b>${esc(u.g)}</b> 과제만 골라 뒀어요.` : ''}`;
+        return R(`대학생 <b>동행 프로젝트</b>로 안내했어요. 장학금 · 전공 학점 · 실무 경력을 받으면서 동성로 가게의 창업부터 운영까지 한 학기 함께해요.${u.g ? ` <b>${esc(u.g)}</b> 과제만 골라 뒀어요.` : ''}`);
       case 'open':
-        window.OWNER.startWith({ status: 'open', trouble: u.trouble, story: text, item: u.item, near: '교동시장' }); A.go('owner');
-        return `운영 중인 가게 고민으로 정리해 뒀어요 — 어려움: <b>${esc(u.trouble)}</b>${u.item ? `, 업종: <b>${esc(u.item)}</b>` : ''}. 화면에서 ${u.item ? '가게 위치만' : '업종 · 가게 위치를'} 확인하고 「AI와 문제 정리하기」를 눌러 주세요.`;
+        window.OWNER.startWith({ status: 'open', trouble: u.trouble || '기타', story: text, item: u.item }); A.go('owner');
+        return R(`운영 중인 가게 고민으로 정리해 뒀어요 — 어려움: <b>${esc(u.trouble)}</b>${u.item ? `, 업종: <b>${esc(u.item)}</b>` : ''}. 화면에서 ${u.item ? '가게 위치만' : '업종 · 가게 위치를'} 확인하고 「AI와 문제 정리하기」를 눌러 주세요.`);
       case 'pre': {
         const known = u.item ? (sp ? 'both' : 'item') : (sp ? 'place' : null);
         window.OWNER.startWith({ status: 'pre', known, item: u.item, space: sp ? sp.id : null }); A.go('owner');
-        return `창업 상담으로 안내했어요.${u.item ? ` 아이템 <b>${esc(u.item)}</b>` : ''}${sp ? ` · 자리 <b>${esc(shortAddr(sp))}</b>` : ''}${known ? '를 넣어 뒀어요.' : ' 정해 둔 것(아이템 · 자리)을 골라 주세요.'} 시민 바람이 많은 빈칸을 먼저 추천해 드려요.`;
+        return R(`창업 상담으로 안내했어요.${u.item ? ` 아이템 <b>${esc(u.item)}</b>` : ''}${sp ? ` · 자리 <b>${esc(shortAddr(sp))}</b>` : ''}${known ? '를 넣어 뒀어요.' : ' 정해 둔 것(아이템 · 자리)을 골라 주세요.'} 시민 바람이 많은 빈칸을 먼저 추천해 드려요.`);
       }
       case 'support': {
         const L = SUP.list.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${esc(x.target)}</li>`).join('');
-        return `동성로 창업 · 가게 운영 때 볼 만한 지원이에요.<ul>${L}</ul>그리고 우리 시범 사업 <b>동행 프로젝트</b>는 사장님께 시범 지원금 + 대학생 팀을 연결해요. ${btn('owner', '사장님 상담 시작')}<small>최종 자격은 공고 기관이 판단해요. (${esc(SUP.checked)} 확인)</small>`;
+        return `${R('동성로 창업 · 가게 운영 때 볼 만한 지원이에요.')}<ul>${L}</ul>그리고 우리 시범 사업 <b>동행 프로젝트</b>는 사장님께 시범 지원금 + 대학생 팀을 연결해요. ${btn('owner', '사장님 상담 시작')}<small>최종 자격은 공고 기관이 판단해요. (${esc(SUP.checked)} 확인)</small>`;
       }
       case 'wish':
-        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return `지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 바람을 남기는 화면을 열었어요. 공감을 많이 받은 바람에는 오픈 이벤트 경품(예시)도 있어요.`; }
+        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 바람을 남기는 화면을 열었어요. 공감을 많이 받은 바람에는 오픈 이벤트 경품(예시)도 있어요.`); }
         A.go('home'); A.pulse();
-        return `지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 바람은 공유 카드로 친구에게 보낼 수 있어요.`;
-      case 'auth': return `보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 휴대폰 본인인증한 회원이 할 수 있어요(한 사람이 한 번씩). 지금 시연에서는 인증이 바로 통과돼요. ${btn('login', '로그인 · 가입')}`;
-      case 'data': return `빈칸 ${M.meta.n_spaces}곳은 소상공인시장진흥공단 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 <b>1층 공실 후보</b>예요(같은 층에 새 업소 없음). 실제 공실인지는 현장 확인이 필요하고, 본 사업에서는 시가 상가 매물 플랫폼과 공실 정보를 연동하는 방안을 제안해요.`;
-      case 'howto': A.go('howto'); return `<b>빈칸</b>(공실 후보)에 시민이 <b>바람</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 바람을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`;
+        return R(`지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 바람은 공유 카드로 친구에게 보낼 수 있어요.`);
+      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 휴대폰 본인인증한 회원이 할 수 있어요(한 사람이 한 번씩). 지금 시연에서는 인증이 바로 통과돼요.')} ${btn('login', '로그인 · 가입')}`;
+      case 'data': return `<small>출처</small>빈칸 ${M.meta.n_spaces}곳은 소상공인시장진흥공단 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 <b>1층 공실 후보</b>예요(같은 층에 새 업소 없음). 실제 공실인지는 현장 확인이 필요하고, 본 사업에서는 시가 상가 매물 플랫폼과 공실 정보를 연동하는 방안을 제안해요.`;
+      case 'howto': A.go('howto'); return R(`<b>빈칸</b>(공실 후보)에 시민이 <b>바람</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 바람을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`);
       case 'find': {
-        const tk = u.q.replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|있어요|어디|있나요|보여줘|찾아줘)$/g, '')).filter(w => w.length >= 2 && !/^(바람|어디|있어요|있나요|보여줘|찾아줘|빈칸)$/.test(w));
+        if (ai && !u.q && u.item) u.q = u.item;
+        const tk = (u.q || text).replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|있어요|어디|있나요|보여줘|찾아줘)$/g, '')).filter(w => w.length >= 2 && !/^(바람|어디|있어요|있나요|보여줘|찾아줘|빈칸)$/.test(w));
         const ws = tk.length ? store.wishes().filter(w => tk.some(k => (w.title + w.cat).includes(k))).sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 4) : [];
         if (ws.length) return `이런 바람이 있어요.<div class="crow">${ws.map(w => btn('space', `${w.title} ♥${store.likes(w)} · ${shortAddr(SP[w.space])}`, ` data-id="${esc(w.space)}"`)).join('')}</div>누르면 지도에서 그 빈칸을 열어 드려요.`;
         const ss = tk.length ? M.spaces.filter(s => tk.some(k => (s.was + s.addr).includes(k))).slice(0, 4) : [];
         if (ss.length) return `직전 업종 · 주소로 찾은 빈칸이에요.<div class="crow">${ss.map(s => btn('space', `${shortAddr(s)} · 직전 ${s.was}`, ` data-id="${s.id}"`)).join('')}</div>`;
+        if (ai) return '';
         return `잘 알아듣지 못했어요. 아래처럼 물어봐 주세요. <small>(시연판은 정해진 말을 알아들어요. 실시간 AI가 연결되면 자유롭게 대화할 수 있어요.)</small>`;
       }
     }
@@ -88,21 +92,66 @@
     '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 금액 · 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
 
   // ---------------- 그리기 · 동작 ----------------
-  function draw() { $('#chatLog').innerHTML = log.map(m => `<div class="cm ${m.who}">${m.html}</div>`).join(''); $('#chatLog').scrollTop = 1e6; chips(); }
-  function say(text) {
-    if (!text.trim()) return;
-    log.push({ who: 'me', html: esc(text) });
-    const a = FAQ[text] || answer(text);
-    log.push({ who: 'bot', html: a }); draw();
+  // ---------------- 실시간 AI (팀 코드가 있을 때) ----------------
+  const CODE_KEY = 'dsr_code';   // 옛 시연과 같은 칸: 한 번 넣으면 같이 씀
+  const live = () => !!localStorage.getItem(CODE_KEY);
+  const ENDPOINT = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/drafthon-ai' : 'https://parkmiyeong.com/api/drafthon-ai';
+  function context() {
+    const v = A.view(), sp = v.space && SP[v.space];
+    const screen = { home: '첫 화면(지도)', space: '빈칸 상세', write: '바람 남기기', owner: '사장님 상담', student: '대학생 동행 프로젝트', howto: '이용 방법', search: '검색 결과', mine: '내 페이지' }[v.mode] || v.mode;
+    return { screen, space: sp ? { addr: shortAddr(sp), was: sp.was, wishes: store.bySpace(sp.id).slice(0, 3).map(w => `${w.title}(공감 ${store.likes(w)})`) } : null,
+      trending: store.wishes().sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 8).map(w => w.title), supports: SUP.list.map(x => x.name + (x.closed ? '(마감)' : '')) };
+  }
+  async function aiUnderstand(text) {
+    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 15000);
+    try {
+      const hist = log.filter(m => m.text).map(m => ({ who: m.who, text: m.text }));
+      const r = await fetch(ENDPOINT, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json', 'x-demo-code': localStorage.getItem(CODE_KEY) }, body: JSON.stringify(window.ASSIST.body(context(), hist, text)) });
+      if (r.status === 401) { localStorage.removeItem(CODE_KEY); throw new Error('팀 코드가 틀려요'); }
+      const j = await r.json();
+      if (!r.ok || j.stop_reason === 'refusal') throw new Error('AI 응답 없음');
+      const u = window.ASSIST.parse((j.content || []).filter(b => b.type === 'text').map(b => b.text).join(''));
+      if (!u) throw new Error('AI 답 형식 오류');
+      return u;
+    } finally { clearTimeout(tm); }
+  }
+  function modeBtn() { const b = $('#chatMode'); b.textContent = live() ? 'AI 연결됨' : '시연판 · AI 연결'; b.classList.toggle('on', live()); }
+
+  function draw() { $('#chatLog').innerHTML = log.map(m => `<div class="cm ${m.who}">${m.html}</div>`).join(''); $('#chatLog').scrollTop = 1e6; chips(); modeBtn(); }
+  let busy = false;
+  async function say(text) {
+    if (!text.trim() || busy) return;
+    log.push({ who: 'me', html: esc(text), text });
+    let u = null, note = '';
+    if (FAQ[text] && !live()) { log.push({ who: 'bot', html: FAQ[text], text: FAQ[text].replace(/<[^>]+>/g, '') }); return draw(); }
+    if (live()) {
+      busy = true; log.push({ who: 'bot wait', html: '<span class="dots">AI가 읽는 중</span>' }); draw();
+      try { u = await aiUnderstand(text); } catch (e) { note = `<small>실시간 AI 연결 실패(${esc(e.name === 'AbortError' ? '응답 시간 초과' : e instanceof TypeError ? '인터넷 · 서버 연결 안 됨' : e.message)}) — 정해 둔 말로 답했어요.</small>`; }
+      log.pop(); busy = false;
+    }
+    const extra = answer(text, u || understand(text));
+    const html = (u ? esc(u.reply) + (extra ? '<div class="cextra">' + extra + '</div>' : '') + '<small class="aimark">AI 답 · 확인 필요한 내용은 공고 · 기관에서</small>' : (FAQ[text] || extra)) + note;
+    log.push({ who: 'bot', html, text: u ? u.reply : html.replace(/<[^>]+>/g, '').slice(0, 200) }); draw();
+  }
+  function askCode() {
+    log.push({ who: 'bot', html: `실시간 AI는 <b>팀 코드</b>가 있어야 켜져요(AI 비용 보호). 코드를 넣으면 이 브라우저에만 저장돼요.<form class="ccode" id="codeForm"><input type="password" id="codeIn" placeholder="팀 코드" autocomplete="off" aria-label="팀 코드"><button>연결</button></form>` }); draw();
+    $('#codeIn').focus();
   }
   function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') }); } draw(); $('#chatIn').focus(); }
   function close() { $('#chatBox').hidden = true; $('#chatFab').hidden = false; }
   $('#chatFab').onclick = open;
   $('#chatForm').onsubmit = e => { e.preventDefault(); const v = $('#chatIn').value; $('#chatIn').value = ''; say(v); };
+  $('#chatBox').addEventListener('submit', e => {
+    if (e.target.id !== 'codeForm') return;
+    e.preventDefault(); const v = $('#codeIn').value.trim(); if (!v) return;
+    localStorage.setItem(CODE_KEY, v);
+    e.target.outerHTML = '<p><b>연결했어요.</b> 이제 AI가 문장을 읽고 안내해요. 코드가 틀리면 첫 질문 때 알려 드려요.</p>'; log[log.length - 1].html = $('#chatLog').lastElementChild.innerHTML; draw();
+  });
   $('#chatBox').addEventListener('click', e => {
     const b = e.target.closest('[data-c]'); if (!b) return;
     const c = b.dataset.c;
     if (c === 'close') return close();
+    if (c === 'mode') { if (live()) { localStorage.removeItem(CODE_KEY); log.push({ who: 'bot', html: 'AI 연결을 끊었어요. 정해 둔 말로 답해요.' }); return draw(); } return askCode(); }
     if (c === 'say') return say(b.dataset.v);
     if (c === 'space') { A.go('space', { space: b.dataset.id }); return; }
     if (c === 'owner') { window.OWNER.start(null); A.go('owner'); return; }
