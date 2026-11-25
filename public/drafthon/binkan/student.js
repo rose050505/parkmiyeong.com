@@ -56,9 +56,9 @@
 
   // ---------------- 화면 ----------------
   const stepper = n => `<ol class="ostep">${STEPS.map((t, i) => `<li class="${i + 1 < n ? 'done' : i + 1 === n ? 'now' : ''}"><span>${i + 1}</span>${t}</li>`).join('')}</ol>`;
-  const aiTag = '<span class="tag ai" title="지금은 규칙으로 만든 시연판. 실시간 연결 때 AI가 씁니다">AI · 시연판</span>';
+  const aiTag = '<span class="tag ai">AI</span>';
   const postCard = p => `<button class="pcard" data-s="open" data-id="${p.id}">
-      <span class="pk">${p.ex ? '<span class="tag ex">예시 공고</span>' : '<span class="tag mine">선정된 공고</span>'} ${p.kind === 'pre' ? '창업 준비' : '운영 중 가게'}</span>
+      <span class="pk">${p.ex ? '' : '<span class="tag mine">새로 선정</span> '}${p.kind === 'pre' ? '창업 준비' : '운영 중 가게'}</span>
       <b>${esc(p.item)}</b><small>📍 ${esc(where(p))}${p.wish ? ' · ' + esc(p.wish) : ''}</small>
       <span class="roles">${p.roles.map(r => `<i>${esc(r.t)}</i>`).join('')}</span>
       <span class="pg">${groupsOfPost(p).map(g => `<em>${esc(g)}</em>`).join('')}</span></button>`;
@@ -66,17 +66,17 @@
   function s1() {
     const s = S(), L = posts().filter(p => !s.filter || groupsOfPost(p).includes(s.filter));
     return `<section class="oq hero"><h2>동성로 가게의 창업부터 운영까지, 한 학기 동안</h2>
-        <div class="gets"><div><b>장학금</b><small>참여 학생 지원 [가정]</small></div><div><b>전공 학점</b><small>지역 대학 연계 교과 · 대구 앵커사업(옛 RISE)</small></div><div><b>실무 경력</b><small>경력 카드로 남음</small></div></div>
+        <div class="gets"><div><b>장학금</b><small>참여 학생 지원</small></div><div><b>전공 학점</b><small>지역 대학 연계 교과 · 대구 앵커사업(옛 RISE)</small></div><div><b>실무 경력</b><small>경력 카드로 남음</small></div></div>
         <p class="was">4인 팀 + 지도교수 · 16주 · 사장님 가게의 실제 과제. 알바가 아니라 내 직무 경력이 돼요.</p></section>
       <section class="oq"><h3>올라온 과제 <small>로그인 없이 볼 수 있어요</small></h3>
         <div class="ochips"><button class="${!s.filter ? 'on' : ''}" data-s="filter" data-v="">전체</button>${GROUPS.map(g => `<button class="${s.filter === g ? 'on' : ''}" data-s="filter" data-v="${g}">${g}</button>`).join('')}</div>
         <div class="plist">${L.map(postCard).join('') || '<p class="emptyw">이 직무의 과제가 아직 없어요.</p>'}</div>
-        <p class="fine">「예시 공고」는 시연용으로 만든 공고예요.</p></section>`;
+</section>`;
   }
 
   function s2() {
     const s = S(), p = P(s.sel); if (!p) return s1();
-    return `<section class="ocard"><div class="ohead"><p class="kick">${p.ex ? '예시 공고 · ' : ''}동행 프로젝트 1기</p><h2>${esc(p.item)} <small>@ ${esc(where(p))}</small></h2>
+    return `<section class="ocard"><div class="ohead"><p class="kick">동행 프로젝트 1기</p><h2>${esc(p.item)} <small>@ ${esc(where(p))}</small></h2>
         <p class="was">${esc(p.owner)}${p.wish ? ' · ' + esc(p.wish) : ''}</p></div>
       <div class="sum"><div><b>기간</b>한 학기 16주 · 8주 중간 점검</div><div><b>팀</b>대학생 4명 + 지도교수</div><div><b>받는 것</b>장학금 · 전공 학점(연계 교과) · 경력 카드</div><div><b>사장님</b>${esc(p.ask)}</div></div>
       <h3 style="margin-top:16px">자리 4개 <small>하나를 골라 지원해요</small></h3>
@@ -110,7 +110,7 @@
       <ol class="tl">${order.map((t, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}">${t}</li>`).join('')}</ol>
       ${k === 'drop' ? `<div class="okpost no"><p class="kick">이번에는 선발되지 않았어요</p><p>같은 연계 교과 안의 공동 과제(동성로 상권 조사)로 참여할 수 있고, 다음 학기에 우선 검토해요.</p></div>` : ''}
       ${k === 'run' ? `<div class="okpost"><p class="kick">한 학기 진행 중</p><ul><li>1~4주: 현장 파악 · 사장님 인터뷰</li><li>5~8주: 결과물 1차 → <b>8주 중간 점검</b>(지도교수 · 운영단)</li><li>9~14주: 실행 · 고치기</li><li>15~16주: 인수인계(원본 파일 · 사용법) · 평가</li></ul></div>` : ''}
-      <div class="onav">${{ sent: `<button class="cta2" data-s="st" data-v="drop">선발 안 됨 보기 (시연)</button><button class="cta" data-s="st" data-v="pass">선발 결과 보기 (시연)</button>`, pass: `<span></span><button class="cta" data-s="st" data-v="met">사장님 면담 완료 (시연)</button>`, met: `<span></span><button class="cta" data-s="st" data-v="team">팀 확정 (시연)</button>`, team: `<span></span><button class="cta" data-s="st" data-v="run">학기 시작 (시연)</button>`, run: `<span></span><button class="cta" data-s="go5">학기 끝 → 경력 카드 (시연)</button>`, drop: `<button class="cta2" data-s="reset">다른 과제 보기</button><span></span>` }[k] || ''}</div>
+      <div class="onav">${{ sent: `<button class="cta2" data-s="st" data-v="drop">운영단 처리: 이번엔 아님</button><button class="cta" data-s="st" data-v="pass">운영단 처리: 선발</button>`, pass: `<span></span><button class="cta" data-s="st" data-v="met">면담 완료</button>`, met: `<span></span><button class="cta" data-s="st" data-v="team">팀 확정</button>`, team: `<span></span><button class="cta" data-s="st" data-v="run">학기 시작</button>`, run: `<span></span><button class="cta" data-s="go5">학기 끝 → 경력 카드</button>`, drop: `<button class="cta2" data-s="reset">다른 과제 보기</button><span></span>` }[k] || ''}</div>
       </section>`;
   }
 
@@ -126,7 +126,7 @@
           <dt>사장님 평</dt><dd class="ph">학기 말 평가에서 사장님이 직접 씀</dd>
           <dt>지도교수 평</dt><dd class="ph">학기 말 평가에서 지도교수가 직접 씀</dd>
           <dt>학점</dt><dd>연계 교과 이수 (대학별 [가정])</dd></dl>
-        <p class="fine">이 카드는 시연용 미리보기예요. 실제 카드는 사장님 · 지도교수 평가가 끝나야 발급돼요.</p>
+        <p class="fine">사장님 · 지도교수 학기 말 평가가 끝나면 발급돼요.</p>
       </section>
       <div class="onav"><button class="cta2" data-s="reset">다음 학기 과제 보기</button><button class="cta" data-act="owner">창업이 꿈이라면 → 예비 사장님으로</button></div>`;
   }
@@ -180,7 +180,7 @@
     if (!pf.time.length) return err('가능 시간을 하나 이상 골라 주세요');
     if (s.ans.some(a => a.length < 10)) return err('질문 두 개에 10자 이상씩 답해 주세요');
     A.needAuth(() => {
-      if (st.user.role !== 'student') { st.user.role = 'student'; A.toast('대학생 역할을 더했어요 (재학 확인 · 시연)'); }
+      if (st.user.role !== 'student') { st.user.role = 'student'; A.toast('대학생 역할을 더했어요'); }
       st.stu.step = 4; st.stu.status = 'sent'; save(); A.rerender();
     });
   });

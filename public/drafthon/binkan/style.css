@@ -466,3 +466,28 @@ body.work-open .work { display: block; grid-column: 2 / 4; overflow: auto; backg
 .ccard2.draft p { margin: 2px 0; }
 .ccard2.draft .dt { font-size: 16px; font-weight: 700; }
 .chatbox { width: 400px; }
+
+/* ---------- 로그인 · 회원가입 ---------- */
+.auth .atabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); margin: -4px 0 12px; }
+.auth .atabs button { border: 0; background: none; padding: 10px; font-weight: 700; color: var(--ink3); border-bottom: 2px solid transparent; }
+.auth .atabs button.on { color: var(--ink); border-bottom-color: var(--wish); }
+.auth .amsg { font-size: 13px; }
+.aform label { display: block; font-weight: 700; font-size: 13px; margin-top: 10px; }
+.aform label small { color: var(--ink3); font-weight: 400; }
+.aform input[type=text], .aform input:not([type]), .aform input[type=password] { display: block; width: 100%; margin-top: 4px; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: inherit; font-weight: 400; }
+.aform input:focus { outline: 2px solid var(--wish); border-color: transparent; }
+.averify { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 8px 10px; font-size: 13px; font-weight: 700; }
+.averify small { display: block; font-weight: 400; color: var(--ink3); }
+.vbtn { border: 1px solid var(--ink); background: var(--card); border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 13px; flex: none; }
+.vbtn.done { border-color: var(--space); color: var(--space-ink); background: var(--space-bg); }
+.aroles { border: 0; padding: 0; margin: 12px 0 0; }
+.aroles legend { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.aroles legend small { color: var(--ink3); font-weight: 400; }
+.aroles .chips label { display: inline-block; margin: 0; font-weight: 400; }
+.agree2 { font-weight: 400 !important; font-size: 13px !important; }
+.agree2 input { accent-color: var(--wish); margin-right: 6px; }
+.alink { text-align: center; font-size: 13px; margin: 10px 0 0 !important; }
+.alink button { border: 0; background: none; color: var(--wish-ink); font-weight: 700; text-decoration: underline; padding: 0; }
+.cta.quick { margin: 4px 0 0; background: var(--ink); }
+.aor { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12px; margin: 12px 0 0 !important; }
+.aor::before, .aor::after { content: ""; flex: 1; height: 1px; background: var(--line); }

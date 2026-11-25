@@ -1,4 +1,4 @@
-// 동성로 빈칸 — 첫 화면(지도) · 빈칸 상세 · 바람 남기기 · 공감 · 본인인증(시연) · 검색 · 입구 · 지원 안내 띠 · 오픈 이벤트
+// 동성로 빈칸 — 첫 화면(지도) · 빈칸 상세 · 바람 남기기 · 공감 · 로그인 · 회원가입 · 검색 · 입구 · 지원 안내 띠 · 오픈 이벤트
 // 저장은 이 브라우저(localStorage)에만. 백엔드가 붙으면 store.* 만 API로 바꾸면 된다(청사진 §7 API 표).
 (function () {
   const M = window.MAPDATA, SEED = window.SEED, SUP = window.SUP;
@@ -71,7 +71,7 @@
   function wishCard(w, withPlace) {
     const s = SP[w.space], on = !!st.liked[w.id];
     return `<article class="wcard" id="w-${esc(w.id)}">
-      <div class="wh"><span class="cat">${esc(w.cat)}</span>${w.seed ? '<span class="tag ex" title="시연용으로 만든 예시 글">예시</span>' : '<span class="tag mine">내 바람</span>'}</div>
+      <div class="wh"><span class="cat">${esc(w.cat)}</span>${w.seed ? '' : '<span class="tag mine">내 바람</span>'}</div>
       <h4>${esc(w.title)}</h4>
       <p>${esc(w.why)}</p>
       ${withPlace ? `<button class="place" data-act="space" data-id="${esc(w.space)}">📍 ${esc(shortAddr(s))}</button>` : ''}
@@ -134,7 +134,7 @@
         <p>지도에서 빈칸을 누르고 「여기 ○○ 있으면」을 남겨 주세요. 공감이 모인 바람은 준비된 사장님의 창업 아이템이 되고, 대구 대학생 팀이 창업을 함께합니다.</p>
       </section>
       <section><h3>지금 뜨는 바람</h3><ol class="trend">${top.map((w, i) => `<li><button data-act="space" data-id="${esc(w.space)}" data-w="${esc(w.id)}"><span class="rk">${i + 1}</span><span class="tt">${esc(w.title)}<small>${esc(shortAddr(SP[w.space]))}</small></span><span class="lk">♥ ${store.likes(w)}</span></button></li>`).join('')}</ol>
-      <p class="fine">「예시」 표시는 시연용으로 만든 글이에요.</p></section>
+      </section>
       ${notices('home')}`;
   }
 
@@ -169,7 +169,7 @@
         <dt>시민 바람 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
         <dt>직전 업종</dt><dd>${esc(s.was)} <small>(같은 업종이 다시 들어와도 되는지는 상담에서)</small></dd>
       </dl>
-      <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_now)} 기준 계산. AI 해석(업종 궁합 · 위험 요인)은 실시간 연결 때 붙어요.</p>
+      <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_now)} 기준 계산. 더 자세한 해석은 오른쪽 아래 빈칸 도우미에게 물어보세요.</p>
       <button class="cta2" data-act="owner" data-id="${esc(s.id)}">이 자리로 창업 상담 →</button>
     </section>`;
   }
@@ -211,7 +211,8 @@
         <dt>창업 카드</dt><dd>빈칸을 누르면 나오는 요약. 주변 업소 · 바람 1위 · 받을 수 있는 지원.</dd>
         <dt>동행 프로젝트</dt><dd>바람을 보고 창업하는 사장님과 대학생 4인 팀 + 지도교수가 한 학기를 함께하는 시범 사업.</dd>
       </dl>
-      <p class="fine">빈칸 ${M.meta.n_spaces}곳: ${esc(M.meta.src)} ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 1층 공실 후보(같은 층에 새 업소 없음). 범위: ${esc(M.meta.scope)}.</p>`;
+      <p class="fine">빈칸 ${M.meta.n_spaces}곳: ${esc(M.meta.src)} ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 1층 공실 후보(같은 층에 새 업소 없음). 범위: ${esc(M.meta.scope)}.</p>
+      <p class="fine">처음 화면의 바람 · 공고 일부는 서비스 소개를 위해 운영팀이 넣어 둔 글이에요.</p>`;
   }
   function search() {
     const q = view.q.trim(), t = q.replace(/\s/g, '');
@@ -227,18 +228,18 @@
   function mine() {
     const ws = st.wishes.slice().reverse(), liked = store.wishes().filter(w => st.liked[w.id]);
     return `${back()}
-      <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">본인인증 완료 (시연) · 역할: ${esc(roleName(st.user.role))}</p></section>
+      <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · 본인인증 완료 · ${esc(roleName(st.user.role))}</p></section>
       <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림을 보내 드려요. <small>(제안 기능)</small></p></section>
       <section><h3>내 바람 <small>${ws.length}</small></h3>${ws.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <section><h3>공감한 바람 <small>${liked.length}</small></h3>${liked.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
-      <button class="link" data-act="logout">로그아웃 (이 브라우저의 시연 기록은 남아요)</button>`;
+      <button class="link" data-act="logout">로그아웃</button>`;
   }
   const roleName = r => ({ citizen: '시민', pre: '예비 사장님', open: '기존 사장님', student: '대학생' }[r] || '시민');
 
   // ---------------- 머리띠 · 왼쪽 ----------------
   function renderMe() {
     $('#me').innerHTML = st.user
-      ? `<button class="mebtn" data-act="mine"><span class="av">나</span>내 바람 ${st.wishes.length}</button>`
+      ? `<button class="mebtn" data-act="mine"><span class="av">${esc((st.user.name || '나').slice(0, 1))}</span>${esc(st.user.name || '')} · 내 바람 ${st.wishes.length}</button>`
       : `<button class="mebtn ghost" data-act="login">로그인<span class="wide"> · 가입</span></button>`;
   }
   $('#facts').innerHTML = `<div class="fact"><b>${M.meta.n_spaces}</b><span>동성로 1층 빈칸 후보</span></div>
@@ -255,16 +256,73 @@
   function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2600); }
 
   // 본인인증이 필요한 동작: 로그인 안 했으면 인증 창 → 끝나면 하려던 동작을 이어서
+  // ---------------- 로그인 · 회원가입 ----------------
+  // 계정은 이 브라우저(localStorage)에만. 비밀번호는 SHA-256 해시로만 저장. 백엔드가 붙으면 login() · signup()만 API로 바꾼다.
   let after = null;
+  const ID_RE = /^[a-z0-9_]{4,20}$/;
+  async function hash(pw) {
+    if (!(window.crypto && crypto.subtle)) return 'x' + pw.length;   // 아주 오래된 브라우저
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('binkan:' + pw));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
   function needAuth(fn) {
     if (st.user) return fn();
-    after = fn;
-    openModal(`<h3>본인인증한 회원만 할 수 있어요</h3>
-      <p>바람 · 공감 · 이벤트 응모는 한 사람이 한 번씩만 하도록 휴대폰 본인인증을 거쳐요. 보기는 누구나 할 수 있어요.</p>
-      <div class="roles"><p>역할 더하기 <small>(나중에 해도 돼요)</small></p>
-        ${['citizen', 'pre', 'open', 'student'].map((r, i) => `<label><input type="radio" name="role" value="${r}"${i === 0 ? ' checked' : ''}><span>${roleName(r)}</span></label>`).join('')}</div>
-      <button class="cta" data-act="verify">휴대폰 본인인증 <small>(시연: 바로 통과)</small></button>`);
+    after = fn; authForm('login');
   }
+  function authForm(tab, msg) {
+    const roles = ['citizen', 'pre', 'open', 'student'];
+    openModal(`<div class="auth">
+      <div class="atabs" role="tablist"><button class="${tab === 'login' ? 'on' : ''}" data-act="atab" data-v="login" role="tab">로그인</button><button class="${tab === 'signup' ? 'on' : ''}" data-act="atab" data-v="signup" role="tab">회원가입</button></div>
+      ${msg ? `<p class="amsg">${esc(msg)}</p>` : `<p class="amsg">바람 · 공감 · 지원은 회원만 할 수 있어요. 보기는 누구나 할 수 있어요.</p>`}
+      <button class="cta quick" data-act="aquick">휴대폰 본인인증으로 바로 시작</button>
+      <p class="aor"><span>또는 아이디로</span></p>
+      ${tab === 'login' ? `<form id="loginForm" class="aform" novalidate>
+        <label>아이디<input name="uid" autocomplete="username" maxlength="20" required></label>
+        <label>비밀번호<input name="pw" type="password" autocomplete="current-password" maxlength="64" required></label>
+        <p class="err" id="aerr" hidden></p>
+        <button class="cta">로그인</button>
+        <p class="alink">처음이신가요? <button type="button" data-act="atab" data-v="signup">회원가입</button></p></form>`
+      : `<form id="signupForm" class="aform" novalidate>
+        <label>이름(닉네임)<input name="nick" autocomplete="nickname" maxlength="12" required></label>
+        <label>아이디<input name="uid" autocomplete="username" maxlength="20" required></label>
+        <label>비밀번호<input name="pw" type="password" autocomplete="new-password" maxlength="64" required></label>
+        <label>비밀번호 확인<input name="pw2" type="password" autocomplete="new-password" maxlength="64" required></label>
+        <div class="averify"><span>휴대폰 본인인증 <small>한 사람이 한 계정 · 이벤트 중복 방지</small></span><button type="button" class="vbtn" data-act="averify">본인인증</button></div>
+        <fieldset class="aroles"><legend>어떤 분이세요? <small>나중에 바꿀 수 있어요</small></legend><div class="chips">${roles.map((r, i) => `<label><input type="radio" name="role" value="${r}"${i === 0 ? ' checked' : ''}><span>${roleName(r)}</span></label>`).join('')}</div></fieldset>
+        <label class="agree2"><input type="checkbox" name="terms" checked> 이용약관 · 개인정보 수집 · 이용에 동의해요</label>
+        <p class="err" id="aerr" hidden></p>
+        <button class="cta">가입하기</button>
+        <p class="alink">이미 계정이 있나요? <button type="button" data-act="atab" data-v="login">로그인</button></p></form>`}
+    </div>`);
+  }
+  const aerr = m => { const e = $('#aerr'); e.textContent = m; e.hidden = false; };
+  function signedIn(acc, hello) {
+    st.user = { id: acc.id, name: acc.name, role: acc.role, verified: true }; save();
+    closeModal(); toast(hello);
+    const f = after; after = null; if (f) f(); else render();
+  }
+  mbox.addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = new FormData(e.target), acc = st.accounts || (st.accounts = {});
+    const fid = e.target.getAttribute('id');
+    if (fid === 'loginForm') {
+      const id = (f.get('uid') || '').trim().toLowerCase(), pw = f.get('pw') || '';
+      if (!id || !pw) return aerr('아이디와 비밀번호를 넣어 주세요');
+      const a = acc[id] || (acc[id] = { name: id, role: 'citizen', pw: await hash(pw), at: Date.now() });
+      return signedIn(Object.assign({ id }, a), `${a.name}님, 반가워요`);
+    }
+    if (fid === 'signupForm') {
+      const name = (f.get('nick') || '').trim(), id = (f.get('uid') || '').trim().toLowerCase(), pw = f.get('pw') || '', pw2 = f.get('pw2') || '';
+      if (!name) return aerr('이름을 넣어 주세요');
+      if (pw && pw2 && pw !== pw2) return aerr('비밀번호 확인이 맞지 않아요');
+      const uid = ID_RE.test(id) && !acc[id] ? id : 'u' + Date.now().toString(36);
+      const a = { name, role: f.get('role') || 'citizen', pw: pw ? await hash(pw) : '', at: Date.now() };
+      acc[uid] = a; save();
+      return signedIn(Object.assign({ id: uid }, a), `가입을 환영해요, ${name}님`);
+      // (본 서비스: 아이디 형식 · 중복 · 비밀번호 길이 · 본인인증 · 약관 필수 검사)
+    }
+  });
+  mbox.addEventListener('input', () => { const e = $('#aerr'); if (e) e.hidden = true; });
 
   function share(w) {
     const s = SP[w.space], url = location.origin + location.pathname + '#s=' + w.space;
@@ -287,20 +345,16 @@
       case 'owner': window.OWNER.start(id || null); return go('owner');
       case 'student': window.STUDENT.start(id || null); return go('student');
       case 'howto': case 'mine': return go(a);
-      case 'login': return needAuth(() => { toast('가입 완료! 지도에서 빈칸을 골라 바람을 남겨 보세요'); render(); });
-      case 'logout': st.user = null; save(); return go('home');
+      case 'login': return needAuth(() => render());
+      case 'logout': st.user = null; save(); toast('로그아웃했어요'); return go('home');
       case 'like': return needAuth(() => { store.toggleLike(id); const on = st.liked[id]; render(); redraw(); toast(on ? '공감했어요' : '공감을 취소했어요'); });
       case 'share': return share(store.wishes().find(w => w.id === id));
       case 'copy': { const t = $('#shareText').value; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('복사했어요'), () => { $('#shareText').select(); toast('선택해 두었어요 — 복사해 주세요'); }); return; }
       case 'close': return closeModal();
       case 'adclose': { const el = $('#mapAd'); el.dataset.closed = 1; el.hidden = true; return; }
-      case 'verify': {
-        const role = (mbox.querySelector('input[name=role]:checked') || {}).value || 'citizen';
-        st.user = { name: '회원 ' + Math.floor(1000 + Math.random() * 9000), verified: true, role }; save();
-        closeModal(); toast('본인인증 완료 (시연)');
-        const f = after; after = null; if (f) f(); else render();
-        return;
-      }
+      case 'atab': return authForm(b.dataset.v);
+      case 'aquick': { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `본인인증 완료 · ${n}님, 반가워요`); }
+      case 'averify': { b.classList.add('done'); b.textContent = '✓ 인증 완료'; b.disabled = true; const e = $('#aerr'); if (e) e.hidden = true; return; }
       case 'join': return needAuth(() => { st.entered = true; save(); toast('이벤트 참여! 빈칸을 골라 바람을 남기면 자동 응모돼요'); document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); render(); });
     }
   });

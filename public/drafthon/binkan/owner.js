@@ -98,7 +98,7 @@
 
   // ---------------- 화면 조각 ----------------
   const stepper = n => `<ol class="ostep">${STEPS.map((t, i) => `<li class="${i + 1 < n ? 'done' : i + 1 === n ? 'now' : ''}"><span>${i + 1}</span>${t}</li>`).join('')}</ol>`;
-  const aiTag = '<span class="tag ai" title="지금은 규칙으로 만든 시연판. 실시간 연결 때 AI가 씁니다">AI 초안 · 시연판</span>';
+  const aiTag = '<span class="tag ai">AI 초안</span>';
   const placeName = o => o.space ? shortAddr(SP[o.space]) : o.near ? o.near + ' 근처' : '';
   const ptOf = o => o.space ? SP[o.space] : LM.find(l => l.name === o.near) || LM[0];
 
@@ -177,7 +177,7 @@
   function s4() {
     const o = O(), a = o.app || {}, n = o.tasks.list.filter(t => t.on);
     const uses = ['인테리어 · 설비', '첫 재료 · 재고', '홍보', '학생 팀 활동비'];
-    return `<section class="ocard"><div class="ohead"><p class="kick">동행 프로젝트 1기 · 사장님 지원서 <span class="tag">우리 정책안 · 시범</span></p><h2>${esc(o.item)} @ ${esc(placeName(o))}</h2></div>
+    return `<section class="ocard"><div class="ohead"><p class="kick">동행 프로젝트 1기 · 사장님 지원서 <span class="tag">시범 사업</span></p><h2>${esc(o.item)} @ ${esc(placeName(o))}</h2></div>
       <div class="sum"><div><b>상황</b>${o.status === 'pre' ? '가게를 열 예정' : '가게를 하고 있음'}</div><div><b>과제</b>${n.map(t => esc(t.t)).join(' · ')}</div>${o.problem ? `<div><b>문제</b>${esc(o.problem.one)}</div>` : ''}</div>
       <form id="oform" novalidate>
         <label class="ofl">${o.status === 'pre' ? '개업 예정 시기' : '가게를 연 지'}<select name="when">${(o.status === 'pre' ? ['3개월 안', '6개월 안', '1년 안'] : ['1년 미만', '1~3년', '3년 이상']).map(v => `<option${a.when === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
@@ -195,7 +195,7 @@
     const tl = [['접수', true], ['운영단 심사 (시 + 지역 대학)', !!r], [r === 'no' ? '다음 기회' : '선정 → 학생 모집', r === 'yes'], ['팀 구성 · 한 학기', false]];
     return `<section class="ocard"><div class="ohead"><p class="kick">진행 상태</p><h2>${esc(o.item)} @ ${esc(placeName(o))}</h2></div>
       <ol class="tl">${tl.map(([t, d], i) => `<li class="${d ? 'done' : i === tl.findIndex(x => !x[1]) ? 'now' : ''}">${esc(t)}</li>`).join('')}</ol>
-      ${!r ? `<p class="was">지원서가 접수됐어요. 운영단이 준비 정도 · 시민 바람 · 과제 적합성을 봐요.</p><div class="onav"><button class="cta2" data-o="result" data-v="no">다음 기회 결과 보기 (시연)</button><button class="cta" data-o="result" data-v="yes">심사 결과 보기 (시연)</button></div>` : ''}
+      ${!r ? `<p class="was">지원서가 접수됐어요. 운영단이 준비 정도 · 시민 바람 · 과제 적합성을 봐요.</p><div class="onav"><button class="cta2" data-o="result" data-v="no">운영단 처리: 다음 기회</button><button class="cta" data-o="result" data-v="yes">운영단 처리: 선정</button></div>` : ''}
       ${r === 'yes' ? `<div class="okpost"><p class="kick">선정! 학생 모집 공고가 올라갔어요</p><h3>[동행 프로젝트 1기] ${esc(o.item)} @ ${esc(placeName(o))}</h3>
         <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)} · ${t.wk}주 · ${esc(t.out)}</li>`).join('')}</ul>
         <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요. 선발은 운영단 → 사장님 면담 순서예요.</p>

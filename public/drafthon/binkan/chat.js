@@ -62,7 +62,7 @@
         if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 바람을 남기는 화면을 열었어요. 공감을 많이 받은 바람에는 오픈 이벤트 경품(예시)도 있어요.`); }
         A.go('home'); A.pulse();
         return R(`지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 바람은 공유 카드로 친구에게 보낼 수 있어요.`);
-      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 휴대폰 본인인증한 회원이 할 수 있어요(한 사람이 한 번씩). 지금 시연에서는 인증이 바로 통과돼요.')} ${btn('login', '로그인 · 가입')}`;
+      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>바람 · 공감 · 지원서</b>만 회원(휴대폰 본인인증)이 할 수 있어요. 한 사람이 한 계정이에요.')} ${btn('login', '로그인 · 가입')}`;
       case 'data': return `<small>출처</small>빈칸 ${M.meta.n_spaces}곳은 소상공인시장진흥공단 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 <b>1층 공실 후보</b>예요(같은 층에 새 업소 없음). 실제 공실인지는 현장 확인이 필요하고, 본 사업에서는 시가 상가 매물 플랫폼과 공실 정보를 연동하는 방안을 제안해요.`;
       case 'howto': A.go('howto'); return R(`<b>빈칸</b>(공실 후보)에 시민이 <b>바람</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 바람을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`);
       case 'find': {
@@ -73,7 +73,7 @@
         const ss = tk.length ? M.spaces.filter(s => tk.some(k => (s.was + s.addr).includes(k))).slice(0, 4) : [];
         if (ss.length) return `직전 업종 · 주소로 찾은 빈칸이에요.<div class="crow">${ss.map(s => btn('space', `${shortAddr(s)} · 직전 ${s.was}`, ` data-id="${s.id}"`)).join('')}</div>`;
         if (ai) return '';
-        return `잘 알아듣지 못했어요. 아래처럼 물어봐 주세요. <small>(시연판은 정해진 말을 알아들어요. 실시간 AI가 연결되면 자유롭게 대화할 수 있어요.)</small>`;
+        return `잘 알아듣지 못했어요. 아래처럼 물어봐 주세요. <small>(지금은 인터넷 연결이 안 돼 정해진 말만 알아들어요.)</small>`;
       }
     }
   }
@@ -154,10 +154,10 @@
   function cardWish(a) {
     const sp = SP[a.space]; if (!sp) return '';
     const k = 'd' + Date.now(); drafts[k] = a;
-    return `<div class="ccard2 draft"><b>바람 초안</b><p>📍 ${esc(shortAddr(sp))} <small>직전 ${esc(sp.was)}</small></p><p class="dt">「${esc(a.title)}」 <small>${esc(a.cat)}</small></p>${a.why ? `<p>${esc(a.why)}</p>` : ''}<div class="cbrow">${btn('wishpost', '이대로 올리기', ` data-k="${k}"`)}${btn('space', '지도에서 보기', ` data-id="${a.space}"`)}</div><small>올리기는 본인인증 회원만 · 비방 · 광고는 걸러져요</small></div>`;
+    return `<div class="ccard2 draft"><b>바람 초안</b><p>📍 ${esc(shortAddr(sp))} <small>직전 ${esc(sp.was)}</small></p><p class="dt">「${esc(a.title)}」 <small>${esc(a.cat)}</small></p>${a.why ? `<p>${esc(a.why)}</p>` : ''}<div class="cbrow">${btn('wishpost', '이대로 올리기', ` data-k="${k}"`)}${btn('space', '지도에서 보기', ` data-id="${a.space}"`)}</div><small>올리기는 회원만 · 비방 · 광고는 걸러져요</small></div>`;
   }
   function cardSupports(who) {
-    return `<div class="ccard2"><b>${who === 'open' ? '운영 중인 가게' : '창업 준비'}에 볼 만한 지원</b><ul>${SUP.list.map(x => { const ok = x.who.includes(who); return `<li class="${ok ? '' : 'no'}"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${ok ? esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</li>`; }).join('')}<li><b>동행 프로젝트(우리 정책안)</b> — 시범 지원금 + 대학생 4인 팀 + 지도교수</li></ul>${btn('owner', '사장님 상담 시작')}<small>${esc(SUP.checked)} 공고 · 보도로 확인 · 최종 자격은 공고 기관 판단</small></div>`;
+    return `<div class="ccard2"><b>${who === 'open' ? '운영 중인 가게' : '창업 준비'}에 볼 만한 지원</b><ul>${SUP.list.map(x => { const ok = x.who.includes(who); return `<li class="${ok ? '' : 'no'}"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${ok ? esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</li>`; }).join('')}<li><b>동행 프로젝트(시범 사업)</b> — 시범 지원금 + 대학생 4인 팀 + 지도교수</li></ul>${btn('owner', '사장님 상담 시작')}<small>${esc(SUP.checked)} 공고 · 보도로 확인 · 최종 자격은 공고 기관 판단</small></div>`;
   }
   function run(a, text) {
     switch (a.act) {
@@ -179,7 +179,7 @@
   }
   function like(id) {
     const w = store.wishes().find(x => x.id === id); if (!w) return '';
-    if (!A.st.user) { A.needAuth(() => { if (!A.st.liked[id]) store.toggleLike(id); A.refresh(); push(`「${esc(w.title)}」에 공감했어요. ♥${store.likes(w)}`); }); return '<small>공감은 본인인증 회원만 — 인증 창을 열었어요.</small>'; }
+    if (!A.st.user) { A.needAuth(() => { if (!A.st.liked[id]) store.toggleLike(id); A.refresh(); push(`「${esc(w.title)}」에 공감했어요. ♥${store.likes(w)}`); }); return '<small>공감은 회원만 할 수 있어요 — 로그인 창을 열었어요.</small>'; }
     if (!A.st.liked[id]) store.toggleLike(id);
     A.refresh(); return `<div class="ccard2">「${esc(w.title)}」에 공감했어요. <b>♥${store.likes(w)}</b></div>`;
   }
