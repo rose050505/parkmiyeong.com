@@ -84,7 +84,7 @@
     const W = store.wishes(), out = [];
     if (o.known === 'none') {
       const seen = new Set();
-      W.sort((a, b) => store.likes(b) - store.likes(a)).forEach(w => { if (!seen.has(w.space) && out.length < 3) { seen.add(w.space); out.push({ space: w.space, item: w.title, why: [`시민 바람 1위 · 공감 ${store.likes(w)}`, `직전: ${SP[w.space].was}`] }); } });
+      W.sort((a, b) => store.likes(b) - store.likes(a)).forEach(w => { if (!seen.has(w.space) && out.length < 3) { seen.add(w.space); out.push({ space: w.space, item: w.title, why: [`바람 1위 · 공감 ${store.likes(w)}`, `직전: ${SP[w.space].was}`] }); } });
     } else if (o.known === 'item') {
       const cat = bigCat(o.item);
       M.spaces.map(s => {
@@ -93,7 +93,7 @@
       }).sort((a, b) => b.sc - a.sc).slice(0, 3).forEach(r => out.push({ space: r.s.id, item: o.item, why: [r.ws.length ? `이 빈칸에 비슷한 바람 「${r.ws[0].title}」 공감 ${r.likes}` : '맞는 바람은 아직 없음', `100m 안 같은 업종대(${cat}) ${r.ar.same}곳`] }));
     } else if (o.known === 'place') {
       const s = SP[o.space], ws = W.filter(w => w.space === s.id).sort((a, b) => store.likes(b) - store.likes(a));
-      ws.slice(0, 3).forEach(w => out.push({ space: s.id, item: w.title, why: [`이 빈칸 시민 바람 · 공감 ${store.likes(w)}`, `100m 안 같은 업종대 ${around(s, bigCat(w.title)).same}곳`] }));
+      ws.slice(0, 3).forEach(w => out.push({ space: s.id, item: w.title, why: [`이 빈칸 바람 · 공감 ${store.likes(w)}`, `100m 안 같은 업종대 ${around(s, bigCat(w.title)).same}곳`] }));
       if (out.length < 3) {
         const near = M.bg.filter(([x, y]) => dist({ x, y }, s) <= 100), c = {};
         ['교육', '예술·스포츠', '수리·개인', '소매'].forEach(k => c[k] = near.filter(b => b[2] === k).length);
@@ -156,10 +156,10 @@
       const nb = nearWishes(pt, o.item), mine = nb.list.filter(x => x.hit);
       risk.push(`<li class="${ar.vacant >= 4 ? 'mid' : 'lo'}"><b>주변 빈칸 ${ar.vacant}곳</b> ${ar.vacant >= 4 ? '골목 공실이 늘고 있을 수 있음' : '골목 공실은 많지 않음'}</li>`);
       risk.push(nb.near
-        ? `<li class="lo"><b>가게 근처(150m) 시민 바람 ${nb.list.length}개</b> ${nb.list.slice(0, 3).map(x => `「${esc(x.w.title)}」 ♥${store.likes(x.w)}`).join(' · ')}${mine.length ? ` — 우리 업종과 닿는 바람 ${mine.length}개` : ''}</li>`
-        : `<li class="lo"><b>가게 150m 안 시민 바람 없음</b> ${nb.list.length ? '300m 안 가까운 바람: ' + nb.list.map(x => `「${esc(x.w.title)}」 약 ${Math.round(x.m / 10) * 10}m`).join(' · ') : '300m 안에도 아직 없음'}</li>`);
+        ? `<li class="lo"><b>가게 근처(150m) 바람 ${nb.list.length}개</b> ${nb.list.slice(0, 3).map(x => `「${esc(x.w.title)}」 ♥${store.likes(x.w)}`).join(' · ')}${mine.length ? ` — 우리 업종과 닿는 바람 ${mine.length}개` : ''}</li>`
+        : `<li class="lo"><b>가게 150m 안 바람 없음</b> ${nb.list.length ? '300m 안 가까운 바람: ' + nb.list.map(x => `「${esc(x.w.title)}」 약 ${Math.round(x.m / 10) * 10}m`).join(' · ') : '300m 안에도 아직 없음'}</li>`);
     }
-    if (sp) risk.push(`<li class="${match.length ? 'lo' : 'mid'}"><b>시민 바람 ${match.length ? '일치' : '없음'}</b> ${match.length ? match.map(w => `「${esc(w.title)}」 공감 ${store.likes(w)}`).join(' · ') : '이 업종을 바라는 바람은 아직 없음'}</li>`);
+    if (sp) risk.push(`<li class="${match.length ? 'lo' : 'mid'}"><b>바람 ${match.length ? '일치' : '없음'}</b> ${match.length ? match.map(w => `「${esc(w.title)}」 공감 ${store.likes(w)}`).join(' · ') : '이 업종을 바라는 바람은 아직 없음'}</li>`);
     const nA = sp ? answeredBy(ws) : 0;
     if (nA) risk.push(`<li class="lo"><b>근처 가게 ${nA}곳이 이 빈칸 바람에 일부 답함</b> 바람은 그대로 열려 있음 — 같은 바람을 노린다면 그 가게 메뉴도 확인</li>`);
     return risk;
@@ -225,7 +225,7 @@
         <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)} · ${t.wk}주 · ${esc(t.out)}</li>`).join('')}</ul>
         <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요. 선발은 운영단 → 사장님 면담 순서예요.</p>
         <p class="note2">「내 가게」에서 근처 바람에 답하고, 답한 메뉴를 기록해요. 학기 중엔 학생 팀이 같이 쓰고, 학기가 끝나면 사장님 혼자 다음 바람에 답해요. 이 기록이 개업 뒤 추적 자료도 돼요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
-      ${r === 'no' ? `<div class="okpost no"><p class="kick">이번 기수에는 선정되지 않았어요</p><p>다음 기수에 우선 검토해요. 그 사이 받을 수 있는 지원을 확인해 보세요. 같은 시기에 신청했지만 선정되지 않은 가게는 효과 비교군으로 함께 추적해요(동의한 경우). 「내 가게」(근처 바람에 답하기 · 상권 변화)는 똑같이 쓸 수 있어요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
+      ${r === 'no' ? `<div class="okpost no"><p class="kick">이번 기수에는 선정되지 않았어요</p><p>다음 기수에 우선 검토해요. 그 사이 받을 수 있는 지원을 확인해 보세요. 같은 시기에 신청했지만 선정되지 않은 가게도 같은 기록으로 함께 살펴봐요(동의한 경우). 「내 가게」(근처 바람에 답하기 · 상권 변화)는 똑같이 쓸 수 있어요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
       </section>
       <div class="onav"><button class="cta2" data-o="reset">새 상담 시작</button><button class="cta2" data-o="map">지도로</button></div>`;
   }

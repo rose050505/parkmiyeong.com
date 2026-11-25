@@ -257,7 +257,7 @@
       <h3>창업 카드 <span class="tag calc">계산 요약</span></h3>
       <dl>
         <dt>${R}m 안 업소</dt><dd><b>${near.length}곳</b> — ${top.map(([l, n]) => `${esc(l)} ${n}`).join(' · ')}</dd>
-        <dt>시민 바람 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
+        <dt>바람 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
         <dt>직전 업종</dt><dd>${esc(s.was)} <small>(같은 업종이 다시 들어와도 되는지는 상담에서)</small></dd>
         ${nA ? `<dt>근처 가게 답</dt><dd><b>${nA}곳</b>이 이 빈칸 바람에 답함 <small>(바람은 닫히지 않아요 · 상권 정보로 참고)</small></dd>` : ''}
       </dl>
@@ -509,7 +509,7 @@
       case 'reportgo': { const why = (mbox.querySelector('input[name="rwhy"]:checked') || {}).value; if (!why) return; closeModal(); toast(MY().report(b.dataset.id, why, b.dataset.n || '')); return render(); }
       case 'showcard': { const h = MY().showCard(b.dataset.id || id); if (h) openModal(h, 'showbig'); return; }
       case 'printguide': return window.print();
-      case 'visitok': { const r = MY().confirmVisit(id); toast(r); const h = MY().showCard(id); if (h) openModal(h, 'showbig'); return; }
+      case 'visitok': { const el = document.getElementById('vcode-' + id), r = MY().confirmVisit(id, el ? el.value : ''); if (r && r.err) { const e2 = document.getElementById('verr-' + id); if (e2) { e2.textContent = r.err; e2.hidden = false; } return; } toast(r); const h = MY().showCard(id); if (h) openModal(h, 'showbig'); return; }
       case 'storemap': { const p = MY().storePoint(id); if (!p) return; closeModal(); if (WORKS.includes(view.mode) || view.mode === 'mine') go('home'); setTimeout(() => map && map.focus(p), 60); return; }
       case 'login': return needAuth(() => render());
       case 'logout': st.user = null; linkLikes(); window.OWNER && window.OWNER.ensure(); window.STUDENT && window.STUDENT.ensure(); save(); toast('로그아웃했어요'); return go('home');

@@ -108,11 +108,13 @@
   }
   const blank = (uid, o) => ({ id: 's' + uid, uid, owner: st.user ? st.user.name : '', name: '', item: o.item || '', sub: '', pt: null, near: o.near || '', space: o.space || null,
     menus: [{ name: '', price: '' }, { name: '', price: '' }, { name: '', price: '' }], offer: '', perk: '', openDays: [], months: [],
-    share: { open: true, band: true, answers: false, sold: false, came: false }, team: { members: [], checks: [false, false, false, false], until: '', handedAt: 0 },
+    share: { open: false, band: false, answers: false, sold: false, came: false }, team: { members: [], checks: [false, false, false, false], until: '', handedAt: 0 },
     drafts: {}, themes: null, area: null, setup: false, at: Date.now() });
   const ptOf = s => s.pt || (s.space && SP[s.space]) || LM.find(l => l.name === s.near) || null;   // 찍은 좌표 → 빈칸 → 근처 이름 순
   const placeOf = s => (s.pt && s.pt.label) || (s.space && SP[s.space] ? shortAddr(SP[s.space]) : s.near ? s.near + ' 근처' : '');
   const storeLabel = s => `${s.name || s.item} @ ${placeOf(s)}`;
+  // 오늘 손님 확인 번호(가게마다 날마다 바뀌는 4자리): 사장님 화면에만 보이고, 손님 화면의 [사장님 확인]에 이 번호를 넣어야 「확인된 손님」으로 셈
+  const dayCode = (sid, date) => { let h = 7; for (const ch of sid + '|' + (date || today())) h = (h * 31 + ch.charCodeAt(0)) % 1000003; return String(h % 10000).padStart(4, '0'); };
   const aiTag = ai => T().aiTag(ai);
 
   function start(opts = {}) {
@@ -366,7 +368,7 @@
     const wid = x.w.id;
     if (ui.busy['d' + wid]) return;
     ui.busy['d' + wid] = true;
-    const input = { item: s.item, place: placeOf(s), menus: s.menus.map(m => m.name).filter(Boolean), offer: [s.offer, s.perk && '첫 방문 혜택: ' + s.perk].filter(Boolean).join(' · '), title: x.w.title, why: x.w.why, likes: store.likes(x.w), dist: Math.round(x.m) };
+    const input = { item: s.item, place: placeOf(s), menus: s.menus.map(m => m.name).filter(Boolean), offer: [s.offer, s.perk && '첫 방문 혜택: ' + s.perk].filter(Boolean).join(' · '), title: x.w.title, why: x.w.why, likes: x.w.seed ? 0 : store.likes(x.w), dist: Math.round(x.m) };   // 운영팀이 넣은 공감 수는 사람 수가 아니라 AI에 넘기지 않음
     const base = { fit: '', why: '', idea: '', menu: '', reply: `${x.w.title}을(를) 바라셔서 저희 가게에서 △△를 준비해 볼게요.`, ai: false };
     window.ASSIST.call('answer', input, 25000)
       .then(out => Object.assign({}, out, { ai: true, menu: out.menu || '', reply: out.reply || '' }), () => base)
@@ -375,7 +377,7 @@
 
   // ---------------- 화면 조각 ----------------
   const bar = (c, s) => `<div class="mtop"><button class="back" data-m="map">← 지도로</button><p class="kick">내 가게 · 경영 도우미</p>
-      ${s && s.setup ? `<div class="mhead"><h2>${esc(s.name || s.item)} <small>${esc(s.item)} @ ${esc(placeOf(s))}</small></h2>
+      ${s && s.setup ? `<div class="mhead"><h2>${esc(s.name || s.item)} <small>${esc(s.item)} @ ${esc(placeOf(s))}</small>${c.mode === 'owner' || c.mode === 'team' ? ` <span class="mcode" title="손님이 「가게에서 이 화면 보여 주기」를 보여 주면 그 화면의 [사장님 확인]에 넣어요">오늘 손님 확인 번호 <b>${dayCode(s.id)}</b></span>` : ''}</h2>
         <div class="mbtns">${c.mode === 'owner' ? `<button class="mb${s.openDays.includes(today()) ? ' on' : ''}" data-m="openday">${s.openDays.includes(today()) ? '✓ 오늘 영업했어요' : '오늘 영업했어요'}</button>
           <button class="mb${ui.view === 'k' ? ' on' : ''}" data-m="v" data-v="k">근처 바람 · 기록</button><button class="mb${ui.view === 'k1' ? ' on' : ''}" data-m="v" data-v="k1">가게 설정</button><button class="mb${ui.view === 'k4' ? ' on' : ''}" data-m="v" data-v="k4">공유 항목 · 이번 달</button><button class="mb${ui.view === 'k5' ? ' on' : ''}" data-m="v" data-v="k5">학생 팀</button>` : ''}</div></div>` : ''}</div>`;
 
@@ -387,6 +389,7 @@
     if (noRecord(s) && !(mo && mo.alive)) L.push(`<div class="mban warn"><b>한 달 넘게 기록이 없어요. 지금 영업 중이세요?</b><span><button class="cta2 sm" data-m="alive" data-v="영업 중이에요">영업 중이에요</button><button class="cta2 sm" data-m="alive" data-v="잠시 쉬고 있어요">잠시 쉬고 있어요</button><button class="cta2 sm" data-m="alive" data-v="문 닫았어요">문 닫았어요</button></span></div>`);
     if (appOf(s) && s.share.band && !(mo && mo.band)) L.push(`<div class="mban"><b>이번 달 매출 구간을 아직 안 골랐어요</b> <small>월 1회 · 운영단에는 구간만 가요</small><button class="cta2 sm" data-m="v" data-v="k4">고르기</button></div>`);
     if (ui.msg) L.push(`<div class="mban ok">${ui.msg}</div>`);
+    L.push(`<p class="mhint">이용료 없음(동행 프로젝트 선정 · 함께 살펴보는 가게, [제안]) · 첫 설정은 운영단이 같이 해요 · 막히면 오른쪽 아래 빈칸 도우미에게 · <button class="link" data-m="guide">사용법 한 장</button></p>`);
     return L.join('');
   }
 
@@ -423,6 +426,14 @@
         ${owner ? `<button class="cta sm" data-m="post" data-w="${wid}">${mine ? '고친 답 올리기' : '이 바람에 답 올리기'}</button>` : '<small class="fine">올리기는 사장님만 해요 — 초안은 저장돼요</small>'}</div></div>`;
   }
 
+  // 바람이 없는 가게: 300m 밖이어도 우리 업종과 닿는 동성로 바람(답은 300m 안만) + 가장 가까운 빈칸에 바람을 남기는 링크
+  function farBox(s) {
+    const pt = ptOf(s); if (!pt) return '';
+    const far = store.wishes().map(w => ({ w, m: dist(SP[w.space], pt) })).filter(x => x.m > 300 && T().wishMatch(s.item, x.w)).sort((a, b) => a.m - b.m).slice(0, 3);
+    const v = M.spaces.map(x => ({ x, m: dist(x, pt) })).sort((a, b) => a.m - b.m)[0], url = v ? `${location.origin}${location.pathname}#s=${v.x.id}` : '';
+    return `<div class="farw">${far.length ? `<b>멀리 있는 우리 업종 바람</b> <small>답은 가게 300m 안 바람에만 할 수 있어요 · 메뉴 아이디어로 참고</small><ul>${far.map(x => `<li>「${esc(x.w.title)}」 <small>약 ${roundDist(x.m)}m · ${esc(x.w.why)}</small></li>`).join('')}</ul>` : ''}
+      ${v ? `<p><b>바람 모으기</b> 가게에서 가장 가까운 빈칸(${esc(shortAddr(v.x))}, 약 ${roundDist(v.m)}m)에 「여기 ○○ 있으면」을 남기는 링크예요. 계산대 · 메뉴판에 붙여 손님에게 알려 주세요.</p><div class="k1find"><input readonly value="${esc(url)}" id="collect-url"><button class="cta2 sm" data-m="copylink">링크 복사</button></div>` : ''}</div>`;
+  }
   function leftCol(c, s) {
     const nb = nearList(s), L = nb.list;
     if (c.mode === 'owner' || c.mode === 'team') loadThemes(s, L);
@@ -435,7 +446,7 @@
           <div class="nwf"><small>♥ ${store.likes(x.w)} · 약 ${roundDist(x.m)}m · ${n ? `답한 가게 ${n}곳` : '아직 답한 가게 없음'}${mine ? ` · <b>내 답: ${esc(mine.state)}</b>` : ''}</small>
             ${open ? '' : `<button class="cta2 sm" data-m="ans" data-w="${x.w.id}">${mine ? '내 답 고치기' : '답하기'}</button>`}</div>
           ${open ? k2Block(s, x, c) : ''}</article>`;
-      }).join('') || `<div class="emptyw"><p>가게 300m 안에 아직 바람이 없어요. 위치가 맞는지 <button class="link" data-m="v" data-v="k1">가게 설정</button>에서 확인해 주세요.</p><p class="fine">바람이 모이게 하려면: 가게 앞 · 계산대에서 「동성로 빈칸에 여기 있으면 좋겠는 가게를 남겨 주세요」라고 알려 주세요. 근처 빈칸에 새 바람이 생기면 여기에 「새 바람」으로 떠요.</p></div>`}
+      }).join('') || `${farBox(s)}<div class="emptyw"><p>가게 300m 안에 아직 바람이 없어요. 위치가 맞는지 <button class="link" data-m="v" data-v="k1">가게 설정</button>에서 확인해 주세요.</p><p class="fine">바람이 모이게 하려면: 가게 앞 · 계산대에서 「동성로 빈칸에 여기 있으면 좋겠는 가게를 남겨 주세요」라고 알려 주세요. 근처 빈칸에 새 바람이 생기면 여기에 「새 바람」으로 떠요.</p></div>`}
       <p class="fine">「운영팀 바람」은 서비스를 소개하려고 운영팀이 넣어 둔 바람이라 실제 시민 글이 아니에요. 공감 · 거리 · 답한 가게 수는 사이트가 세요.</p></section>`;
   }
 
@@ -576,12 +587,12 @@
     const L = myAnswers(s);
     return `<section class="mcol"><h3>답한 메뉴 <small>${L.length}개 · 하루 한 줄</small></h3>
       ${L.map(a => mcard(c, s, a)).join('') || '<p class="emptyw">아직 답한 메뉴가 없어요. 왼쪽 근처 바람에 [답하기]를 눌러 보세요.</p>'}
-      <p class="fine">「바람 보고 온 손님」은 시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 보여 줄 때 세요. 그 화면의 [사장님 확인]을 누르면 시민 화면에서 확인한 손님으로 따로 남고, 바쁠 땐 여기 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.</p></section>`;
+      <p class="fine">「바람 보고 온 손님」은 시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 보여 줄 때 세요. 그 화면의 [사장님 확인]에 위의 「오늘 손님 확인 번호」를 넣으면 확인된 손님으로 따로 남고, 바쁠 땐 여기 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.</p></section>`;
   }
 
   function areaBlock(s) {
     const ar = area(s);
-    if (!ar) return `<div id="marea"><p class="emptyw">가게 설정에서 업종(소분류)과 위치를 고르면 계산해요.</p></div>`;
+    if (!ar) return `<div id="marea"><p class="emptyw">가게 설정에서 상권 비교에 쓸 업종과 위치를 고르면 계산해요.</p></div>`;
     const ak = areaKey(s, ar), ln = s.area && s.area.key === ak ? s.area : ui.area && ui.area.key === ak ? ui.area : null;
     const base = `같은 업종(${s.sub}) ${ar.before}곳 → ${ar.now}곳, 사라진 업소 ${ar.goneAll}곳${ar.vac.find(v => v.w) ? ` · 근처 빈칸에 「${ar.vac.find(v => v.w).w.title}」 바람이 있어요` : ''}`;
     const vacW = ar.vac.filter(v => v.w).sort((a, b) => store.likes(b.w) - store.likes(a.w));
@@ -836,6 +847,7 @@
         if (b.dataset.v === '끝남' && trialOf(a).on && !trialOf(a).done && !a.outcome) { ui.sum[a.id] = true; repaint(c, s, a); return A.toast('시험 판매를 정리해요 — 남길지 · 접을지 골라 주세요'); }
         a.state = b.dataset.v; if (a.state === '판매 중' && !a.startAt) a.startAt = Date.now(); if (a.state === '끝남') a.endAt = Date.now(); db.putAnswer(a); A.toast(a.state === '끝남' ? '접었어요 · 시민에게 「끝났어요」로 보여요' : `「${a.state}」로 바꿨어요`); return keepScroll(() => A.refresh()); }
       case 'guide': return A.openModal(guideHTML(), 'wide');
+      case 'copylink': { const el = document.getElementById('collect-url'); if (!el) return; (navigator.clipboard ? navigator.clipboard.writeText(el.value) : Promise.reject()).then(() => A.toast('링크를 복사했어요'), () => { el.select(); A.toast('선택해 두었어요 — 복사해 주세요'); }); return; }
       case 'd.off': { const d = s.drafts[b.dataset.w]; if (!d) return; const t = d.trial || (d.trial = trialDefault()), w = +b.dataset.v; t.offDays = t.offDays.includes(w) ? t.offDays.filter(x => x !== w) : t.offDays.concat(w); d.touched = true; db.putStore(s); b.classList.toggle('on'); return; }
       case 't.off': { if (!owner) return; const a = db.answer(b.dataset.a); if (!a) return; const t = a.trial || (a.trial = trialDefault()), w = +b.dataset.v; t.offDays = (t.offDays || []).includes(w) ? t.offDays.filter(x => x !== w) : (t.offDays || []).concat(w); db.putAnswer(a); return repaint(c, s, a); }
       case 'ordered': { if (!owner) return; const a = db.answer(b.dataset.a), r = a && order(a); if (!r || !r.qty) return; const o = a.order || (a.order = {}); if ((o.log || []).some(x => x.for === (r.D || r.from))) return; (o.log || (o.log = [])).push({ at: today(), qty: r.qty, for: r.D || r.from || '' }); o.orderedAt = Date.now(); db.putAnswer(a); A.toast('주문을 기록했어요'); return repaint(c, s, a); }
@@ -870,7 +882,7 @@
       case 'alive': {
         const cur = today().slice(0, 7); let mo = s.months.find(m => m.ym === cur); if (!mo) s.months.push(mo = { ym: cur, band: '', asked: true }); mo.asked = true; mo.alive = b.dataset.v;
         if (b.dataset.v === '영업 중이에요' && !s.openDays.includes(today())) s.openDays.push(today());
-        db.putStore(s); ui.msg = b.dataset.v === '문 닫았어요' ? '알려 주셔서 고마워요. 운영단이 다음 지원을 먼저 연락드려요.' : '고마워요. 이번 달 기록으로 남겼어요.'; return rerender();
+        db.putStore(s); ui.msg = b.dataset.v === '문 닫았어요' ? (appOf(s) ? '알려 주셔서 고마워요. 운영단이 다음 지원을 먼저 연락드려요.' : '알려 주셔서 고마워요. 다시 문을 열면 「영업 중이에요」를 눌러 주세요.') : '고마워요. 이번 달 기록으로 남겼어요.'; return rerender();
       }
       case 'invite': return invite(s, b.dataset.u, b.dataset.n, b.dataset.j);
       case 'inviteid': { const id = (document.getElementById('k5id').value || '').trim().toLowerCase(), acc = (st.accounts || {})[id]; if (!acc) return A.toast('그 아이디의 회원이 없어요'); return invite(s, id, acc.name, ''); }
@@ -955,14 +967,15 @@
       <p class="sr">「${esc(a.reply)}」</p>
       ${w ? `<p class="sw">바람 「${esc(w.title)}」에 답한 메뉴</p>` : ''}
       ${!end && s.perk ? `<div class="sperk"><b>첫 방문 혜택</b><span>${esc(s.perk)}</span></div>` : ''}
-      ${end ? '' : u && u.id !== a.uid ? `<div class="svisit">${done ? '<b>✓ 오늘 사장님이 확인했어요</b>' : `<button class="cta" data-act="visitok" data-id="${esc(aid)}">사장님 확인 — 바람 보고 왔어요</button><small>가게에서 사장님이 눌러 주세요 (하루 한 번)</small>`}</div>` : ''}
+      ${end || a.remote ? '' : u && u.id !== a.uid ? `<div class="svisit">${done ? '<b>✓ 오늘 사장님이 확인했어요</b>' : `<div class="vrow"><input id="vcode-${esc(aid)}" inputmode="numeric" maxlength="4" placeholder="확인 번호 4자리"><button class="cta" data-act="visitok" data-id="${esc(aid)}">사장님 확인</button></div><small>가게에서 사장님이 오늘 손님 확인 번호를 넣어 주세요 (하루 한 번)</small><p class="err" id="verr-${esc(aid)}" hidden></p>`}</div>` : ''}
       ${end ? '' : `<button class="link" data-act="storemap" data-id="${esc(aid)}">지도에서 가게 보기</button>`}
       <p class="fine">이름 · 연락처는 사장님께 가지 않아요.</p></div>`;
   }
   // 「사장님 확인」: 시민 화면에서 사장님이 누르면 그날 「바람 보고 온 손님」 +1 (시민 1명 · 답 1개당 하루 한 번)
-  function confirmVisit(aid) {
-    const u = st.user, a = db.answer(aid); if (!u || !a || a.state === '끝남') return '';
+  function confirmVisit(aid, code) {
+    const u = st.user, a = db.answer(aid); if (!u || !a || a.state === '끝남' || a.remote) return '';
     if (a.uid === u.id) return '내 가게 답이에요 — 손님 화면에서 눌러 주세요';
+    if (String(code || '').trim() !== dayCode(a.sid)) return { err: '확인 번호가 맞지 않아요 — 사장님 「내 가게」 위쪽의 오늘 번호를 넣어 주세요' };
     const key = aid + ':' + today(); if (db.got('visits', u.id, key)) return '오늘은 이미 확인했어요';
     db.mark('visits', u.id, key, Date.now());
     const d = dayOf(a, today(), true); d.came = (d.came || 0) + 1; d.ok = (d.ok || 0) + 1; db.putAnswer(a);
@@ -1029,7 +1042,7 @@
 
   window.MYSTORE = {
     want, wantBy: (aid, uid) => db.got('wants', uid, aid), addNote, notesOf, noteBy: (aid, uid) => (((db.answer(aid) || {}).notes) || []).filter(n => n.uid === uid && !n.gone).pop(), noteCheck, trialLabel, cupsFor, order, orderLine, flowRows, compare,
-    render, mount, start, answersFor, showCard, confirmVisit, storePins, pickStore, storePoint, monthly, alertsFor, markSeen, went, report, roundDist, funnel, areaNote, shareOf, recipients,
+    BANDS, dayCode, render, mount, start, answersFor, showCard, confirmVisit, storePins, pickStore, storePoint, monthly, alertsFor, markSeen, went, report, roundDist, funnel, areaNote, shareOf, recipients,
     wentBy: (aid, uid) => db.got('went', uid, aid), reportedBy: (aid, uid) => db.got('reported', uid, aid),
     stores: db.stores, storeOf: uid => db.store(uid), appOf, risk, area, stats, myAnswers, storeLabel, placeOf, db, checkReply, prep,
   };

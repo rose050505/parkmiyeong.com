@@ -759,3 +759,15 @@ body.work-open .work { display: block; grid-column: 2 / 4; overflow: auto; backg
 .wnotes .wnh { font-size: 12px; font-weight: 700; color: var(--ink3); }
 .wnotes .link { margin: 0 0 0 4px; font-size: 11.5px; }
 .mbox .ming:has(input[type="date"]), .trialbox .ming:has(input[type="date"]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mcode { display: inline-block; margin-left: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink2); background: #fff7e0; border-radius: 8px; padding: 2px 8px; vertical-align: 3px; }
+.mcode b { font-size: 15px; color: var(--ink); letter-spacing: 1px; }
+.mhint { margin: -4px 0 10px; font-size: 12.5px; color: var(--ink2); }
+.mhint .link { margin: 0; font-size: 12.5px; }
+.farw { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font-size: 13.5px; }
+.farw ul { margin: 4px 0 8px; padding-left: 18px; }
+.farw small { color: var(--ink3); }
+.farw p { margin: 6px 0 0; }
+.showcard .vrow { display: flex; gap: 6px; }
+.showcard .vrow input { flex: 1; min-width: 0; border: 0; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 16px; text-align: center; letter-spacing: 2px; }
+.showcard .vrow .cta { width: auto; padding: 8px 14px; }
+.showcard .err { color: #ffd2c6; margin: 6px 0 0; }
