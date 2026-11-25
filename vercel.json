@@ -78,6 +78,9 @@
   "functions": {
     "api/drafthon-ai.js": {
       "maxDuration": 60
+    },
+    "api/binkan-startup-risk.js": {
+      "maxDuration": 60
     }
   },
   "redirects": [

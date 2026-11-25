@@ -9,6 +9,49 @@
   O().busy = null;
   // 늦게 온 AI 응답이 다른 화면(내 가게 등)을 다시 그리지 않게, 사장님 화면일 때만 다시 그림
   const set = patch => { Object.assign(O(), patch); save(); if (A.view().mode === 'owner') A.rerender(); };
+  const startupRisks = new WeakMap();
+  const startupRiskKey = o => o.status === 'pre' && SP[o.space] && o.item.trim()
+    ? JSON.stringify([o.space, o.item.trim()]) : null;
+  const currentStartupRisk = o => {
+    const current = startupRisks.get(o);
+    return current?.key === startupRiskKey(o) ? current : null;
+  };
+
+  function analyzeStartup(o) {
+    const key = startupRiskKey(o);
+    if (!key) return;
+    const space = SP[o.space];
+    const vacancy = window.BK?.spaces[o.space] || {};
+    const body = JSON.stringify({ spaceId: o.space, businessIdea: o.item.trim(), latitude: space.y, longitude: space.x,
+      depositKrw: vacancy.depositKrw, monthlyRentKrw: vacancy.monthlyRentKrw, areaM2: vacancy.areaM2 });
+    const previous = startupRisks.get(o);
+    if (previous?.body === body && !previous.error) return previous.result;
+    const state = { key, body };
+    startupRisks.set(o, state);
+    const refresh = () => { if (st.owner === o && o.step === 2 && A.view().mode === 'owner') A.rerender(); };
+    refresh();
+    state.result = (async () => {
+      try {
+        const response = await fetch('/api/binkan-startup-risk', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+          signal: AbortSignal.timeout(63000),
+        });
+        const report = await response.json();
+        if (!response.ok) state.error = report.error || 'AI 분석을 불러오지 못했어요.';
+        else state.report = report;
+      } catch {
+        state.error = 'AI 분석을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+      }
+      if (startupRisks.get(o) === state) refresh();
+      return state.report;
+    })();
+    return state.result;
+  }
+
+  function showRisk(o, patch = {}) {
+    set({ ...patch, step: 2, tasks: null });
+    return analyzeStartup(o);
+  }
 
   // ---------------- 계산 도구 ----------------
   const dist = A.dist;   // 위도 35.87° 기준 거리(m) — app.js와 같은 식
@@ -81,6 +124,49 @@
       return { list: L.map((x, i) => Object.assign({ id: 't' + i }, x)), expert };
     },
   };
+
+  function tasksFromRisk(report) {
+    if (!Array.isArray(report?.studentProjects) || report.analysisStatus === 'outside_coverage') return [];
+    return report.studentProjects.flatMap(project => {
+      if (!project?.task || !project.deliverable || !Array.isArray(project.suggested_majors) || !project.suggested_majors.length) return [];
+      return [{ t: project.task, major: project.suggested_majors.join(' · '), out: project.deliverable, wk: null }];
+    });
+  }
+
+  async function showStudentTasks(o) {
+    if (o.busy) return;
+    if (o.tasks) return set({ step: 3 });
+    const status = o.status, key = startupRiskKey(o);
+    const stillHere = () => st.owner === o && o.step === 2 && o.status === status && startupRiskKey(o) === key;
+    set({ busy: 'tasks' });
+    try {
+      const report = await (currentStartupRisk(o)?.result ?? analyzeStartup(o));
+      if (!stillHere()) return;
+      const fallback = AI.tasks(o);
+      const riskTasks = tasksFromRisk(report);
+      let tasks;
+      if (riskTasks.length) {
+        tasks = { ai: false, fromRisk: true, expert: fallback.expert, list: riskTasks };
+      } else {
+        const input = { status: o.status, item: o.item, place: placeName(o), trouble: o.trouble || '', problem: o.problem ? o.problem.one : '', risks: riskList(o).map(strip) };
+        try {
+          const out = await window.ASSIST.call('tasks', input, 25000);
+          tasks = { ai: true, expert: out.expert.length ? out.expert : fallback.expert, list: out.list };
+        } catch {
+          tasks = { ...fallback, ai: false };
+        }
+      }
+      if (stillHere()) {
+        tasks.list = tasks.list.map((task, i) => ({ id: 't' + i, on: i < 4, ...task }));
+        set({ step: 3, tasks, busy: null });
+      }
+    } finally {
+      if (o.busy === 'tasks') {
+        if (st.owner === o) set({ busy: null });
+        else o.busy = null;
+      }
+    }
+  }
 
   // ---------------- 추천 (열 예정) ----------------
   function combos(o) {
@@ -179,6 +265,31 @@
     const n = nearWishes(ptOf(o), o.item).list.length; if (!n) return '';
     return `<div class="mband"><div><b>근처 의견 ${n}개 — 답해 보기</b><small>아직 손님이 아닌 근처 사람들이 바라는 것에 「우리 가게에서 해 볼게요」라고 답하면, 그 의견을 남기고 공감한 사람에게 알림이 가요. 지원서를 내기 전에도, 선정되지 않아도 쓸 수 있어요.</small></div><button class="cta" data-o="mystore">내 가게에서 답해 보기 →</button></div>`;
   }
+  function riskPanel(o, risk) {
+    const baseline = `<ul class="risk">${risk.join('')}</ul><p class="fine">소진공 상가정보 ${esc(M.meta.q_now)} 기준. 높음 · 보통 · 낮음 기준(60 · 30곳)은 [가정].</p>`;
+    const key = startupRiskKey(o);
+    if (!key) return `<h3>위험과 근거 <span class="tag calc">계산</span></h3>${baseline}`;
+    const state = currentStartupRisk(o);
+    const title = '<h3>위험과 근거</h3>';
+    const retry = state?.error ? 'AI 분석 다시 시도' : 'AI 분석 보기';
+    const local = `<h4>기존 100m 상권 현황</h4>${baseline}`;
+    if (!state || state.error) return `${title}${state?.error ? `<p role="status">${esc(state.error)}</p>` : ''}<button class="cta2" data-o="retry-risk">${retry}</button>${local}`;
+    if (!state.report) return `${title}<p role="status">AI가 주변 상권과 창업 아이템을 비교하고 있어요…</p>${local}`;
+
+    const { analysisStatus, summary, comparison, findings, model } = state.report;
+    if (analysisStatus === 'outside_coverage') return `${title}<p role="status">${esc(summary)}</p>${local}`;
+    const peers = comparison ? `<p class="fine">반경 ${esc(comparison.radius)}m · 주변 점포 ${esc(comparison.nearby)}곳${comparison.industry ? ` · 동일 업종(${esc(comparison.industry)}) ${esc(comparison.same)}곳` : ''}${comparison.observedOn ? ` · ${esc(comparison.observedOn)} 기준` : ''}</p>` : '';
+    let modelInfo = '';
+    if (model?.status === 'estimated' && Number.isFinite(model.closureProbability)) {
+      modelInfo = `<p class="fine">학습 모델 · ${esc(model.horizonDays)}일 이내 폐업 위험 추정치 ${(model.closureProbability * 100).toFixed(1)}%</p>`;
+    } else if (model?.status === 'unavailable' && model.reason) {
+      modelInfo = `<p class="fine">학습 모델 추정 보류 · ${esc(model.reason)}</p>`;
+    }
+    const checks = findings.map(f => `<li class="${f.status === 'high' ? 'hi' : f.status === 'clear' ? 'lo' : 'mid'}"><b>${esc(f.label)}${f.status_label ? ` · ${esc(f.status_label)}` : ''}</b>${esc(f.evidence)}${f.action ? `<div>할 일 · ${esc(f.action)}</div>` : ''}</li>`).join('');
+    return `${title}<p role="status"><b>${esc(summary)}</b></p>${peers}${modelInfo}<ul class="risk">${checks}</ul>
+      <details><summary>기존 100m 상권 현황</summary>${baseline}</details>`;
+  }
+
   function s2() {
     const o = O(), risk = riskList(o), who = o.status === 'pre' ? 'pre' : 'open';
     const sup = SUP.list.map(x => { const ok = x.who.includes(who); return `<a class="sup${ok ? '' : ' no'}" href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b>${x.closed ? ' <em>마감</em>' : ''}<small>${esc(x.org)} · ${esc(x.what)}</small><small>${ok ? '대상: ' + esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</small></a>`; }).join('');
@@ -186,7 +297,7 @@
         <div class="ohead"><p class="kick">${o.status === 'pre' ? '자리 분석' : '가게 분석'}</p><h2>${esc(o.item)} <small>@ ${esc(placeName(o))}</small></h2></div>
         ${o.problem ? `<p class="oprob"><b>정리한 문제</b> ${esc(o.problem.one)}</p>` : ''}
         <div class="ogrid">
-          <div><h3>위험과 근거 <span class="tag calc">계산</span></h3><ul class="risk">${risk.join('')}</ul><p class="fine">소진공 상가정보 ${esc(M.meta.q_now)} 기준. 높음 · 보통 · 낮음 기준(60 · 30곳)은 [가정].</p>${ansRow(o)}</div>
+          <div>${riskPanel(o, risk)}${ansRow(o)}</div>
           <div><h3>받을 수 있는 지원</h3>${sup}<p class="fine">${esc(SUP.checked)} 공고 · 보도로 확인. 최종 자격은 공고 기관이 판단해요.</p></div>
         </div>
       </section>${ansBand(o)}
@@ -195,8 +306,9 @@
 
   function s3() {
     const o = O(), T = o.tasks, n = T.list.filter(t => t.on).length;
-    return `<section class="ocard"><div class="ohead"><p class="kick">과제 정리</p><h2>대학생 4인 팀과 한 학기 동안 할 일 ${aiTag(T.ai)}</h2><p class="was">${esc(o.item)} @ ${esc(placeName(o))} · 고른 과제 <b>${n}</b>개 (1~4개)</p></div>
-      <div class="tasks">${T.list.map(t => `<label class="task${t.on ? ' on' : ''}"><input type="checkbox" data-o="task" data-id="${t.id}"${t.on ? ' checked' : ''}><div><b>${esc(t.t)}</b><small>필요한 전공: ${esc(t.major)} · ${t.wk}주</small><small>결과물: ${esc(t.out)}</small></div></label>`).join('')}</div>
+    const tag = T.fromRisk ? '<span class="tag ai">상권 분석</span>' : aiTag(T.ai);
+    return `<section class="ocard"><div class="ohead"><p class="kick">과제 정리</p><h2>대학생 4인 팀과 한 학기 동안 할 일 ${tag}</h2><p class="was">${esc(o.item)} @ ${esc(placeName(o))} · 고른 과제 <b>${n}</b>개 (1~4개)</p></div>
+      <div class="tasks">${T.list.map(t => `<label class="task${t.on ? ' on' : ''}"><input type="checkbox" data-o="task" data-id="${t.id}"${t.on ? ' checked' : ''}><div><b>${esc(t.t)}</b><small>필요한 전공: ${esc(t.major)}${t.wk ? ` · ${esc(t.wk)}주` : ''}</small><small>결과물: ${esc(t.out)}</small></div></label>`).join('')}</div>
       <div class="expert"><b>학생 팀이 할 일이 아니에요 → 전문가 · 기관으로</b><ul>${T.expert.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>
       <p class="err" id="oerr" hidden></p></section>
       <div class="onav"><button class="cta2" data-o="step" data-v="2">← 분석으로</button><button class="cta" data-o="go4"${n >= 1 && n <= 4 ? '' : ' disabled'}>동행 프로젝트 지원서 →</button></div>`;
@@ -225,7 +337,7 @@
       <ol class="tl">${tl.map(([t, d], i) => `<li class="${d ? 'done' : i === tl.findIndex(x => !x[1]) ? 'now' : ''}">${esc(t)}</li>`).join('')}</ol>
       ${!r ? `<p class="was">지원서가 접수됐어요. 운영단(대구시 + 지역 대학)이 준비 정도 · 이 자리 시민 의견 수(공감 포함) · 과제 적합성을 봐요.</p>${A.hasRole('ops') ? `<div class="onav"><button class="cta2" data-o="opsres" data-v="no">운영단 처리: 다음 기회</button><button class="cta2" data-o="opsgo">운영단 표에서 점수 매기기</button><button class="cta" data-o="opsres" data-v="yes">운영단 처리: 선정</button></div>` : '<p class="fine">운영단 심사 중이에요 — 운영단 표에서 처리되면 여기 진행 상태가 바뀌어요.</p>'}` : ''}
       ${r === 'yes' ? `<div class="okpost"><p class="kick">선정! 학생 모집 공고가 올라갔어요</p><h3>[동행 프로젝트 1기] ${esc(o.item)} @ ${esc(placeName(o))}</h3>
-        <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)} · ${t.wk}주 · ${esc(t.out)}</li>`).join('')}</ul>
+        <ul>${n.map(t => `<li><b>${esc(t.t)}</b> — ${esc(t.major)}${t.wk ? ` · ${esc(t.wk)}주` : ''} · ${esc(t.out)}</li>`).join('')}</ul>
         <p class="fine">대학생 입구 「과제 둘러보기」에 뜨고, 관심 직무가 맞는 학생에게 알림이 가요 [제안]. 선발은 운영단 → 사장님 면담 순서예요.</p>
         <p class="note2">「내 가게」에서 근처 의견에 답하고, 답한 메뉴를 기록해요. 학기 중엔 학생 팀이 같이 쓰고, 학기가 끝나면 사장님 혼자 다음 의견에 답해요. 이 기록이 개업 뒤 추적 자료도 돼요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
       ${r === 'no' ? `<div class="okpost no"><p class="kick">이번 기수에는 선정되지 않았어요</p><p>다음 기수에 우선 검토해요. 그 사이 받을 수 있는 지원을 확인해 보세요. 같은 시기에 신청했지만 선정되지 않은 가게도 같은 기록으로 함께 살펴봐요(동의한 경우). 「내 가게」(근처 의견에 답하기 · 상권 변화)는 똑같이 쓸 수 있어요. <button class="link" data-o="mystore">내 가게 →</button></p></div>` : ''}
@@ -266,7 +378,7 @@
       case 'known': return set({ known: v, reco: null });
       case 'trouble': return set({ trouble: v, problem: null });
       case 'reco': return set({ reco: combos(o) });
-      case 'pick': { const c = o.reco[+b.dataset.i]; return set({ space: c.space, item: c.item, step: 2, tasks: null }); }
+      case 'pick': { const c = o.reco[+b.dataset.i]; return showRisk(o, { space: c.space, item: c.item }); }
       case 'problem': {
         if (o.busy) return;
         if (!o.story.trim()) o.story = `${o.trouble} 때문에 고민이에요`;
@@ -276,21 +388,17 @@
           .catch(() => { set({ busy: null, problem: Object.assign(AI.problem(o.trouble, o.story, o.item.trim()), { ai: false }) }); setTimeout(() => { const el = W.querySelector('.oprob'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60); });
         return;
       }
-      case 'go2': if (!o.item.trim()) return err('업종을 적어 주세요'); if (o.status === 'open' && !o.near) return err('가게 위치를 골라 주세요'); return set({ step: 2, tasks: null });
+      case 'go2':
+        if (!o.item.trim()) return err('업종을 적어 주세요');
+        if (o.status === 'open' && !o.near) return err('가게 위치를 골라 주세요');
+        if (o.status === 'pre' && !SP[o.space]) return err('빈칸을 골라 주세요');
+        return showRisk(o);
+      case 'retry-risk': return analyzeStartup(o);
       case 'answer': return A.needAuth(() => { window.MYSTORE.start({ wish: b.dataset.w }); A.go('mystore'); });
       case 'mystore': return A.needAuth(() => { window.MYSTORE.start(); A.go('mystore'); });
       case 'opsres': { const ap = window.OPS && window.OPS.decideOwner(o.appId, v); if (!ap) A.toast('운영단 표에서 처리해 주세요'); return A.rerender(); }
       case 'opsgo': return A.go('ops');
-      case 'go3': {
-        if (o.busy) return;
-        if (o.tasks) return set({ step: 3 });
-        set({ busy: 'tasks' });
-        const input = { status: o.status, item: o.item, place: placeName(o), trouble: o.trouble || '', problem: o.problem ? o.problem.one : '', risks: riskList(o).map(strip) };
-        window.ASSIST.call('tasks', input, 25000)
-          .then(out => set({ busy: null, step: 3, tasks: { ai: true, expert: out.expert.length ? out.expert : AI.tasks(o).expert, list: out.list.map((x, i) => Object.assign({ id: 't' + i, on: i < 4 }, x)) } }))
-          .catch(() => set({ busy: null, step: 3, tasks: Object.assign(AI.tasks(o), { ai: false }) }));
-        return;
-      }
+      case 'go3': return showStudentTasks(o);
       case 'go4': return set({ step: 4 });
       case 'step': return set({ step: +v });
       case 'result': return set({ result: v });
