@@ -239,7 +239,7 @@
   function renderMe() {
     $('#me').innerHTML = st.user
       ? `<button class="mebtn" data-act="mine"><span class="av">나</span>내 바람 ${st.wishes.length}</button>`
-      : `<button class="mebtn ghost" data-act="login">로그인 · 가입</button>`;
+      : `<button class="mebtn ghost" data-act="login">로그인<span class="wide"> · 가입</span></button>`;
   }
   $('#facts').innerHTML = `<div class="fact"><b>${M.meta.n_spaces}</b><span>동성로 1층 빈칸 후보</span></div>
     <div class="fact"><b>${M.meta.n_gone.toLocaleString()}</b><span>지난 분기에 사라진 업소</span></div>

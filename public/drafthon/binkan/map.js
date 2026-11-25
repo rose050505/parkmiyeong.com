@@ -53,7 +53,7 @@
       relayout() { map.relayout(); },
       fitTo(list) {
         if (!list.length) return;
-        const bd = new kakao.maps.LatLngBounds(); list.forEach(p => bd.extend(new kakao.maps.LatLng(p.y, p.x))); map.setBounds(bd, 80, 300, 40, 40);
+        const bd = new kakao.maps.LatLngBounds(); list.forEach(p => bd.extend(new kakao.maps.LatLng(p.y, p.x))); const phone = window.innerWidth <= 640; map.setBounds(bd, 70, phone ? 30 : 300, phone ? Math.round(window.innerHeight * 0.45) : 40, phone ? 30 : 40);   // 폰은 아래 패널, 큰 화면은 오른쪽 안내 자리만큼 비움
       },
     };
   }
@@ -117,7 +117,9 @@
         const r = el.getBoundingClientRect(), xy = list.map(p => px(p.x, p.y));
         const a0 = Math.min(...xy.map(v => v[0])), a1 = Math.max(...xy.map(v => v[0])), b0 = Math.min(...xy.map(v => v[1])), b1 = Math.max(...xy.map(v => v[1]));
         s = Math.max(0.4, Math.min(3, (r.width - padPx * 2) / Math.max(1, a1 - a0), (r.height - padPx * 2) / Math.max(1, b1 - b0)));
-        tx = r.width / 2 - (a0 + a1) / 2 * s; ty = r.height / 2 - (b0 + b1) / 2 * s; apply();
+        const phone = window.innerWidth <= 640, vh = phone ? r.height * 0.55 : r.height;
+        if (phone) s = Math.min(s, (vh - padPx) / Math.max(1, b1 - b0));
+        tx = r.width / 2 - (a0 + a1) / 2 * s; ty = vh / 2 - (b0 + b1) / 2 * s; apply();
       },
     };
   }

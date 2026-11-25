@@ -245,7 +245,9 @@ body.pulse .pin.empty .sq { animation: pulse 0.8s ease-in-out 3; }
   .search input { padding: 8px 12px; }
   .mebtn { padding: 4px; font-size: 0; }
   .mebtn .av { font-size: 11px; }
-  .mebtn.ghost { font-size: 13px; padding: 6px 12px; }
+  .mebtn.ghost { font-size: 13px; padding: 6px 10px; white-space: nowrap; }
+  .mebtn .wide { display: none; }
+  .top { gap: 6px; }
   .search button { padding: 0 12px; }
 }
 
