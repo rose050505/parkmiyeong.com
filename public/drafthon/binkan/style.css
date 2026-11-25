@@ -507,3 +507,4 @@ body.work-open .work { display: block; grid-column: 2 / 4; overflow: auto; backg
 .railbox .adbody small { font-size: 12px; }
 @media (max-width: 1199px) { .railbox .adbody small, .nrow small { display: none; } }
 @media (max-width: 900px) { .railbox { display: none; } }
+.newq { margin: 0 0 0 8px; font-size: 12px; }

@@ -119,7 +119,7 @@
         <fieldset class="ofs"><legend>가능 시간</legend><div class="ochips">${TIMES.map(t => `<label><input type="checkbox" name="time" value="${t}"${pf.time.includes(t) ? ' checked' : ''}><span>${t}</span></label>`).join('')}</div></fieldset>
         <label class="ofl">포트폴리오 링크 <small>(선택)</small><input name="link" value="${esc(pf.link)}" placeholder="https://" maxlength="200"></label>
         ${rec.length ? `<div class="reco aiout"><b>내 정보로 맞는 자리 ${aiTag(!!aiRec)}</b>${recBusy ? '<small class="busy">AI 추천 받는 중…</small>' : ''}${rec.map(x => `<button type="button" class="rrow" data-s="pickrec" data-id="${x.p.id}" data-v="${x.i}"><span>${esc(x.r.t)} <small>@ ${esc(x.p.item)}</small></span><small>${esc(x.why.join(' · '))}</small></button>`).join('')}</div>` : ''}
-        <h3 style="margin-top:18px">질문 2개 ${aiTag(qd.ai)} <small>내 말로 짧게</small></h3>
+        <h3 style="margin-top:18px">질문 2개 ${aiTag(qd.ai)} <small>내 말로 짧게</small> <button type="button" class="link newq" data-s="newq">다른 질문 받기</button></h3>
         ${qs.map((q, i) => `<label class="ofl qa"><span>Q${i + 1}. ${esc(q)}</span><textarea name="a${i}" rows="3" maxlength="400">${esc(s.ans[i] || '')}</textarea><small class="cnt2">${(s.ans[i] || '').length} / 400</small></label>`).join('')}
         <p class="err" id="serr" hidden></p>
         <div class="onav"><button type="button" class="cta2" data-s="step" data-v="2">← 공고로</button><button class="cta" type="submit">지원서 제출</button></div>
@@ -187,8 +187,9 @@
       case 'map': return A.go('home');
       case 'filter': return set({ filter: v || null });
       case 'open': return set({ sel: b.dataset.id, role: null, step: 2 });
-      case 'go3': if (b.disabled) return; b.disabled = true; b.textContent = '질문 준비 중…'; loadQuestions().then(() => { set({ step: 3 }); fetchReco(); }); return;
-      case 'pickrec': readForm(); S().sel = b.dataset.id; S().role = +v; b.textContent = '질문 준비 중…'; loadQuestions().then(() => set({ step: 3 })); return;
+      case 'go3': if (b.disabled) return; b.disabled = true; b.textContent = '질문 준비 중…'; S().qs = null; loadQuestions().then(() => { set({ step: 3 }); fetchReco(); }); return;
+      case 'pickrec': readForm(); S().sel = b.dataset.id; S().role = +v; S().qs = null; b.textContent = '질문 준비 중…'; loadQuestions().then(() => set({ step: 3 })); return;
+      case 'newq': readForm(); if (b.disabled) return; b.disabled = true; b.textContent = '새 질문 받는 중…'; S().qs = null; loadQuestions().then(() => A.rerender()); return;
       case 'step': if (s.step === 3) readForm(); return set({ step: +v });
       case 'st': return set({ status: v });
       case 'go5': return set({ step: 5 });
