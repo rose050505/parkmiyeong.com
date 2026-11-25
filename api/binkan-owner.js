@@ -19,6 +19,6 @@ export default async function handler(req, res) {
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.token) return res.status(502).json({ error: '가게 계정 로그인 실패' });
     const a = j.account || {};
-    return res.status(200).json({ token: j.token, account: { id: a.id, username: a.username, displayName: a.displayName, role: a.role || null, roles: a.roles || [], demoOwner: !!a.demoOwner } });
+    return res.status(200).json({ token: j.token, account: { id: a.id, username: a.username, displayName: '동성로 시범 가게', role: a.role || null, roles: a.roles || [], demoOwner: !!a.demoOwner } });
   } catch (e) { return res.status(504).json({ error: '팀 서버 응답 없음' }); }
 }
