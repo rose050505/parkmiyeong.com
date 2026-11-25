@@ -70,6 +70,11 @@
   },
   "redirects": [
     {
+      "source": "/drafthon/binkan",
+      "destination": "/drafthon/binkan/",
+      "permanent": false
+    },
+    {
       "source": "/drafthon",
       "destination": "/drafthon/",
       "permanent": false
