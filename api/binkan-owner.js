@@ -18,7 +18,15 @@ export default async function handler(req, res) {
     const r = await fetch(API + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: u, password: p }), signal: AbortSignal.timeout(60000) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || !j.token) return res.status(502).json({ error: '가게 계정 로그인 실패' });
-    const a = j.account || {};
+    let a = j.account || {};
+    // 시범 가게 계정이 다른 역할(예: 예비 창업자 FOUNDER)로 바뀌어 있으면 가게 API(/api/stores/me 등)가 403 → 「내 가게」가 서버에 안 올라감.
+    // 지정된 시연 계정은 역할명만 보내 OWNER로 되돌릴 수 있음(백엔드 README). 실패해도 로그인은 그대로 돌려줌
+    if (a.role !== 'OWNER') {
+      try {
+        const rr = await fetch(API + '/api/me/role', { method: 'PUT', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + j.token }, body: JSON.stringify({ role: 'OWNER' }), signal: AbortSignal.timeout(20000) });
+        if (rr.ok) { const me = await rr.json().catch(() => null); if (me && me.role) a = Object.assign({}, a, me); }
+      } catch (e) { }
+    }
     return res.status(200).json({ token: j.token, account: { id: a.id, username: a.username, displayName: '동성로 시범 가게', role: a.role || null, roles: a.roles || [], demoOwner: !!a.demoOwner } });
   } catch (e) { return res.status(504).json({ error: '팀 서버 응답 없음' }); }
 }
