@@ -327,7 +327,7 @@
   $('#search').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q) go('search', { q }); });
 
   // ---------------- owner.js 등에 내보내기 ----------------
-  window.APP = { st, save, store, SP, M, SUP, SEED, esc, shortAddr, roleName, go, needAuth, toast, adHTML, rerender: () => render(), view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
+  window.APP = { st, save, store, SP, M, SUP, SEED, esc, shortAddr, roleName, go, needAuth, toast, adHTML, rerender: () => render(), refresh: () => { render(); redraw(); }, view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
 
   // ---------------- 시작 ----------------
   (async () => {

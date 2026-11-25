@@ -445,3 +445,24 @@ body.work-open .work { display: block; grid-column: 2 / 4; overflow: auto; backg
 .ccode { display: flex; gap: 6px; margin-top: 8px; }
 .ccode input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 .ccode button { border: 0; background: var(--ink); color: #fff; border-radius: 8px; padding: 0 12px; font-weight: 700; }
+/* 도우미 채팅 카드 */
+.ccard2 { margin-top: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+.ccard2 > b { display: block; margin-bottom: 4px; }
+.ccard2 .sub { display: block; margin-top: 8px; }
+.ccard2 ul { margin: 4px 0; padding-left: 18px; }
+.ccard2 li.no { color: var(--ink3); }
+.ccard2 .risk { padding-left: 0; }
+.ccard2 .risk li { font-size: 12.5px; padding: 4px 8px; margin-bottom: 4px; }
+.ccard2 > small { display: block; color: var(--ink3); margin-top: 6px; }
+.citem { display: flex; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.citem:first-of-type { border-top: 0; }
+.citem .cn { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-top: 2px; }
+.citem > div { flex: 1; min-width: 0; }
+.citem small { color: var(--ink3); }
+.citem ul { color: var(--ink2); font-size: 12.5px; }
+.cbrow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.cbrow .cbtn { margin: 0; padding: 4px 9px; font-size: 12px; background: var(--card); }
+.ccard2.draft { background: var(--wish-bg); border-color: #f6c9b9; }
+.ccard2.draft p { margin: 2px 0; }
+.ccard2.draft .dt { font-size: 16px; font-weight: 700; }
+.chatbox { width: 400px; }

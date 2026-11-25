@@ -134,10 +134,10 @@
     return h;
   }
 
-  function s2() {
-    const o = O(), pt = ptOf(o), cat = bigCat(o.item), ar = around(pt, cat), [lv, lc] = level(ar.same);
+  // 위험과 근거 줄들 (창업 카드 · 챗봇이 같이 씀). o = { status, item, space, near }
+  function riskList(o) {
+    const pt = ptOf(o), cat = bigCat(o.item), ar = around(pt, cat), [lv, lc] = level(ar.same);
     const sp = o.space && SP[o.space], ws = sp ? store.bySpace(sp.id) : [], match = ws.filter(w => wishMatch(o.item, w));
-    const who = o.status === 'pre' ? 'pre' : 'open';
     const risk = [];
     risk.push(`<li class="${lc}"><b>같은 업종대 경쟁 ${lv}</b> 100m 안 ${cat} ${ar.same}곳 (전체 ${ar.all}곳)</li>`);
     if (sp && sp.wasL === cat) risk.push(`<li class="mid"><b>같은 업종대가 나간 자리</b> 직전 ${esc(sp.was)} — 나간 이유(임대료 · 위치 · 운영) 확인</li>`);
@@ -149,6 +149,10 @@
       risk.push(`<li class="lo"><b>가게 근처 시민 바람 ${nearW.length}개</b> ${nearW.length ? nearW.slice(0, 3).map(w => `「${esc(w.title)}」 ♥${store.likes(w)}`).join(' · ') + (mine.length ? ` — 우리 업종과 닿는 바람 ${mine.length}개: 메뉴 · 홍보 아이디어로` : '') : '150m 안에는 아직 없음'}</li>`);
     }
     if (sp) risk.push(`<li class="${match.length ? 'lo' : 'mid'}"><b>시민 바람 ${match.length ? '일치' : '없음'}</b> ${match.length ? match.map(w => `「${esc(w.title)}」 공감 ${store.likes(w)}`).join(' · ') : '이 업종을 바라는 바람은 아직 없음'}</li>`);
+    return risk;
+  }
+  function s2() {
+    const o = O(), risk = riskList(o), who = o.status === 'pre' ? 'pre' : 'open';
     const sup = SUP.list.map(x => { const ok = x.who.includes(who); return `<a class="sup${ok ? '' : ' no'}" href="${esc(x.url)}" target="_blank" rel="noopener"><b>${esc(x.name)}</b>${x.closed ? ' <em>마감</em>' : ''}<small>${esc(x.org)} · ${esc(x.what)}</small><small>${ok ? '대상: ' + esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</small></a>`; }).join('');
     return `<section class="ocard">
         <div class="ohead"><p class="kick">${o.status === 'pre' ? '창업 카드' : '가게 카드'}</p><h2>${esc(o.item)} <small>@ ${esc(placeName(o))}</small></h2></div>
@@ -260,6 +264,7 @@
     // 빈칸에서 들어오면 그 자리를 고른 채로 시작. 진행 중인 상담이 있으면 이어서.
     // 챗봇이 대화로 채워서 시작: patch = { status, trouble, story, item, known }
     startWith(patch) { st.owner = Object.assign(blank(), patch); save(); },
+    tools: { combos, riskList, bigCat, wishMatch },
     start(spaceId) {
       // 빈칸에서 들어왔는데 지금 상담이 다른 자리 것이면 새로 시작(같은 자리면 이어서)
       if (spaceId && O().space !== spaceId) { st.owner = Object.assign(blank(), { status: 'pre', known: 'place', space: spaceId }); save(); }

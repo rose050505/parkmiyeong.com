@@ -1,6 +1,6 @@
 // 동성로 빈칸(/drafthon/binkan) 「빈칸 도우미」 전용 AI 창구. 팀 코드 없이 열려 있지만 일반 Claude 창구로는 못 쓴다:
 // - 지시문(SYSTEM)과 요청 모양은 서버가 고정(_binkan_assist.cjs = 프론트 assist.js 사본). 브라우저는 맥락 · 문장만 보낸다
-// - 답은 길 안내 JSON(route · item · trouble · group · query · reply)만 돌려준다
+// - 답은 { reply, do: [할 일] } JSON만 돌려준다(할 일은 정해진 10가지, 값 검증)
 // - 사이트 주소 확인 · 길이 제한 · 1분당 횟수 제한(인스턴스 단위, 대략)
 import A from './_binkan_assist.cjs';
 
@@ -28,8 +28,8 @@ export default async function handler(req, res) {
   const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const text = str(b.text, 300).trim(); if (!text) return res.status(400).json({ error: '빈 문장' });
   const c = b.ctx || {}, sp = c.space && typeof c.space === 'object' ? c.space : null;
-  const ctx = { screen: str(c.screen, 30) || '첫 화면', space: sp ? { addr: str(sp.addr, 60), was: str(sp.was, 40), wishes: list(sp.wishes, 3, 60) } : null, trending: list(c.trending, 8, 40), supports: list(c.supports, 5, 60) };
-  const history = (Array.isArray(b.history) ? b.history.slice(-6) : []).map(h => ({ who: h && h.who === 'me' ? 'me' : 'bot', text: str(h && h.text, 300) })).filter(h => h.text);
+  const ctx = { screen: str(c.screen, 30) || '첫 화면', space: sp ? { id: str(sp.id, 6), addr: str(sp.addr, 60), was: str(sp.was, 40), wishes: list(sp.wishes, 4, 80) } : null, owner: str(c.owner, 160), trending: list(c.trending, 8, 80), shown: list(c.shown, 6, 120), user: str(c.user, 60) };
+  const history = (Array.isArray(b.history) ? b.history.slice(-8) : []).map(h => ({ who: h && h.who === 'me' ? 'me' : 'bot', text: str(h && h.text, 300) })).filter(h => h.text);
   const body = Object.assign(A.body(ctx, history, text), { output_config: { effort: 'low' }, fallbacks: 'default' });
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
