@@ -324,13 +324,17 @@
   });
   mbox.addEventListener('input', () => { const e = $('#aerr'); if (e) e.hidden = true; });
 
+  const SHARE_BASE = 'https://parkmiyeong.com/drafthon/binkan/';
+  let lastShare = null;
   function share(w) {
-    const s = SP[w.space], url = location.origin + location.pathname + '#s=' + w.space;
+    // 공유 주소는 늘 실제 사이트. /s/빈칸?w=…로 보내야 카톡 · 메신저가 이 바람 썸네일을 보여 준다(api/binkan-share · binkan-ogimg)
+    const s = SP[w.space], url = SHARE_BASE + 's/' + w.space + '?' + new URLSearchParams({ w: w.title, a: shortAddr(s), n: String(store.likes(w)) }).toString();
     const text = `동성로 ${shortAddr(s)} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘 → ${url}`;
+    lastShare = { title: `「${w.title}」 있으면 좋겠다 — 동성로 빈칸`, text: `동성로 ${shortAddr(s)} 빈칸에 「${w.title}」 있으면 좋겠다! 공감 눌러 줘`, url };
     openModal(`<h3>공유 카드</h3>
       <div class="sharecard"><p class="sk">동성로 빈칸</p><p class="sw">「${esc(w.title)}」</p><p class="sa">📍 ${esc(shortAddr(s))}</p><p class="sl">♥ ${store.likes(w)}명이 공감</p></div>
       <textarea readonly rows="3" id="shareText">${esc(text)}</textarea>
-      <button class="cta" data-act="copy">문구 · 링크 복사</button>`);
+      <div class="sharebtns">${navigator.share ? '<button class="cta" data-act="nshare">공유하기 (카카오톡 등)</button>' : ''}<button class="${navigator.share ? 'cta2' : 'cta'}" data-act="copy">문구 · 링크 복사</button></div>`);
   }
 
   // ---------------- 클릭 한곳에서 ----------------
@@ -350,6 +354,7 @@
       case 'like': return needAuth(() => { store.toggleLike(id); const on = st.liked[id]; render(); redraw(); toast(on ? '공감했어요' : '공감을 취소했어요'); });
       case 'share': return share(store.wishes().find(w => w.id === id));
       case 'copy': { const t = $('#shareText').value; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('복사했어요'), () => { $('#shareText').select(); toast('선택해 두었어요 — 복사해 주세요'); }); return; }
+      case 'nshare': if (lastShare && navigator.share) navigator.share(lastShare).catch(() => {}); return;
       case 'close': return closeModal();
       case 'adclose': { const el = $('#mapAd'); el.dataset.closed = 1; el.hidden = true; return; }
       case 'atab': return authForm(b.dataset.v);
