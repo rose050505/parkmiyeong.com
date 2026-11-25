@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동성로 빈칸 — 이 빈 가게에 뭐가 생기면 좋을까?</title>
+<meta name="description" content="동성로 빈 점포에 「여기 ○○ 있으면」을 남기면, 준비된 사장님과 대구 대학생 팀이 창업으로 이어 갑니다.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="#" data-act="home"><span class="mark">빈칸</span><span class="name">동성로 빈칸<small>가칭</small></span></a>
+  <form class="search" id="search" role="search">
+    <input id="q" type="search" placeholder="가게 · 업종 · 거리 찾기 (예: 파스타)" autocomplete="off" aria-label="검색">
+    <button type="submit">찾기</button>
+  </form>
+  <div class="me" id="me"></div>
+</header>
+
+<main class="body">
+  <nav class="rail" aria-label="입구">
+    <p class="railh">이런 분이라면</p>
+    <button class="door" data-act="owner"><b>사장님이세요?</b><small>창업 · 경영 상담과 받을 수 있는 지원</small></button>
+    <button class="door" data-act="student"><b>대학생이세요?</b><small>동행 프로젝트 · 장학금 · 학점 · 경력</small></button>
+    <button class="door minor" data-act="howto"><b>이용 방법</b><small>빈칸 · 바람 · 공감이 뭔가요</small></button>
+    <div class="facts" id="facts"></div>
+  </nav>
+
+  <section class="mapwrap">
+    <div id="map" class="map" aria-label="동성로 지도"></div>
+    <div class="legend"><span><i class="lg sp"></i>빈칸(공실 후보)</span><span><i class="lg wi"></i>바람이 붙은 빈칸</span></div>
+    <div id="mapmsg" class="mapmsg" hidden></div>
+    <div id="mapAd" class="mapad"></div>
+  </section>
+
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+  <section class="work" id="work" aria-live="polite"></section>
+</main>
+
+<footer class="event" id="event">
+  <span class="eb">오픈 이벤트</span>
+  <span class="et">동성로 빈칸에 원하는 가게를 말해 주세요 — 공감을 많이 받은 바람에 커피 · 배달 상품권 <small>(경품은 예시)</small></span>
+  <button data-act="join">참여하기</button>
+</footer>
+
+<div class="modal" id="modal" hidden><div class="box" role="dialog" aria-modal="true" id="modalBox"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="data/spaces.js"></script>
+<script src="data/seed.js"></script>
+<script src="data/support.js"></script>
+<script src="map.js"></script>
+<script src="app.js"></script>
+<script src="owner.js"></script>
+<script src="student.js"></script>
+</body>
+</html>

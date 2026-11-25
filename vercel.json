@@ -5,6 +5,10 @@
       "destination": "/drafthon/index.html"
     },
     {
+      "source": "/drafthon/binkan/",
+      "destination": "/drafthon/binkan/index.html"
+    },
+    {
       "source": "/((?!api/|drafthon/).*)",
       "destination": "/index.html"
     }
