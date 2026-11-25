@@ -10,7 +10,9 @@
   const dist = (a, b) => Math.hypot((a.x - b.x) * KX, (a.y - b.y) * KY);
 
   // ---------------- 저장 ----------------
-  const KEY = 'binkan.v1';
+  // 시연판(parkmiyeong.com/drafthon/, tools/publish_demo.sh): 서버 없이 더미 데이터로만 돌고, 완성본(binkan.v1)과 저장 칸을 나눔. ?reset 으로 처음 상태
+  const DEMO = !!window.BINKAN_DEMO, KEY = DEMO ? 'binkan.demo.v1' : 'binkan.v1';
+  if (DEMO && /[?&]reset\b/.test(location.search)) { localStorage.removeItem(KEY); history.replaceState(null, '', location.pathname); }
   const st = Object.assign({ user: null, wishes: [], liked: {}, entered: false }, JSON.parse(localStorage.getItem(KEY) || '{}'));
   const save = () => localStorage.setItem(KEY, JSON.stringify(st));
   // 역할은 더하는 방식(청사진 §4-2): roles[]에 쌓고, role은 가장 최근에 더한 역할(지원 안내 · 의견 「쓴 사람」 표시용)
@@ -407,7 +409,7 @@
       <div class="atabs" role="tablist"><button class="${tab === 'login' ? 'on' : ''}" data-act="atab" data-v="login" role="tab">로그인</button><button class="${tab === 'signup' ? 'on' : ''}" data-act="atab" data-v="signup" role="tab">회원가입</button></div>
       ${msg ? `<p class="amsg">${esc(msg)}</p>` : `<p class="amsg">의견 · 공감 · 지원은 회원만 할 수 있어요. 보기는 누구나 할 수 있어요.</p>`}
       <button class="cta quick" data-act="aquick">바로 시작하기 <small>아이디 없이</small></button>
-      ${SV() ? '<button class="cta2 quick" data-act="aowner">가게 사장님으로 바로 시작 <small>동성로 시범 가게 계정</small></button>' : ''}
+      ${SV() || DEMO ? '<button class="cta2 quick" data-act="aowner">가게 사장님으로 바로 시작 <small>동성로 시범 가게 계정</small></button>' : ''}
       <p class="aor"><span>또는 아이디로</span></p>
       ${tab === 'login' ? `<form id="loginForm" class="aform" novalidate>
         <label>아이디<input name="uid" autocomplete="username" maxlength="20" required></label>
@@ -539,6 +541,7 @@
       case 'close': return closeModal();
       case 'atab': return authForm(b.dataset.v);
       case 'aowner': {   // 서버에 지정된 시범 가게 계정 — 비밀번호는 서버 함수(api/binkan-owner)에만 있음
+        if (DEMO && !SV()) { const acc = st.accounts || (st.accounts = {}); acc['demo-owner'] = acc['demo-owner'] || { name: '동성로 시범 가게', role: 'open', roles: ['open'], pw: '', at: Date.now() }; save(); after = after || (() => { MY().start(); go('mystore'); }); return signedIn(Object.assign({ id: 'demo-owner' }, acc['demo-owner']), '동성로 시범 가게 사장님, 반가워요'); }   // 시연판: 서버 없이 이 브라우저 안의 시범 가게 계정
         const url = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/binkan-owner' : 'https://parkmiyeong.com/api/binkan-owner';
         b.disabled = true; b.textContent = '가게 계정 여는 중…';
         fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))

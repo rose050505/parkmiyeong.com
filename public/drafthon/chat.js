@@ -1,0 +1,265 @@
+// 같이가게 도우미 (챗봇) — 모든 화면 오른쪽 아래. 말로 물으면 맞는 화면으로 데려가고(길 안내), 의견 · 빈칸을 찾고, 지원사업 · 이용 방법을 답한다.
+// AI(assist.js · /api/binkan-assist)가 답과 할 일을 고르면 run()이 사이트 데이터로 계산해 채팅 카드로 보여 준다. AI가 안 되면 규칙(understand · answer)으로.
+(function () {
+  const A = window.APP, { store, SP, M, SUP, esc, shortAddr } = A;
+  const $ = s => document.querySelector(s);
+  const log = [];   // { who: 'bot' | 'me', html }
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <button class="chatfab" id="chatFab" aria-label="같이가게 도우미 열기"><span class="cf-i">💬</span><span class="cf-t">같이가게 도우미</span></button>
+    <section class="chatbox" id="chatBox" hidden role="dialog" aria-label="같이가게 도우미">
+      <header><b>같이가게 도우미</b><span class="caimode" id="chatMode"></span><button class="cx" data-c="close" aria-label="닫기">×</button></header>
+      <div class="clog" id="chatLog" aria-live="polite"></div>
+      <div class="cchips" id="chatChips"></div>
+      <form class="cform" id="chatForm"><input id="chatIn" type="text" placeholder="편하게 물어보세요" autocomplete="off" aria-label="도우미에게 묻기"><button type="button" class="cmic" id="chatMic" aria-label="말로 묻기" hidden>🎤</button><button class="csend">보내기</button></form>
+    </section>`);
+
+  // ---------------- 알아듣기 (시연: 규칙) ----------------
+  const GROUP_WORDS = [['디자인 · 공간', /디자인|건축|인테리어|공간/], ['마케팅 · 콘텐츠', /마케팅|홍보|광고|미디어|콘텐츠|sns/i], ['데이터 · IT', /데이터|통계|컴퓨터|개발|코딩|it/i], ['식품 · 메뉴', /식품|조리|요리|메뉴|영양/], ['경영 · 기획', /경영|기획|회계|창업/]];
+  const itemOf = t => { const m = t.match(/([가-힣a-zA-Z]{1,10} ?(집|카페|식당|가게|샵|바|주점|베이커리|학원|사진관|스튜디오|점|방|관))/); const it = m ? m[1].replace(/^(우리|제|저희|동성로에?|여기에?)\s*/, '').trim() : ''; return /^(가게|집|카페|식당|샵|바)$/.test(it) ? '' : it; };
+  function understand(text) {
+    const t = text.replace(/\s/g, '');
+    if (/^(안녕|하이|hi|hello|도움|도와)/i.test(t)) return { k: 'hello' };
+    if (/학생|대학생|학점|장학|인턴|취업|포트폴리오|전공|과제있|경력쌓/.test(t)) return { k: 'student', g: (GROUP_WORDS.find(([, re]) => re.test(t)) || [])[0] };
+    if (/지원금|지원사업|혜택|보조금|대출|받을수있|정부지원|지원받/.test(t)) return { k: 'support' };
+    // 「내 가게」: open 규칙(우리가게 · 장사 · 손님)보다 먼저 — 뒤에 두면 「우리 가게 근처 …」가 상담으로 먼저 걸림
+    const storeCtx = /(우리|저희|내)가게|사장|장사/.test(t), trouble = /매출|손님이?줄|단골|재고|안팔|떨어/.test(t);
+    if (!trouble && ((storeCtx && /근처.{0,12}(원하|원해|원함|바라|바래|바람|의견)/.test(t)) || /(의견|바람)에답|(의견|바람)답하|상권변화/.test(t) || /(^|\s)내\s*가게(\s|$|를|에|화면|열|좀|보)/.test(text))) return { k: 'mystore' };
+    if (/운영중|하고있|장사|손님|매출|단골|재고|발주|리뷰|우리가게|저희가게|홍보가|안팔/.test(t)) {
+      const trouble = /손님|단골|재방문|리뷰/.test(t) ? '고객 관리' : /홍보|알리|sns|인스타|모르/i.test(t) ? '홍보' : /매출|안팔|돈/.test(t) ? '매출' : /재고|발주|폐기|남아/.test(t) ? '재고' : '기타';
+      return { k: 'open', trouble, item: itemOf(text) };
+    }
+    if (/창업|열고|열려|열어|오픈|차리|차려|개업|시작하고싶|시작해|가게를?내|해볼까|하고싶|하려고|할까/.test(t)) return { k: 'pre', item: itemOf(text) };
+    if (/어디|찾아|보여/.test(t) && !/남기/.test(t)) return { k: 'find', q: text.trim() };
+    if (/(의견|바람)남|남기|있었으면|있으면좋|생기면좋|원하는가게|이벤트|기프티콘|상품권/.test(t)) return { k: 'wish' };
+    if (/로그인|가입|본인인증|인증/.test(t)) return { k: 'auth' };
+    if (/공실|데이터|어디서|출처|정확/.test(t)) return { k: 'data' };
+    if (/뭐야|뭔가요|무엇|어떻게|이용|사용법|처음|설명/.test(t)) return { k: 'howto' };
+    return { k: 'find', q: text.trim() };
+  }
+
+  // ---------------- 답하기 (동작은 실제 화면을 움직인다) ----------------
+  const btn = (c, label, extra = '') => `<button class="cbtn" data-c="${c}"${extra}>${esc(label)}</button>`;
+  function answer(text, u0) {
+    const u = u0 || understand(text), v = A.view(), sp = v.space && SP[v.space];
+    const ai = !!u.ai, R = s => ai ? '' : s;   // AI 답이면 정해 둔 문장 대신 AI 문장을 쓰고, 목록 · 버튼만 덧붙인다
+    switch (u.k) {
+      case 'other': return '';
+      case 'hello': return `안녕하세요! 동성로 빈 점포에 <b>원하는 가게</b>를 남기거나, <b>창업 · 경영 상담</b>, <b>대학생 동행 프로젝트</b>로 안내해 드려요. 무엇이 궁금하세요?`;
+      case 'student':
+        if (window.STUDENT.startWith({ filter: u.g || null }) === false) { A.go('student'); return R('쓰던 지원서가 있어 그대로 열었어요(지우지 않았어요). 과제 필터만 바꿨어요.'); } A.go('student');
+        return R(`대학생 <b>동행 프로젝트</b>로 안내했어요. 장학금 · 전공 학점 · 실무 경력을 받으면서 동성로 가게의 개업 준비와 첫 운영을 한 학기 동안 도와요.${u.g ? ` <b>${esc(u.g)}</b> 과제만 골라 뒀어요.` : ''}`);
+      case 'open':
+        if (window.OWNER.startWith({ status: 'open', trouble: u.trouble || '기타', story: text, item: u.item }) === false) { A.go('owner'); return R('하던 상담이 있어 그대로 열었어요(지우지 않았어요).'); } A.go('owner');
+        return R(`운영 중인 가게 고민으로 정리해 뒀어요 — 어려움: <b>${esc(u.trouble)}</b>${u.item ? `, 업종: <b>${esc(u.item)}</b>` : ''}. 화면에서 ${u.item ? '가게 위치만' : '업종 · 가게 위치를'} 확인하고 「AI와 문제 정리하기」를 눌러 주세요.`);
+      case 'pre': {
+        const known = u.item ? (sp ? 'both' : 'item') : (sp ? 'place' : null);
+        if (window.OWNER.startWith({ status: 'pre', known, item: u.item, space: sp ? sp.id : null }) === false) { A.go('owner'); return R('하던 상담이 있어 그대로 열었어요(지우지 않았어요).'); } A.go('owner');
+        return R(`창업 상담으로 안내했어요.${u.item ? ` 아이템 <b>${esc(u.item)}</b>` : ''}${sp ? ` · 자리 <b>${esc(shortAddr(sp))}</b>` : ''}${known ? '를 넣어 뒀어요.' : ' 정해 둔 것(아이템 · 자리)을 골라 주세요.'} 시민 의견이 많은 빈칸을 먼저 추천해 드려요.`);
+      }
+      case 'support': {
+        const L = SUP.list.map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${esc(x.target)}</li>`).join('');
+        return `${R('동성로 창업 · 가게 운영 때 볼 만한 지원이에요.')}<ul>${L}</ul>그리고 시범 사업 <b>동행 프로젝트</b>는 사장님께 시범 지원금 + 대학생 팀을 연결해요. ${btn('owner', '사장님 상담 시작')}<small>최종 자격은 공고 기관이 판단해요. (${esc(SUP.checked)} 확인)</small>`;
+      }
+      case 'wish':
+        if (sp) { A.needAuth(() => A.go('write', { space: sp.id })); return R(`지금 보고 있는 <b>${esc(shortAddr(sp))}</b> 빈칸에 의견을 남기는 화면을 열었어요. 시범 운영이 시작되면 공감을 많이 받은 의견에 오픈 이벤트 상품권도 걸려요.`); }
+        A.go('home'); A.pulse();
+        return R(`지도에서 <b>초록 네모(빈칸)</b>를 눌러 「여기 있으면 좋겠는 가게」를 남겨 주세요. 지금 반짝이는 게 빈칸이에요. 남긴 의견은 공유 카드로 친구에게 보낼 수 있어요.`);
+      case 'auth': return `${R('보기는 누구나 할 수 있고, <b>의견 · 공감 · 지원서</b>만 회원이 할 수 있어요. 로그인 창의 「바로 시작하기」로 바로 가입돼요(본 서비스에서는 휴대폰 본인인증으로 한 사람 한 계정 [제안]).')} ${btn('login', '로그인 · 가입')}`;
+      case 'data': return `<small>출처</small>빈칸 ${M.meta.n_spaces}곳은 소상공인시장진흥공단 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교로 찾은 <b>1층 공실 후보</b>예요(같은 층에 새 업소 없음). 실제 공실인지는 현장 확인이 필요하고, 본 사업에서는 시가 상가 매물 플랫폼과 공실 정보를 연동하는 방안을 제안해요.`;
+      case 'mystore': openStore(); return R(`<b>「내 가게」</b>를 열었어요. 가게 근처(150m, 없으면 300m) 빈칸에 붙은 시민 의견을 보고 「우리 가게에서 해 볼게요」라고 답하면, 의견을 남기고 공감한 분들께 알림이 가요. 답한 메뉴 기록 · 분기 상권 변화도 같은 화면에 있어요.`);
+      case 'howto': A.go('howto'); return R(`<b>빈칸</b>(공실 후보)에 시민이 <b>의견</b>(여기 ○○ 있으면)을 남기고 <b>공감</b>을 모아요 → 준비된 사장님이 그 의견을 보고 창업 상담 → 시 + 지역 대학이 선정 → 대학생 4인 팀 + 지도교수가 한 학기 함께해요. 오른쪽에 이용 방법을 열어 뒀어요.`);
+      case 'find': {
+        if (ai && !u.q && u.item) u.q = u.item;
+        const tk = (u.q || text).replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).map(w => w.replace(/(집|가게|있어요|어디|있나요|보여줘|찾아줘)$/g, '')).filter(w => w.length >= 2 && !/^(의견|바람|어디|있어요|있나요|보여줘|찾아줘|빈칸)$/.test(w));
+        const ws = tk.length ? store.wishes().filter(w => tk.some(k => (w.title + w.cat).includes(k))).sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 4) : [];
+        if (ws.length) return `이런 의견이 있어요.<div class="crow">${ws.map(w => btn('space', `${w.title} ♥${store.likes(w)} · ${shortAddr(SP[w.space])}`, ` data-id="${esc(w.space)}"`)).join('')}</div>누르면 지도에서 그 빈칸을 열어 드려요.`;
+        const ss = tk.length ? M.spaces.filter(s => tk.some(k => (s.was + s.addr).includes(k))).slice(0, 4) : [];
+        if (ss.length) return `직전 업종 · 주소로 찾은 빈칸이에요.<div class="crow">${ss.map(s => btn('space', `${shortAddr(s)} · 직전 ${s.was}`, ` data-id="${s.id}"`)).join('')}</div>`;
+        if (ai) return '';
+        return `잘 알아듣지 못했어요. 아래처럼 물어봐 주세요. <small>(지금은 인터넷 연결이 안 돼 정해진 말만 알아들어요.)</small>`;
+      }
+    }
+  }
+
+  // ---------------- 추천 질문: 지금 화면에 맞게 ----------------
+  function chips() {
+    const v = A.view(), sp = v.space && SP[v.space];
+    const C = { owner: ['지원금은 어떤 게 있어요?', '과제는 누가 해요?', '대학생 팀은 어떻게 뽑아요?'],
+      student: ['디자인 전공인데 할 수 있는 과제 있어요?', '장학금 · 학점은 어떻게 받아요?', '창업하고 싶어요'],
+      space: [`이 자리에 창업하고 싶어요`, '여기 의견 남기고 싶어요', '받을 수 있는 지원은?'],
+      mystore: ['답을 올리면 누가 봐요?', '의견 보고 온 손님은 어떻게 세요?', '내 가게 쓰는 데 돈 들어요?', '누가 쓰는 법을 알려 줘요?'] }[v.mode]
+      || ['동성로에 디저트 카페 열고 싶어요', '우리 가게 손님이 줄었어요', '우리 가게 근처 사람들은 뭘 원해요?', '대학생인데 경력 쌓고 싶어요', '파스타 의견 어디 있어요?'];
+    $('#chatChips').innerHTML = C.map(c => `<button class="chip ex" data-c="say" data-v="${esc(c)}">${esc(c)}</button>`).join('');
+  }
+  const FAQ = { '과제는 누가 해요?': '선정된 가게마다 <b>대학생 4명 + 지도교수</b>가 한 팀이에요. 과제는 사장님 상담에서 AI가 초안을 내고 사장님이 1~4개를 골라요. 세무 · 공사 · 계약처럼 학생 몫이 아닌 일은 전문가 · 기관으로 안내해요.',
+    '대학생 팀은 어떻게 뽑아요?': '학생은 관심 직무 · 가능 시간 · 질문 2개로 지원하고, <b>운영단(시 + 지역 대학)이 선발 → 사장님 면담</b> 순서로 정해요. 전공 · 학년 제한은 두지 않아요.',
+    '답을 올리면 누가 봐요?': '답은 그 의견 카드 아래에 누구나 보이고, 지도 핀에도 「근처 가게가 답함」 점이 붙어요. 그 의견을 <b>남긴 분과 공감한 분</b>에게는 알림이 가고, 알림에서 「가게에서 이 화면 보여 주기」를 열 수 있어요. 답해도 의견은 닫히지 않아요.',
+    '상권 변화 숫자는 어디서 나와요?': '빈칸을 찾은 것과 같은 <b>소진공 상가(상권)정보 분기 파일</b>(2026년 2분기 · 3분기)에서, 가게 100m 안 같은 업종(소분류) 업소를 분기마다 직접 세요. AI는 그 숫자를 한 줄로 풀기만 하고 숫자를 만들지 않아요.',
+    '의견 보고 온 손님은 어떻게 세요?': '시민이 알림에서 연 「가게에서 이 화면 보여 주기」를 가게에서 보여 주면, 사장님이 그 화면의 <b>[사장님 확인]</b>에 「내 가게」 위쪽의 <b>오늘 손님 확인 번호</b>를 넣어요(확인된 손님으로 따로 셈). 바쁠 땐 답한 메뉴 카드의 [＋]로 세요. 화면을 보여 준 손님만 세므로 실제와 다를 수 있어요 — 운영단은 「보여 주기 연 회원」 수와 같이 봐요.',
+    '내 가게 쓰는 데 돈 들어요?': '동행 프로젝트에 선정된 가게와, 신청했지만 선정되지 않아 함께 살펴보는 가게는 <b>이용료가 없어요</b> [제안]. AI를 부르는 비용은 운영단 예산으로 잡는 방안이고, 학기 뒤 누가 낼지는 아직 정하는 중이에요 [확인 필요].',
+    '누가 쓰는 법을 알려 줘요?': '선정 가게는 <b>학생 팀이 한 학기 같이 쓰면서</b> 사용법 한 장을 남겨요. 함께 살펴보는 가게는 <b>운영단이 첫 설정을 한 번 같이</b> 해요 [제안]. 막히면 저(같이가게 도우미)에게 물어보시거나 「내 가게」 위쪽 「사용법 한 장」을 보세요.',
+    '장학금 · 학점은 어떻게 받아요?': '지역 대학 <b>연계 교과</b>로 전공 학점을 받고(대구 앵커사업 · 옛 RISE 연계), 참여 학생 장학금을 지원해요. 장학금은 월 30만 원 [추정], 학점 수는 대학별로 정해요 [가정]. 학기 끝에 <b>경력 카드</b>가 남아요.' };
+
+  // ---------------- 실시간 AI (전용 창구 /api/binkan-assist: 지시문 서버 고정, { reply, do } JSON만 받음) ----------------
+  const live = () => navigator.onLine !== false;
+  const ENDPOINT = /(^|\.)parkmiyeong\.com$/.test(location.hostname) ? '/api/binkan-assist' : 'https://parkmiyeong.com/api/binkan-assist';
+  let shown = [];   // 최근 채팅에 보여 준 빈칸 · 의견(번호로 가리킬 수 있게)
+  const wishLabel = w => `의견 ${w.id} 「${w.title}」 @${w.space} ${shortAddr(SP[w.space])} ♥${store.likes(w)}${w.seed ? ' (운영팀이 넣은 의견)' : ''}`;
+  const spaceLabel = sp => `빈칸 ${sp.id} ${shortAddr(sp)} (직전 ${sp.was})`;
+  function context() {
+    const v = A.view(), sp = v.space && SP[v.space], st = A.st;
+    const screen = { home: '첫 화면(지도)', space: '빈칸 상세', write: '의견 남기기', owner: '사장님 상담', student: '대학생 동행 프로젝트', howto: '이용 방법', search: '검색 결과', mine: '내 페이지', mystore: '내 가게(근처 의견 · 답한 메뉴 · 상권 변화)', ops: '운영단 표' }[v.mode] || v.mode;
+    const o = st.owner;
+    return {
+      screen,
+      space: sp ? { id: sp.id, addr: shortAddr(sp), was: sp.was, wishes: store.bySpace(sp.id).slice(0, 4).map(w => `${w.id} ${w.title}(♥${store.likes(w)})`) } : null,
+      owner: v.mode === 'owner' && o ? `${o.step}단계 · ${o.status === 'open' ? '운영 중' : o.status === 'pre' ? '열 예정' : '상황 미정'}${o.item ? ' · 업종 ' + o.item : ''}${o.space ? ' · 자리 ' + o.space : ''}` : '',
+      trending: store.wishes().sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 8).map(wishLabel),
+      shown: shown.map(x => x.label),
+      user: st.user ? `로그인함 · ${A.rolesOf(st.user).map(A.roleName).join(' · ')}` : '로그인 안 함',
+    };
+  }
+  async function aiTurn(text) {
+    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const history = log.filter(m => m.text).map(m => ({ who: m.who === 'me' ? 'me' : 'bot', text: m.text }));
+      const r = await fetch(ENDPOINT, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ctx: context(), history, text }) });
+      if (r.status === 429) throw new Error('잠시 뒤 다시');
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.u || typeof j.u.reply !== 'string') throw new Error('AI 답 없음');
+      return j.u;
+    } finally { clearTimeout(tm); }
+  }
+
+  // ---------------- 할 일 실행: 사이트 데이터로 계산해 채팅 카드로 ----------------
+  const T = () => window.OWNER.tools;
+  const drafts = {};
+  const spBtns = (id, item) => `<div class="cbrow">${btn('space', '지도에서 보기', ` data-id="${id}"`)}${item ? btn('card', '자리 분석', ` data-id="${id}" data-item="${esc(item)}"`) + btn('consult', '이 자리로 상담', ` data-id="${id}" data-item="${esc(item)}"`) : btn('consult', '이 자리로 상담', ` data-id="${id}"`)}</div>`;
+  function cardRecommend(item) {
+    const L = T().combos({ known: 'item', item });
+    shown = L.map(c => ({ kind: 'space', id: c.space, label: spaceLabel(SP[c.space]) }));
+    return `<div class="ccard2"><b>「${esc(item)}」에 맞는 빈칸</b>${L.map((c, i) => `<div class="citem"><span class="cn">${i + 1}</span><div><b>${esc(shortAddr(SP[c.space]))}</b> <small>직전 ${esc(SP[c.space].was)}</small><ul>${c.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul>${spBtns(c.space, item)}</div></div>`).join('')}<small>시민 의견 · 100m 안 같은 업종대 수로 계산</small></div>`;
+  }
+  function cardSpace(id, item) {
+    const sp = SP[id]; if (!sp) return '';
+    shown = [{ kind: 'space', id, label: spaceLabel(sp) }];
+    const it = item || sp.was, risk = T().riskList({ status: 'pre', item: it, space: id });
+    const sup = SUP.list.filter(x => x.who.includes('pre')).map(x => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.needCheck ? ' <small>공고 확인 필요</small>' : ''}</li>`).join('');
+    return `<div class="ccard2"><b>자리 분석 · ${esc(it)} @ ${esc(shortAddr(sp))}</b><ul class="risk">${risk.join('')}</ul><b class="sub">받을 수 있는 지원</b><ul>${sup}</ul>${spBtns(id, item)}<small>소진공 상가정보 ${esc(M.meta.q_now)} 기준 계산 · 경쟁 기준 [가정]</small></div>`;
+  }
+  function cardFind(q) {
+    const tk = q.replace(/[^가-힣a-zA-Z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 2);
+    const ws = store.wishes().filter(w => tk.some(k => (w.title + w.cat + w.why).includes(k))).sort((a, b) => store.likes(b) - store.likes(a)).slice(0, 4);
+    const ss = M.spaces.filter(s => tk.some(k => (s.was + s.addr).includes(k))).slice(0, 3);
+    shown = ws.map(w => ({ kind: 'wish', id: w.id, label: wishLabel(w) })).concat(ss.map(s => ({ kind: 'space', id: s.id, label: spaceLabel(s) })));
+    if (!ws.length && !ss.length) return `<div class="ccard2"><b>「${esc(q)}」</b> 의견 · 빈칸이 아직 없어요. 빈칸에 첫 의견을 남겨 보세요.</div>`;
+    const wRow = (w, i) => {
+      const likeLabel = store.liked(w) ? '♥ 공감함' : '♥ 공감';
+      return '<div class="citem"><span class="cn">' + (i + 1) + '</span><div><b>' + esc(w.title) + '</b> <small>♥' + store.likes(w) + ' · ' + esc(shortAddr(SP[w.space])) + (w.seed ? ' · 운영팀 의견' : '') + '</small><div class="cbrow">' + btn('like', likeLabel, ' data-id="' + w.id + '"') + btn('space', '지도에서 보기', ' data-id="' + w.space + '"') + '</div></div></div>';
+    };
+    const sRow = (s, i) => '<div class="citem"><span class="cn">' + (ws.length + i + 1) + '</span><div><b>' + esc(shortAddr(s)) + '</b> <small>직전 ' + esc(s.was) + '</small>' + spBtns(s.id) + '</div></div>';
+    return '<div class="ccard2">' + (ws.length ? '<b>「' + esc(q) + '」 의견</b>' + ws.map(wRow).join('') : '') + (ss.length ? '<b class="sub">직전 업종 · 주소로 찾은 빈칸</b>' + ss.map(sRow).join('') : '') + '</div>';
+  }
+  function cardWish(a) {
+    const sp = SP[a.space]; if (!sp) return '';
+    const k = 'd' + Date.now(); drafts[k] = a;
+    return `<div class="ccard2 draft"><b>의견 초안</b><p>📍 ${esc(shortAddr(sp))} <small>직전 ${esc(sp.was)}</small></p><p class="dt">「${esc(a.title)}」 <small>${esc(a.cat)}</small></p>${a.why ? `<p>${esc(a.why)}</p>` : ''}<div class="cbrow">${btn('wishpost', '이대로 올리기', ` data-k="${k}"`)}${btn('space', '지도에서 보기', ` data-id="${a.space}"`)}</div><small>올리기는 회원만 · 비방 · 광고는 걸러져요</small></div>`;
+  }
+  function cardSupports(who) {
+    return `<div class="ccard2"><b>${who === 'open' ? '운영 중인 가게' : '창업 준비'}에 볼 만한 지원</b><ul>${SUP.list.map(x => { const ok = x.who.includes(who); return `<li class="${ok ? '' : 'no'}"><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.closed ? ' <em>마감</em>' : ''} — ${ok ? esc(x.target) : '해당 안 됨: ' + esc((x.whyNot || {})[who] || '대상이 다름')}</li>`; }).join('')}<li><b>동행 프로젝트(시범 사업)</b> — 시범 지원금 + 대학생 4인 팀 + 지도교수</li></ul>${btn('owner', '사장님 상담 시작')}<small>${esc(SUP.checked)} 공고 · 보도로 확인 · 최종 자격은 공고 기관 판단</small></div>`;
+  }
+  function run(a, text) {
+    switch (a.act) {
+      case 'recommend': return cardRecommend(a.item);
+      case 'spacecard': return cardSpace(a.space, a.item);
+      case 'find': return cardFind(a.query);
+      case 'show': if (SP[a.space]) { A.go('space', { space: a.space }); shown = [{ kind: 'space', id: a.space, label: spaceLabel(SP[a.space]) }]; } return '';
+      case 'wish': return cardWish(a);
+      case 'like': return like(a.wish);
+      case 'owner': {
+        const known = a.status === 'pre' ? (a.item && a.space ? 'both' : a.item ? 'item' : a.space ? 'place' : null) : null;
+        return window.OWNER.startWith({ status: a.status, item: a.item, trouble: a.trouble, story: a.status === 'open' ? text : '', space: a.status === 'pre' ? (a.space || null) : null, known }) === false ? (A.go('owner'), '<small>하던 상담이 있어 그대로 열었어요(지우지 않았어요).</small>') : (A.go('owner'), '');
+      }
+      case 'student': { const kept = window.STUDENT.startWith({ filter: a.group || null }) === false; A.go('student'); return kept ? '<small>쓰던 지원서가 있어 그대로 열었어요(지우지 않았어요). 과제 필터만 바꿨어요.</small>' : ''; }
+      case 'supports': return cardSupports(a.who);
+      case 'page': if (a.to === 'login' || (a.to === 'mine' && !A.st.user)) { A.needAuth(() => A.refresh()); return ''; } A.go(a.to); return '';
+      case 'mystore': openStore(); return A.st.user ? '' : '<small>「내 가게」는 회원만 열 수 있어요 — 로그인 창을 열었어요.</small>';
+    }
+    return '';
+  }
+  const openStore = () => A.needAuth(() => { window.MYSTORE.start(); A.go('mystore'); });
+  function like(id) {
+    const w = store.wishes().find(x => x.id === id); if (!w) return '';
+    const doLike = () => (store.liked(w) ? Promise.resolve() : store.toggleLike(id)).then(() => { A.refresh(); const w2 = store.wishes().find(x => x.id === id) || w; push(`「${esc(w2.title)}」에 공감했어요. ♥${store.likes(w2)}`); }, () => push('공감을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.'));
+    if (!A.st.user) { A.needAuth(doLike); return '<small>공감은 회원만 할 수 있어요 — 로그인 창을 열었어요.</small>'; }
+    doLike(); return '<small>공감 누르는 중…</small>';
+  }
+  function push(html, text) { log.push({ who: 'bot', html, text: text || html.replace(/<[^>]+>/g, '').slice(0, 200) }); draw(); }
+
+  // 머리 표시: 마지막 대화를 실제 AI가 답했을 때만 초록 「AI 연결됨」(인터넷만 켜져 있다고 켜지 않음)
+  let aiOk = null;
+  function modeBtn() { const b = $('#chatMode'); const ok = live() && aiOk === true; b.textContent = !live() ? '오프라인' : aiOk === false ? '기본 답' : ok ? 'AI 연결됨' : 'AI'; b.classList.toggle('on', ok); b.title = ok ? '방금 답은 Claude가 문장을 읽고 고른 거예요. 숫자 · 목록은 사이트 데이터로 계산해요' : aiOk === false ? '실시간 AI 연결이 안 돼 정해 둔 말로 답했어요' : '말을 걸면 Claude가 읽고 안내 · 실행해요. 연결이 안 되면 정해 둔 말로 답해요'; }
+  function draw() { $('#chatLog').innerHTML = log.map(m => `<div class="cm ${m.who}">${m.html}</div>`).join(''); $('#chatLog').scrollTop = 1e6; chips(); modeBtn(); }
+  let busy = false;
+  async function say(text) {
+    if (!text.trim() || busy) return;
+    log.push({ who: 'me', html: esc(text), text });
+    if (FAQ[text]) { aiOk = null; push(FAQ[text]); return; }   // 정해 둔 답이라 「AI 연결됨」을 끔
+    let u = null, note = '';
+    if (live()) {
+      busy = true; log.push({ who: 'bot wait', html: '<span class="dots">AI가 읽는 중</span>' }); draw();
+      try { u = await aiTurn(text); aiOk = !!u; } catch (e) { aiOk = false; note = `<small>실시간 AI 연결 실패(${esc(e.name === 'AbortError' ? '응답 시간 초과' : e instanceof TypeError ? '인터넷 · 서버 연결 안 됨' : e.message)}) — 정해 둔 말로 답했어요.</small>`; }
+      log.pop(); busy = false;
+    }
+    if (u) {
+      const cards = (u.do || []).map(a => run(a, text)).filter(Boolean).join('');
+      u.reply = String(u.reply || '').replace(/\s?[(（]?\b(V\d{3}|w\d{2,3}|o[0-9a-f]{32})\b[)）]?/g, '');   // 내부 id(V005 · w15)는 화면에 안 보이게
+      push(esc(u.reply) + cards + '<small class="aimark">AI 답 · 숫자 · 목록은 사이트 데이터로 계산</small>', u.reply + (shown.length ? ' [보여 준 것: ' + shown.map(x => x.id).join(', ') + ']' : ''));
+    } else push((answer(text, understand(text)) || '') + note);
+  }
+  function open() { $('#chatBox').hidden = false; $('#chatFab').hidden = true; if (!log.length) { log.push({ who: 'bot', html: answer('안녕') + '<br><small>예: 「동성로에 1인 샤브샤브집 어때?」 「두 번째 자리 분석해 줘」 「거기 셀프 사진관 의견 남겨 줘」</small>' }); } draw(); $('#chatIn').focus(); }
+  function close() { $('#chatBox').hidden = true; $('#chatFab').hidden = false; }
+  $('#chatFab').onclick = open;
+  $('#chatForm').onsubmit = e => { e.preventDefault(); const v = $('#chatIn').value; $('#chatIn').value = ''; say(v); };
+
+  $('#chatBox').addEventListener('click', e => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    const c = b.dataset.c, id = b.dataset.id;
+    if (c === 'close') return close();
+    if (c === 'say') return say(b.dataset.v);
+    if (c === 'space') { A.go('space', { space: id }); return; }
+    if (c === 'card') { push(cardSpace(id, b.dataset.item)); return; }
+    if (c === 'consult') { const item = b.dataset.item || ''; const fresh = window.OWNER.startWith({ status: 'pre', known: item ? 'both' : 'place', item, space: id }) !== false; A.go('owner'); if (!fresh) { push('<small>하던 상담을 열었어요.</small>'); return; } push(`<small>${esc(shortAddr(SP[id]))} 자리로 창업 상담을 열었어요${item ? ` (아이템 「${esc(item)}」)` : ''}.</small>`); return; }
+    if (c === 'like') { push(like(id)); return; }
+    if (c === 'wishpost') {
+      const d = drafts[b.dataset.k]; if (!d) return;
+      A.needAuth(() => {
+        if (store.bySpace(d.space).some(w => w.title.replace(/\s/g, '') === d.title.replace(/\s/g, ''))) return push('이 빈칸에 같은 의견이 이미 있어요. 그 의견에 공감해 주세요.');
+        if (A.checkText(d.title + ' ' + d.why)) return push('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 의견 쓰기와 같은 기준
+        const w = { id: 'u' + Date.now(), space: d.space, cat: d.cat, title: d.title, why: d.why || '—', who: A.roleName(A.st.user.role), likes: 0, ago: 0, uid: A.st.user.id };
+        delete drafts[b.dataset.k];
+        store.add(w).then(x => {
+          const w2 = x || w; A.go('space', { space: d.space });
+          shown = [{ kind: 'wish', id: w2.id, label: wishLabel(w2) }];
+          push(`의견을 올렸어요 — 「${esc(w2.title)}」 @ ${esc(shortAddr(SP[w2.space]))}. 오픈 이벤트가 열리면 자동 응모돼요. 지도에서 그 빈칸을 열어 뒀어요.`);
+        }, () => push('의견을 저장하지 못했어요. 잠시 뒤 다시 해 주세요.'));
+      });
+      return;
+    }
+    if (c === 'owner') { window.OWNER.start(null); A.go('owner'); return; }
+    if (c === 'login') { A.needAuth(() => A.toast('가입 완료!')); return; }
+  });
+  // 음성 입력 (지원하는 브라우저만): 화면 글자 입력이 어려운 분도 말로 물을 수 있게
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    const mic = $('#chatMic'); mic.hidden = false;
+    mic.onclick = () => {
+      const r = new SR(); r.lang = 'ko-KR'; r.interimResults = false;
+      mic.classList.add('on'); r.onresult = e => { const t = e.results[0][0].transcript; say(t); };
+      r.onend = () => mic.classList.remove('on'); r.onerror = () => { mic.classList.remove('on'); A.toast('음성을 알아듣지 못했어요'); };
+      r.start();
+    };
+  }
+  window.CHAT = { open, say };
+})();

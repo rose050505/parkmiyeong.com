@@ -13,6 +13,10 @@
       "destination": "/drafthon/index.html"
     },
     {
+      "source": "/drafthon/v3/",
+      "destination": "/drafthon/v3/index.html"
+    },
+    {
       "source": "/drafthon/binkan/",
       "destination": "/drafthon/binkan/index.html"
     },
@@ -77,6 +81,11 @@
     }
   },
   "redirects": [
+    {
+      "source": "/drafthon/v3",
+      "destination": "/drafthon/v3/",
+      "permanent": false
+    },
     {
       "source": "/drafthon/binkan",
       "destination": "/drafthon/binkan/",
