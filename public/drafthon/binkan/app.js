@@ -52,11 +52,11 @@
     document.body.classList.toggle('panel-open', view.mode !== 'home');
     const work = { owner: window.OWNER, student: window.STUDENT }[view.mode];
     document.body.classList.toggle('work-open', !!work);
-    if (work) { $('#work').innerHTML = work.render(); $('#work').scrollTop = 0; renderMe(); return; }
+    if (work) { $('#work').innerHTML = work.render(); $('#work').scrollTop = 0; renderMe(); renderRail(); return; }
     const f = { home, space, write, howto, search, mine }[view.mode] || home;
     P.innerHTML = f();
     P.scrollTop = 0;
-    renderMe(); mapAd();
+    renderMe(); renderRail();
   }
   function go(mode, extra) {
     const was = view.mode;
@@ -121,10 +121,18 @@
     return `<div class="ad ad-${a.kind}" data-ad="${esc(a.id)}">${main}<details class="adwhy"><summary aria-label="왜 이 안내가 보이나요">ⓘ</summary><p>${esc(why)} 보여요. 공공 지원사업과 동행 프로젝트만 띄우고 상업 광고는 받지 않아요.${a.kind === 'sup' ? ` (${esc(SUP.checked)} 확인 · 최종 자격은 공고 기관 판단)` : ''}</p></details></div>`;
   }
   const notices = ctx => adHTML(ctx, 'panel');
-  // 지도 구석 자리: 패널과 다른 것 하나
-  function mapAd() {
-    const el = $('#mapAd'); if (!el || el.dataset.closed) return;
-    el.innerHTML = adHTML(view.mode, 'map', lastAd.panel) + '<button class="adx" data-act="adclose" aria-label="이 안내 닫기">×</button>';
+  // 왼쪽 아래 칸: 빈칸을 골랐으면 「이 근처 빈칸」, 그 아래 지원 안내 하나(패널과 다른 것)
+  function renderRail() {
+    const el = $('#railBox'); if (!el) return;
+    let near = '';
+    const sp = view.space && SP[view.space];
+    if (sp && (view.mode === 'space' || view.mode === 'write')) {
+      const d = s2 => Math.hypot((s2.x - sp.x) * 88200, (s2.y - sp.y) * 111000);
+      const L = M.spaces.filter(x => x.id !== sp.id).map(x => ({ x, m: d(x) })).filter(o => o.m <= 200).sort((a, b) => a.m - b.m).slice(0, 3);
+      near = `<section class="near"><h3>이 근처 빈칸</h3>${L.length ? L.map(({ x, m }) => { const w = store.bySpace(x.id)[0]; return `<button class="nrow" data-act="space" data-id="${x.id}"><b>${esc(shortAddr(x))}</b><small>${Math.round(m / 10) * 10}m · ${w ? `「${esc(w.title)}」 ♥${store.likes(w)}` : '바람 아직 없음'}</small></button>`; }).join('') : '<p class="fine">200m 안에 다른 빈칸이 없어요.</p>'}</section>`;
+    }
+    const ctx = view.mode === 'owner' || view.mode === 'student' ? view.mode : view.mode === 'space' ? 'space' : 'home';
+    el.innerHTML = near + adHTML(ctx, 'rail', lastAd.panel);
   }
 
   function home() {
@@ -242,9 +250,7 @@
       ? `<button class="mebtn" data-act="mine"><span class="av">${esc((st.user.name || '나').slice(0, 1))}</span>${esc(st.user.name || '')} · 내 바람 ${st.wishes.length}</button>`
       : `<button class="mebtn ghost" data-act="login">로그인<span class="wide"> · 가입</span></button>`;
   }
-  $('#facts').innerHTML = `<div class="fact"><b>${M.meta.n_spaces}</b><span>동성로 1층 빈칸 후보</span></div>
-    <div class="fact"><b>${M.meta.n_gone.toLocaleString()}</b><span>지난 분기에 사라진 업소</span></div>
-    <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_prev)} → ${esc(M.meta.q_now)} 비교 · <span class="tag real">실제 데이터</span></p>`;
+
 
   // ---------------- 모달 · 알림 ----------------
   const modal = $('#modal'), mbox = $('#modalBox');
@@ -359,7 +365,6 @@
       case 'copy': { const t = $('#shareText').value; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('복사했어요'), () => { $('#shareText').select(); toast('선택해 두었어요 — 복사해 주세요'); }); return; }
       case 'nshare': if (lastShare && navigator.share) navigator.share(lastShare).catch(() => {}); return;
       case 'close': return closeModal();
-      case 'adclose': { const el = $('#mapAd'); el.dataset.closed = 1; el.hidden = true; return; }
       case 'atab': return authForm(b.dataset.v);
       case 'aquick': { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `본인인증 완료 · ${n}님, 반가워요`); }
       case 'averify': { b.classList.add('done'); b.textContent = '✓ 인증 완료'; b.disabled = true; const e = $('#aerr'); if (e) e.hidden = true; return; }
