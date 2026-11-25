@@ -5,18 +5,78 @@
   const $ = s => document.querySelector(s);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const SP = Object.fromEntries(M.spaces.map(s => [s.id, s]));
+  // 거리(m): 위도 35.87°에서 경도 · 위도 1도 길이. 빈칸 데이터를 만든 demo_v3/tools/build_data.py와 같은 식
+  const L0 = 35.87 * Math.PI / 180, KX = 111412.84 * Math.cos(L0) - 93.5 * Math.cos(3 * L0), KY = 111132.92 - 559.82 * Math.cos(2 * L0) + 1.175 * Math.cos(4 * L0);
+  const dist = (a, b) => Math.hypot((a.x - b.x) * KX, (a.y - b.y) * KY);
 
   // ---------------- 저장 ----------------
   const KEY = 'binkan.v1';
   const st = Object.assign({ user: null, wishes: [], liked: {}, entered: false }, JSON.parse(localStorage.getItem(KEY) || '{}'));
   const save = () => localStorage.setItem(KEY, JSON.stringify(st));
+  // 역할은 더하는 방식(청사진 §4-2): roles[]에 쌓고, role은 가장 최근에 더한 역할(지원 안내 · 바람 「쓴 사람」 표시용)
+  const rolesOf = u => !u ? [] : Array.isArray(u.roles) && u.roles.length ? u.roles : [u.role || 'citizen'];
+  if (st.user && !Array.isArray(st.user.roles)) st.user.roles = rolesOf(st.user);
+  const hasRole = r => rolesOf(st.user).includes(r);
+  function addRole(r) {
+    if (!st.user || hasRole(r)) return false;
+    st.user.roles = rolesOf(st.user).concat(r); st.user.role = r;
+    const a = st.accounts && st.accounts[st.user.id]; if (a) { a.roles = st.user.roles.slice(); a.role = r; }
+    save(); return true;
+  }
+  const MY = () => window.MYSTORE;
+  // 공감은 회원마다 1회: st.likedBy = { 회원 id: { 바람 id: true } }, st.liked = 지금 로그인한 회원의 것(같은 객체), 공감 수는 모든 회원 것을 더함
+  if (!st.likedBy || typeof st.likedBy !== 'object') { st.likedBy = {}; if (st.liked && Object.keys(st.liked).length) st.likedBy[st.user ? st.user.id : '_old'] = st.liked; }
+  const linkLikes = () => { st.liked = st.user ? (st.likedBy[st.user.id] || (st.likedBy[st.user.id] = {})) : {}; };
+  linkLikes();
+  // 사장님 상담 · 학생 지원 진행은 회원마다(로그인 전엔 '_guest'). st.owner · st.stu는 지금 회원 것을 가리키는 창(저장은 ownerBy · stuBy)
+  const ukey = () => st.user ? st.user.id : '_guest';
+  ['owner', 'stu'].forEach(k => {
+    const by = st[k + 'By'] && typeof st[k + 'By'] === 'object' ? st[k + 'By'] : (st[k + 'By'] = {});
+    if (st[k] && !Object.keys(by).length) by[ukey()] = st[k];   // 옛 상태: 하나뿐이던 진행을 지금 회원 것으로
+    delete st[k];
+    Object.defineProperty(st, k, { get: () => by[ukey()], set: v => { by[ukey()] = v; }, enumerable: false, configurable: true });
+  });
+  // 옛 상태 옮기기(처음 한 번): 주인 없는 공감 · 바람은 처음 로그인한 회원 것으로, 운영단 표가 없던 때 낸 지원서는 지원서 목록으로
+  function migrate() {
+    if (!st.user) return;
+    const old = st.likedBy._old; if (old) { Object.assign(st.liked, old); delete st.likedBy._old; }
+    st.wishes.forEach(w => { if (!w.uid) w.uid = st.user.id; });
+    const o = st.owner;
+    if (o && o.app && o.step >= 5 && !o.appId && o.tasks && o.tasks.list) {
+      const L = st.ownerApps || (st.ownerApps = []), ap = { id: 'oa' + Date.now().toString(36), uid: st.user.id, name: st.user.name, status: o.status, item: o.item, space: o.space, near: o.near,
+        place: o.space && SP[o.space] ? shortAddr(SP[o.space]) : (o.near || '') + ' 근처', trouble: o.trouble || '', problem: o.problem ? o.problem.one : '', tasks: o.tasks.list.filter(t => t.on).map(t => ({ t: t.t, major: t.major, out: t.out, wk: t.wk })),
+        when: o.app.when, use: o.app.use || [], msg: o.app.msg || '', track: !!o.app.track, handover: !!o.app.handover, at: o.submittedAt || Date.now(), result: o.result || null, score: null };
+      L.push(ap); o.appId = ap.id;
+    }
+    save();
+  }
+  // 바람 저장소: 팀 백엔드(backend.js, BK.on)가 살아 있으면 서버, 아니면 이 브라우저. 화면은 store.*만 부른다.
+  const SV = () => !!(window.BK && window.BK.on);
+  const myServer = () => (st.user && st.myOps && st.myOps[st.user.id]) || [];
   const store = {
-    wishes: () => SEED.wishes.map(w => Object.assign({ seed: true }, w)).concat(st.wishes),
-    likes: w => w.likes + (st.liked[w.id] ? 1 : 0),
+    wishes: () => SV() ? window.BK.wishes.map(w => myServer().includes(w.op) ? Object.assign({}, w, { uid: st.user.id, who: roleName(st.user.role) }) : Object.assign({}, w))
+      : SEED.wishes.map(w => Object.assign({ seed: true }, w)).concat(st.wishes),
+    likes: w => SV() ? w.likes : w.likes + Object.values(st.likedBy).filter(m => m && m[w.id]).length,
+    liked: w => SV() ? !!w.liked : !!st.liked[w.id],
     bySpace: id => store.wishes().filter(w => w.space === id).sort((a, b) => store.likes(b) - store.likes(a)),
-    add(w) { st.wishes.push(w); save(); },
-    toggleLike(id) { st.liked[id] = !st.liked[id]; if (!st.liked[id]) delete st.liked[id]; save(); },
+    // 둘 다 Promise. 서버 모드에서 실패하면 throw(401이면 로그인 만료)
+    async add(w) {
+      if (!SV()) { st.wishes.push(w); save(); return w; }
+      const x = await window.BK.add(w); if (!x) return null;
+      const m = st.myOps || (st.myOps = {}); (m[st.user.id] || (m[st.user.id] = [])).push(x.op); save();
+      return Object.assign({}, x, { uid: st.user.id });
+    },
+    async toggleLike(id) {
+      if (!SV()) { st.liked[id] = !st.liked[id]; if (!st.liked[id]) delete st.liked[id]; save(); return; }
+      const w = await window.BK.toggleLike(id);
+      if (w) { if (w.liked) st.liked[id] = true; else delete st.liked[id]; save(); }   // 내 가게 알림(공감한 사람) 계산용 거울
+    },
   };
+  // 서버 요청이 로그인 만료(401)로 막히면 다시 로그인하게
+  function serverFail(e, retry) {
+    if (e && e.status === 401) { st.user = null; linkLikes(); save(); render(); toast('로그인이 만료됐어요. 다시 로그인해 주세요'); return needAuth(retry); }
+    toast('서버에 저장하지 못했어요 · 잠시 뒤 다시 해 주세요'); console.warn(e);
+  }
 
   // ---------------- 화면 상태 ----------------
   let view = { mode: 'home', space: null, q: '' };
@@ -35,13 +95,14 @@
       const ws = store.bySpace(s.id), sel = view.space === s.id;
       if (!ws.length) return { id: s.id, x: s.x, y: s.y, cls: 'empty' + (sel ? ' sel' : ''), html: '<i class="sq"></i>', label: '빈칸 ' + shortAddr(s), z: sel ? 9000 : 1 };
       const w = ws[0], n = store.likes(w);
+      const na = MY() ? new Set(ws.flatMap(x => MY().answersFor(x.id)).map(a => a.sid)).size : 0;   // 이 빈칸 바람에 답한 근처 가게 수
       return {
         id: s.id, x: s.x, y: s.y, z: sel ? 9999 : (hot.has(s.id) ? 2000 : 1000) + n,
-        cls: 'wish' + (hot.has(s.id) ? ' hot' : '') + (sel ? ' sel' : ''),
-        html: `<span class="t">${esc(w.title)}</span><span class="n">♥ ${n}</span>${ws.length > 1 ? `<span class="more">+${ws.length - 1}</span>` : ''}`,
-        label: `빈칸 ${shortAddr(s)} · 바람 ${ws.length}개 · 1위 ${w.title}`,
+        cls: 'wish' + (hot.has(s.id) ? ' hot' : '') + (sel ? ' sel' : '') + (na ? ' answered' : ''),
+        html: `<span class="t">${esc(w.title)}</span><span class="n">♥ ${n}</span>${ws.length > 1 ? `<span class="more">+${ws.length - 1}</span>` : ''}${na ? `<i class="adot" title="근처 가게 ${na}곳이 답했어요"></i>` : ''}`,
+        label: `빈칸 ${shortAddr(s)} · 바람 ${ws.length}개 · 1위 ${w.title}${na ? ` · 근처 가게 ${na}곳이 답함` : ''}`,
       };
-    });
+    }).concat(MY() ? MY().storePins() : []);   // 근처 바람에 답하고 지금 하는 가게(끝나지 않은 답) — 시민이 찾아갈 수 있게
   }
   const redraw = () => map && map.draw(pins());
 
@@ -50,9 +111,9 @@
   function render() {
     P.dataset.mode = view.mode;
     document.body.classList.toggle('panel-open', view.mode !== 'home');
-    const work = { owner: window.OWNER, student: window.STUDENT }[view.mode];
+    const work = { owner: window.OWNER, student: window.STUDENT, mystore: window.MYSTORE, ops: window.OPS }[view.mode];
     document.body.classList.toggle('work-open', !!work);
-    if (work) { $('#work').innerHTML = work.render(); $('#work').scrollTop = 0; renderMe(); renderRail(); return; }
+    if (work) { $('#work').innerHTML = work.render(); $('#work').scrollTop = 0; work.mount && work.mount(); renderMe(); renderRail(); return; }
     const f = { home, space, write, howto, search, mine }[view.mode] || home;
     P.innerHTML = f();
     P.scrollTop = 0;
@@ -64,12 +125,13 @@
     if (mode === 'space' && view.space) { history.replaceState(null, '', '#s=' + view.space); map && map.focus(SP[view.space]); }
     else if (mode === 'home') { history.replaceState(null, '', location.pathname); }
     render(); redraw();
-    if ((was === 'owner' || was === 'student') && mode !== 'owner' && mode !== 'student' && map) setTimeout(() => { map.relayout(); if (view.space) map.focus(SP[view.space]); }, 0);
+    if (WORKS.includes(was) && !WORKS.includes(mode) && map) setTimeout(() => { map.relayout(); if (view.space) map.focus(SP[view.space]); }, 0);
   }
+  const WORKS = ['owner', 'student', 'mystore', 'ops'];   // #work 영역을 쓰는 화면(지도 · 패널이 숨음)
   const back = (to = 'home', label = '지도 처음으로') => `<button class="back" data-act="${to}">← ${label}</button>`;
 
   function wishCard(w, withPlace) {
-    const s = SP[w.space], on = !!st.liked[w.id];
+    const s = SP[w.space], on = store.liked(w);
     return `<article class="wcard" id="w-${esc(w.id)}">
       <div class="wh"><span class="cat">${esc(w.cat)}</span>${w.seed ? '' : '<span class="tag mine">내 바람</span>'}</div>
       <h4>${esc(w.title)}</h4>
@@ -78,7 +140,20 @@
       <div class="wf"><span class="who">${esc(w.who)} · ${ago(w.ago || 0)}</span>
         <button class="like${on ? ' on' : ''}" data-act="like" data-id="${esc(w.id)}" aria-pressed="${on}">♥ 공감 ${store.likes(w)}</button>
         <button class="share" data-act="share" data-id="${esc(w.id)}">공유</button></div>
+      ${answersHTML(w)}
     </article>`;
+  }
+  // 바람 카드 아래 「근처 가게가 답했어요」(누구나 봄) + 가 봤어요 · 신고 (회원)
+  function answersHTML(w) {
+    const L = MY() ? MY().answersFor(w.id) : [];
+    if (!L.length) return '';
+    const uid = st.user && st.user.id;
+    return `<div class="wans"><p class="wansh">근처 가게 ${L.length}곳이 답했어요 <small>바람은 그대로 열려 있어요</small></p>${L.map(a => {
+      const end = a.state === '끝남', went = MY().wentBy(a.id, uid), rep = MY().reportedBy(a.id, uid), own = uid && a.uid === uid;
+      return `<div class="wa${end ? ' end' : ''}" id="a-${esc(a.id)}"><p class="wah"><b>${esc(a.store)}</b> <small>${esc(a.item)} · 약 ${MY().roundDist(a.dist)}m</small><span class="tag st">${end ? '끝났어요' : esc(a.state)}</span></p>
+        ${a.menu ? `<p class="wam">${esc(a.menu)}</p>` : ''}<p class="war">${esc(a.reply)}</p>
+        <div class="waf">${end ? '' : `<button data-act="storemap" data-id="${esc(a.id)}">지도에서 가게 보기</button>`}${own ? '<small class="fine">내 가게가 올린 답</small>' : `<button class="went${went ? ' on' : ''}" data-act="went" data-id="${esc(a.id)}"${went ? ' aria-pressed="true"' : ''}>가 봤어요 ${a.went || 0}</button><button class="rep" data-act="report" data-id="${esc(a.id)}"${rep ? ' disabled' : ''}>${rep ? '신고함' : '신고'}</button>`}</div></div>`;
+    }).join('')}</div>`;
   }
 
   // ---------------- 지원 안내 (구글 애즈처럼 자리마다 하나씩) ----------------
@@ -90,13 +165,15 @@
   const shown = {}, lastAd = {};
   // 점수: 지금 화면(ctx) · 역할 · 지역 · 마감 · 이번 방문에 몇 번 봤나. 이유도 같이 돌려준다.
   function pickAd(ctx, slot, exclude) {
-    const role = (st.user && st.user.role) || 'citizen';
+    const roles = st.user ? rolesOf(st.user) : ['citizen'];
     const sp = view.space && SP[view.space], hasWish = sp && store.bySpace(sp.id).length;
     let best = null;
     for (const a of ADS) {
       if (a.id === exclude || (a.act && a.act === ctx)) continue;   // 지금 들어와 있는 곳의 모집은 다시 안 띄움
       let sc = 0; const why = [];
-      if (a.who.includes(role) && st.user) { sc += 3; why.push(roleName(role) + ' 회원이라서'); }
+      const hitRole = st.user && roles.find(r => a.who.includes(r));
+      if (hitRole) { sc += 3; why.push(roleName(hitRole) + ' 회원이라서'); }
+      if (ctx === 'mystore' && a.who.includes('open')) { sc += 4; why.push('가게를 하는 사장님 화면이라서'); }   // [가정] 가중치
       if (ctx === 'student' && a.id === 'prog-student') { sc += 6; why.push('대학생 입구를 보고 있어서'); }
       if (ctx === 'owner' && a.kind === 'sup' && a.who.includes('pre')) { sc += 4; why.push('사장님 입구를 보고 있어서'); }
       if (ctx === 'owner' && a.id === 'prog-owner') { sc += 3; }
@@ -127,11 +204,11 @@
     let near = '';
     const sp = view.space && SP[view.space];
     if (sp && (view.mode === 'space' || view.mode === 'write')) {
-      const d = s2 => Math.hypot((s2.x - sp.x) * 88200, (s2.y - sp.y) * 111000);
+      const d = s2 => dist(s2, sp);
       const L = M.spaces.filter(x => x.id !== sp.id).map(x => ({ x, m: d(x) })).filter(o => o.m <= 200).sort((a, b) => a.m - b.m).slice(0, 3);
       near = `<section class="near"><h3>이 근처 빈칸</h3>${L.length ? L.map(({ x, m }) => { const w = store.bySpace(x.id)[0]; return `<button class="nrow" data-act="space" data-id="${x.id}"><b>${esc(shortAddr(x))}</b><small>${Math.round(m / 10) * 10}m · ${w ? `「${esc(w.title)}」 ♥${store.likes(w)}` : '바람 아직 없음'}</small></button>`; }).join('') : '<p class="fine">200m 안에 다른 빈칸이 없어요.</p>'}</section>`;
     }
-    const ctx = view.mode === 'owner' || view.mode === 'student' ? view.mode : view.mode === 'space' ? 'space' : 'home';
+    const ctx = WORKS.includes(view.mode) ? view.mode : view.mode === 'space' ? 'space' : 'home';
     el.innerHTML = near + adHTML(ctx, 'rail', lastAd.panel);
   }
 
@@ -165,17 +242,18 @@
 
   // 창업 카드: 지금은 계산으로 만든 요약. 실시간 AI가 붙으면 업종 · 상권 해석 문장이 여기에 들어간다.
   function startCard(s, ws) {
-    const R = 100, kx = 88200, ky = 111000;  // 위도 35.87 부근 1도 ≈ 88.2km(경도) · 111km(위도)
-    const near = M.bg.filter(([x, y]) => Math.hypot((x - s.x) * kx, (y - s.y) * ky) <= R);
+    const R = 100;
+    const near = M.bg.filter(([x, y]) => dist({ x, y }, s) <= R);
     const byL = {}; near.forEach(([, , l]) => byL[l] = (byL[l] || 0) + 1);
     const top = Object.entries(byL).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    const w1 = ws[0];
+    const w1 = ws[0], nA = MY() ? new Set(ws.flatMap(w => MY().answersFor(w.id)).map(a => a.sid)).size : 0;
     return `<section class="scard">
       <h3>창업 카드 <span class="tag calc">계산 요약</span></h3>
       <dl>
         <dt>${R}m 안 업소</dt><dd><b>${near.length}곳</b> — ${top.map(([l, n]) => `${esc(l)} ${n}`).join(' · ')}</dd>
         <dt>시민 바람 1위</dt><dd>${w1 ? `<b>${esc(w1.title)}</b> (공감 ${store.likes(w1)})` : '아직 없음'}</dd>
         <dt>직전 업종</dt><dd>${esc(s.was)} <small>(같은 업종이 다시 들어와도 되는지는 상담에서)</small></dd>
+        ${nA ? `<dt>근처 가게 답</dt><dd><b>${nA}곳</b>이 이 빈칸 바람에 답함 <small>(바람은 닫히지 않아요 · 상권 정보로 참고)</small></dd>` : ''}
       </dl>
       <p class="fine">소진공 상가(상권)정보 ${esc(M.meta.q_now)} 기준 계산. 더 자세한 해석은 오른쪽 아래 빈칸 도우미에게 물어보세요.</p>
       <button class="cta2" data-act="owner" data-id="${esc(s.id)}">이 자리로 창업 상담 →</button>
@@ -234,27 +312,41 @@
       <section><h3>빈칸 <small>직전 업종 · 주소 · ${ss.length}</small></h3>${ss.slice(0, 12).map(s => `<button class="srow" data-act="space" data-id="${esc(s.id)}"><b>${esc(shortAddr(s))}</b><small>직전 ${esc(s.was)}</small></button>`).join('') || '<p class="emptyw">없음</p>'}</section>`;
   }
   function mine() {
-    const ws = st.wishes.slice().reverse(), liked = store.wishes().filter(w => st.liked[w.id]);
-    return `${back()}
-      <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · 본인인증 완료 · ${esc(roleName(st.user.role))}</p></section>
-      <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림과 첫 방문 쿠폰을 보내 드려요.</p></section>
+    const ws = myWishes().slice().reverse(), liked = store.wishes().filter(w => store.liked(w));
+    const al = MY() ? MY().alertsFor(st.user) : [];
+    const html = `${back()}
+      <section class="sphead"><p class="kick">내 페이지</p><h2>${esc(st.user.name)}</h2><p class="was">@${esc(st.user.id || '')} · 본인인증 완료 · ${esc(rolesOf(st.user).map(roleName).join(' · '))}</p></section>
+      <section class="alert"><b>알림</b><p>내 바람과 같은 업종의 가게가 빈칸에 열리면 「내 바람이 가게로」 알림과 첫 방문 쿠폰을 보내 드려요. 내가 쓰거나 공감한 바람에 <b>근처 가게가 답하면</b> 여기에 알려 드려요.</p>
+        ${al.length ? `<ul class="alist">${al.map(x => `<li class="${x.unread ? 'new' : ''}${x.kind === 'end' ? ' end' : ''}">
+          <p>${x.unread ? '<span class="tag mine">새 알림</span> ' : ''}${x.why === 'wrote' ? '내가 쓴' : '내가 공감한'} 바람 「${esc(x.w.title)}」${x.kind === 'end' ? `에 답한 <b>${esc(x.a.store)}</b>이 「끝났어요」로 바꿨어요` : `에 근처 가게가 답했어요 — <b>${esc(x.a.store)}</b> <small>${esc(x.a.item)} · 약 ${MY().roundDist(x.a.dist)}m</small>`}${x.self ? ' <small class="fine">(내 가게 답)</small>' : ''}</p>
+          ${x.kind === 'end' ? '' : `<p class="am">${esc(x.a.menu)} — ${esc(x.a.reply)}</p>${x.a.state === '끝남' ? '<p class="fine">지금은 끝난 메뉴예요.</p>' : `<button class="cta2 sm" data-act="showcard" data-id="${esc(x.a.id)}">가게에서 이 화면 보여 주기</button> <button class="link" data-act="storemap" data-id="${esc(x.a.id)}">지도에서 가게 보기</button>`}`}</li>`).join('')}</ul>` : ''}</section>
       <section><h3>내 바람 <small>${ws.length}</small></h3>${ws.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <section><h3>공감한 바람 <small>${liked.length}</small></h3>${liked.map(w => wishCard(w, true)).join('') || '<p class="emptyw">아직 없어요.</p>'}</section>
       <button class="link" data-act="logout">로그아웃</button>`;
+    if (MY()) MY().markSeen(st.user);   // 연 알림은 읽음으로(머리띠 숫자가 줄어듦)
+    return html;
   }
-  const roleName = r => ({ citizen: '시민', pre: '예비 사장님', open: '기존 사장님', student: '대학생' }[r] || '시민');
+  // 내 바람: 쓴 사람(uid)이 있는 바람은 그 사람 것만, 예전 바람(uid 없음)은 이 브라우저 것으로
+  const myWishes = () => SV() ? store.wishes().filter(w => st.user && w.uid === st.user.id) : st.wishes.filter(w => !w.uid || (st.user && w.uid === st.user.id));
+  const roleName = r => ({ citizen: '시민', pre: '예비 사장님', open: '기존 사장님', student: '대학생', ops: '운영단' }[r] || '시민');
 
   // ---------------- 머리띠 · 왼쪽 ----------------
   function renderMe() {
+    const un = st.user && MY() ? MY().alertsFor(st.user).filter(x => x.unread).length : 0;
     $('#me').innerHTML = st.user
-      ? `<button class="mebtn" data-act="mine"><span class="av">${esc((st.user.name || '나').slice(0, 1))}</span>${esc(st.user.name || '')} · 내 바람 ${st.wishes.length}</button>`
+      ? `<button class="topbtn${view.mode === 'mystore' ? ' on' : ''}" data-act="mystore">내 가게</button>${hasRole('ops') ? `<button class="topbtn${view.mode === 'ops' ? ' on' : ''}" data-act="ops">운영단 표</button>` : ''}<button class="mebtn" data-act="mine"><span class="av">${esc((st.user.name || '나').slice(0, 1))}</span>${esc(st.user.name || '')} · 내 바람 ${myWishes().length}${un ? `<span class="badge" title="새 알림">${un}</span>` : ''}</button>`
       : `<button class="mebtn ghost" data-act="login">로그인<span class="wide"> · 가입</span></button>`;
   }
 
 
   // ---------------- 모달 · 알림 ----------------
   const modal = $('#modal'), mbox = $('#modalBox');
-  function openModal(html) { mbox.innerHTML = html + '<button class="x" data-act="close" aria-label="닫기">×</button>'; modal.hidden = false; mbox.querySelector('button:not(.x), input')?.focus(); }
+  function openModal(html, cls) { mbox.className = 'box' + (cls ? ' ' + cls : ''); mbox.innerHTML = html + '<button class="x" data-act="close" aria-label="닫기">×</button>'; modal.hidden = false; mbox.querySelector('button:not(.x), input')?.focus(); }
+  function reportForm(id) {
+    openModal(`<h3>이 답을 신고할까요?</h3><p class="fine">운영단이 보고 숨길지 정해요. 신고한 사람은 사장님에게 보이지 않아요.</p>
+      <div class="rlist">${['비방 · 깎아내림', '광고 · 연락처', '거짓 · 약속과 다름', '기타'].map((t, i) => `<label><input type="radio" name="rwhy" value="${t}"${i === 0 ? ' checked' : ''}> ${t}</label>`).join('')}</div>
+      <button class="cta" data-act="reportgo" data-id="${esc(id)}">신고하기</button>`);
+  }
   const closeModal = () => { modal.hidden = true; };
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
@@ -276,7 +368,7 @@
     after = fn; authForm('login');
   }
   function authForm(tab, msg) {
-    const roles = ['citizen', 'pre', 'open', 'student'];
+    const roles = ['citizen', 'pre', 'open', 'student', 'ops'];
     openModal(`<div class="auth">
       <div class="atabs" role="tablist"><button class="${tab === 'login' ? 'on' : ''}" data-act="atab" data-v="login" role="tab">로그인</button><button class="${tab === 'signup' ? 'on' : ''}" data-act="atab" data-v="signup" role="tab">회원가입</button></div>
       ${msg ? `<p class="amsg">${esc(msg)}</p>` : `<p class="amsg">바람 · 공감 · 지원은 회원만 할 수 있어요. 보기는 누구나 할 수 있어요.</p>`}
@@ -303,26 +395,60 @@
   }
   const aerr = m => { const e = $('#aerr'); e.textContent = m; e.hidden = false; };
   function signedIn(acc, hello) {
-    st.user = { id: acc.id, name: acc.name, role: acc.role, verified: true }; save();
+    const gO = st.ownerBy._guest, gS = st.stuBy._guest;   // 로그인 전에 하던 상담 · 지원은 로그인한 회원 것으로 이어 감
+    st.user = { id: acc.id, name: acc.name, role: acc.role || 'citizen', roles: rolesOf(acc), verified: true, token: acc.token || null }; linkLikes();
+
+    const fresh = x => !x || (!x.status && !x.sel && (x.step || 1) === 1);
+    if (gO && !fresh(gO) && fresh(st.owner)) { st.owner = gO; delete st.ownerBy._guest; }
+    if (gS && !fresh(gS) && fresh(st.stu)) { st.stu = gS; delete st.stuBy._guest; }
+    migrate(); save();
     closeModal(); toast(hello);
-    const f = after; after = null; if (f) f(); else render();
+    const f = after; after = null;
+    const cont = () => { if (f) f(); else render(); };
+    // 서버 모드: 내가 공감한 것(likedByMe)을 먼저 다시 받고 나서 하려던 일(공감 등)을 이어서 — 순서가 바뀌면 옛 숫자로 덮임
+    if (SV() && acc.token) window.BK.reload().then(cont, cont); else cont();
   }
   mbox.addEventListener('submit', async e => {
     e.preventDefault();
     const f = new FormData(e.target), acc = st.accounts || (st.accounts = {});
     const fid = e.target.getAttribute('id');
+    if (fid === 'loginForm' && SV()) {
+      const id = (f.get('uid') || '').trim().toLowerCase(), pw = f.get('pw') || '';
+      if (!id || !pw) return aerr('아이디와 비밀번호를 넣어 주세요');
+      try { const a = await window.BK.login(id, pw); return signedIn(Object.assign(a, { role: 'citizen' }), `${a.name}님, 반가워요`); }
+      catch (e1) {
+        if (e1.status !== 401) return aerr('서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요');
+        if (!ID_RE.test(id)) return aerr('아이디 또는 비밀번호가 맞지 않아요');
+        try { const a = await window.BK.signup(id, pw, id); return signedIn(Object.assign(a, { role: 'citizen' }), `가입을 환영해요, ${a.name}님`); }   // 처음 쓰는 아이디면 바로 가입
+        catch (e2) { return aerr(e2.status === 409 ? '비밀번호가 맞지 않아요' : '서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'); }
+      }
+    }
+    if (fid === 'signupForm' && SV()) {
+      const name = (f.get('nick') || '').trim(), id = (f.get('uid') || '').trim().toLowerCase(), pw = f.get('pw') || '', pw2 = f.get('pw2') || '';
+      if (!name) return aerr('이름을 넣어 주세요');
+      if (pw && pw2 && pw !== pw2) return aerr('비밀번호 확인이 맞지 않아요');
+      const r0 = f.get('role') || 'citizen', extra = { role: r0, roles: r0 === 'citizen' ? ['citizen'] : ['citizen', r0] };
+      let a = null;
+      try { a = await window.BK.signup(ID_RE.test(id) ? id : null, pw, name); }
+      catch (e1) { if (e1.status !== 409) return aerr('서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'); try { a = await window.BK.signup(null, pw, name); } catch (e2) { return aerr('가입하지 못했어요. 잠시 뒤 다시 해 주세요'); } }
+      return signedIn(Object.assign(a, extra), `가입을 환영해요, ${name}님`);
+    }
     if (fid === 'loginForm') {
       const id = (f.get('uid') || '').trim().toLowerCase(), pw = f.get('pw') || '';
       if (!id || !pw) return aerr('아이디와 비밀번호를 넣어 주세요');
-      const a = acc[id] || (acc[id] = { name: id, role: 'citizen', pw: await hash(pw), at: Date.now() });
+      const a = acc[id];
+      if (!a) return aerr('없는 아이디예요. 회원가입하거나 휴대폰 본인인증으로 바로 시작해 주세요');
+      if (a.pw && a.pw !== await hash(pw)) return aerr('비밀번호가 맞지 않아요');
       return signedIn(Object.assign({ id }, a), `${a.name}님, 반가워요`);
     }
     if (fid === 'signupForm') {
       const name = (f.get('nick') || '').trim(), id = (f.get('uid') || '').trim().toLowerCase(), pw = f.get('pw') || '', pw2 = f.get('pw2') || '';
       if (!name) return aerr('이름을 넣어 주세요');
       if (pw && pw2 && pw !== pw2) return aerr('비밀번호 확인이 맞지 않아요');
-      const uid = ID_RE.test(id) && !acc[id] ? id : 'u' + Date.now().toString(36);
-      const a = { name, role: f.get('role') || 'citizen', pw: pw ? await hash(pw) : '', at: Date.now() };
+      if (id && !ID_RE.test(id)) return aerr('아이디는 영문 소문자 · 숫자 · _ 4~20자로 넣어 주세요');
+      if (id && acc[id]) return aerr('이미 있는 아이디예요. 다른 아이디를 넣거나 로그인해 주세요');
+      const uid = id || 'u' + Date.now().toString(36);
+      const r0 = f.get('role') || 'citizen', a = { name, role: r0, roles: r0 === 'citizen' ? ['citizen'] : ['citizen', r0], pw: pw ? await hash(pw) : '', at: Date.now() };
       acc[uid] = a; save();
       return signedIn(Object.assign({ id: uid }, a), `가입을 환영해요, ${name}님`);
       // (본 서비스: 아이디 형식 · 중복 · 비밀번호 길이 · 본인인증 · 약관 필수 검사)
@@ -358,15 +484,24 @@
       case 'owner': window.OWNER.start(id || null); return go('owner');
       case 'student': window.STUDENT.start(id || null); return go('student');
       case 'howto': case 'mine': return go(a);
+      case 'mystore': return needAuth(() => { MY().start(); go('mystore'); });
+      case 'ops': return needAuth(() => go('ops'));
+      case 'went': return needAuth(() => { const r = MY().went(id); toast(r); render(); redraw(); });
+      case 'report': return needAuth(() => reportForm(id));
+      case 'reportgo': { const why = (mbox.querySelector('input[name="rwhy"]:checked') || {}).value; if (!why) return; closeModal(); toast(MY().report(b.dataset.id, why)); return render(); }
+      case 'showcard': { const h = MY().showCard(b.dataset.id || id); if (h) openModal(h, 'showbig'); return; }
+      case 'printguide': return window.print();
+      case 'visitok': { const r = MY().confirmVisit(id); toast(r); const h = MY().showCard(id); if (h) openModal(h, 'showbig'); return; }
+      case 'storemap': { const p = MY().storePoint(id); if (!p) return; closeModal(); if (WORKS.includes(view.mode) || view.mode === 'mine') go('home'); setTimeout(() => map && map.focus(p), 60); return; }
       case 'login': return needAuth(() => render());
-      case 'logout': st.user = null; save(); toast('로그아웃했어요'); return go('home');
-      case 'like': return needAuth(() => { store.toggleLike(id); const on = st.liked[id]; render(); redraw(); toast(on ? '공감했어요' : '공감을 취소했어요'); });
+      case 'logout': st.user = null; linkLikes(); window.OWNER && window.OWNER.ensure(); window.STUDENT && window.STUDENT.ensure(); save(); toast('로그아웃했어요'); return go('home');
+      case 'like': { const go1 = () => store.toggleLike(id).then(() => { const w = store.wishes().find(x => x.id === id); render(); redraw(); toast(w && store.liked(w) ? '공감했어요' : '공감을 취소했어요'); }, e => serverFail(e, go1)); return needAuth(go1); }
       case 'share': return share(store.wishes().find(w => w.id === id));
       case 'copy': { const t = $('#shareText').value; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('복사했어요'), () => { $('#shareText').select(); toast('선택해 두었어요 — 복사해 주세요'); }); return; }
       case 'nshare': if (lastShare && navigator.share) navigator.share(lastShare).catch(() => {}); return;
       case 'close': return closeModal();
       case 'atab': return authForm(b.dataset.v);
-      case 'aquick': { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `본인인증 완료 · ${n}님, 반가워요`); }
+      case 'aquick': if (SV()) { const n = '회원' + String(Date.now()).slice(-4); b.disabled = true; b.textContent = '본인인증 중…'; window.BK.signup(null, null, n).then(a => signedIn(Object.assign(a, { role: 'citizen' }), `본인인증 완료 · ${n}님, 반가워요`), () => { b.disabled = false; b.textContent = '휴대폰 본인인증으로 바로 시작'; toast('서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'); }); return; } { const acc = st.accounts || (st.accounts = {}); const uid = 'p' + Date.now().toString(36), n = '회원' + String(Date.now()).slice(-4); acc[uid] = { name: n, role: 'citizen', pw: '', at: Date.now() }; save(); return signedIn(Object.assign({ id: uid }, acc[uid]), `본인인증 완료 · ${n}님, 반가워요`); }
       case 'averify': { b.classList.add('done'); b.textContent = '✓ 인증 완료'; b.disabled = true; const e = $('#aerr'); if (e) e.hidden = true; return; }
       case 'join': return needAuth(() => { st.entered = true; save(); toast('이벤트 참여! 빈칸을 골라 바람을 남기면 자동 응모돼요'); document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); render(); });
     }
@@ -383,22 +518,29 @@
     if (title.length < 2) return err('가게를 두 글자 이상 적어 주세요');
     if (BAD.test(title + why)) return err('비방 · 광고 · 연락처로 보이는 말이 있어요. 고쳐서 다시 올려 주세요');
     if (store.bySpace(view.space).some(w => w.title.replace(/\s/g, '') === title.replace(/\s/g, ''))) return err('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감을 눌러 주세요');
-    const w = { id: 'u' + Date.now(), space: view.space, cat: f.get('cat'), title, why: why || '—', who: roleName(st.user.role), likes: 0, ago: 0 };
-    store.add(w);
-    go('space', { space: view.space });
-    toast('바람이 올라갔어요 · 오픈 이벤트 자동 응모');
-    setTimeout(() => share(w), 300);
+    const w = { id: 'u' + Date.now(), space: view.space, cat: f.get('cat'), title, why: why || '—', who: roleName(st.user.role), likes: 0, ago: 0, uid: st.user.id };
+    const btn = e.target.querySelector('button[type=submit], .cta'); if (btn) { btn.disabled = true; btn.textContent = '올리는 중…'; }
+    const sp0 = view.space;
+    store.add(w).then(x => {
+      go('space', { space: sp0 });
+      toast('바람이 올라갔어요 · 오픈 이벤트 자동 응모');
+      setTimeout(() => share(x || w), 300);
+    }, e2 => { if (btn) { btn.disabled = false; btn.textContent = '바람 올리기'; } serverFail(e2, () => {}); });
   });
 
   // 검색
   $('#search').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q) go('search', { q }); });
 
   // ---------------- owner.js 등에 내보내기 ----------------
-  window.APP = { st, save, store, SP, M, SUP, SEED, esc, shortAddr, roleName, go, needAuth, toast, adHTML, rerender: () => render(), refresh: () => { render(); redraw(); }, view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
+  window.APP = { st, save, store, dist, KX, KY, SP, M, SUP, SEED, esc, shortAddr, roleName, rolesOf, hasRole, addRole, myWishes, openModal, closeModal, go, needAuth, toast, adHTML, wishCard, rerender: () => render(), refresh: () => { render(); redraw(); }, view: () => view, focus: id => map && map.focus(SP[id]), pulse: () => { document.body.classList.add('pulse'); setTimeout(() => document.body.classList.remove('pulse'), 2400); } };
+
+  // 팀 백엔드가 준비되면(늦게 깨어나도) 서버 바람으로 다시 그림
+  if (window.BK) window.BK.onChange(() => { render(); redraw(); });
 
   // ---------------- 시작 ----------------
+  migrate();
   (async () => {
-    map = await MapView.create($('#map'), M, { onPick: id => go('space', { space: id }) });
+    map = await MapView.create($('#map'), M, { onPick: id => /^st:/.test(id) ? MY().pickStore(id.slice(3)) : go('space', { space: id }) });
     if (map.why) { const m = $('#mapmsg'); m.textContent = map.why; m.hidden = false; }
     document.body.dataset.map = map.kind;
     const fromHash = () => { const h = location.hash.match(/^#s=(V\d+)/); if (h && SP[h[1]]) { go('space', { space: h[1] }); return true; } };

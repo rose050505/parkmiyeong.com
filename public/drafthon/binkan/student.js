@@ -7,10 +7,10 @@
   const groupOf = majors => { const major = majors.split('·')[0]; return /식품|조리/.test(major) ? '식품 · 메뉴' : /디자인|건축|공간/.test(major) ? '디자인 · 공간' : /미디어|광고|홍보|마케팅/.test(major) ? '마케팅 · 콘텐츠' : /통계|데이터|컴퓨터|산업공학/.test(major) ? '데이터 · IT' : '경영 · 기획'; };
   const TIMES = ['평일 낮', '평일 저녁', '주말'];
   const blank = () => ({ step: 1, filter: null, sel: null, role: null, prof: { school: '', major: '', groups: [], time: [], link: '' }, ans: ['', ''], status: null });
-  if (!st.stu) st.stu = blank();
-  st.stu.recoBusy = null;
-  const S = () => st.stu;
-  const set = patch => { Object.assign(st.stu, patch); save(); A.rerender(); };
+  // st.stu = 지금 회원의 지원 진행(app.js가 회원마다 나눠 둠). 없으면 새로
+  const S = () => st.stu || (st.stu = blank());
+  S().recoBusy = null;
+  const set = patch => { Object.assign(S(), patch); save(); if (A.view().mode === 'student') A.rerender(); };
 
   // ---------------- 공고 ----------------
   const R = (t, major, out, wk = 4) => ({ t, major, out, wk });
@@ -20,15 +20,22 @@
     { id: 'p2', ex: true, kind: 'pre', space: 'V005', item: '밤늦게 여는 스터디카페', owner: '예비 사장님 · 첫 창업', ask: '주 1회 현장 방문', wish: '시민 바람 ♥33',
       roles: [R('상권 · 이용자 조사', '경영 · 통계', '시험 기간 이용 수요 보고서', 3), R('좌석 · 동선 배치안', '실내건축', '배치 도면 2안'), R('예약 · 좌석 관리 화면', '컴퓨터', '예약 화면 시안 · 운영 규칙'), R('오픈 홍보', '미디어 · 광고홍보', '대학가 홍보 콘텐츠', 3)] },
     { id: 'p3', ex: true, kind: 'open', near: '교동시장', item: '덮밥집 (운영 3년)', owner: '기존 사장님 · 고민: 고객 관리', ask: '점심 장사 뒤 오후 3시 회의', wish: '근처 바람 「혼밥 덮밥집」 ♥24',
-      roles: [R('단골 관리 방식 설계', '경영', '적립 · 알림 방식 · 단골 기록표'), R('리뷰 · 방문 데이터 분석', '통계 · 데이터', '재방문 분석 보고서'), R('매출 · 손님 기록 정리', '회계 · 컴퓨터', '사장님이 계속 쓸 장부', 3), R('가게 소개 · 메뉴판 다시 만들기', '시각디자인', '메뉴판 · 소개 카드', 3)] },
+      roles: [R('단골 관리 방식 설계', '경영', '적립 · 알림 방식 · 단골 기록표'), R('근처 바람으로 메뉴 실험', '식품영양 · 경영 · 미디어', '근처 시민 바람에 답 1~2개 · 답한 메뉴 기록 양식'), R('리뷰 · 방문 데이터 분석', '통계 · 데이터', '재방문 분석 보고서', 3), R('가게 소개 · 메뉴판 다시 만들기', '시각디자인', '메뉴판 · 소개 카드', 3)] },
     { id: 'p4', ex: true, kind: 'pre', space: 'V113', item: '지역 작가 소품샵', owner: '예비 사장님 · 공예 작가', ask: '주말 작업 가능하면 좋음', wish: '시민 바람 ♥14',
       roles: [R('브랜드 · 매장 디스플레이', '시각디자인 · 실내건축', '브랜드 가이드 · 진열 배치안'), R('입점 작가 모집 · 정산 방식', '경영', '입점 계약 초안 · 정산표'), R('온라인 판매 페이지', '컴퓨터 · 마케팅', '판매 페이지 · 상품 사진'), R('오픈 행사 기획', '미디어 · 광고홍보', '오픈 행사안 · 콘텐츠', 3)] },
   ];
+  // 공고 = 예시 4건 + 운영단이 선정한 지원서(운영단 표 · st.ownerApps)
   function posts() {
     const o = st.owner, L = EXAMPLES.slice();
-    if (o && o.result === 'yes' && o.tasks) L.unshift({ id: 'mine', ex: false, kind: o.status, space: o.space, near: o.near, item: o.item, owner: (o.status === 'pre' ? '예비' : '기존') + ' 사장님 · 이 브라우저에서 선정된 공고', ask: '면담 때 정함', wish: '', roles: o.tasks.list.filter(t => t.on).map(t => R(t.t, t.major, t.out, t.wk)) });
+    (st.ownerApps || []).filter(a => a.result === 'yes' && a.tasks && a.tasks.length).forEach(a => L.unshift({ id: a.id, ex: false, kind: a.status, space: a.space, near: a.near, item: a.item, owner: (a.status === 'pre' ? '예비' : '기존') + ' 사장님 · 운영단이 선정한 공고', ask: '면담 때 정함', wish: '', roles: a.tasks.map(t => R(t.t, t.major, t.out, t.wk)), uid: a.uid }));
+    if (o && o.result === 'yes' && o.tasks && !o.appId) L.unshift({ id: 'mine', ex: false, kind: o.status, space: o.space, near: o.near, item: o.item, owner: (o.status === 'pre' ? '예비' : '기존') + ' 사장님 · 이 브라우저에서 선정된 공고', ask: '면담 때 정함', wish: '', roles: o.tasks.list.filter(t => t.on).map(t => R(t.t, t.major, t.out, t.wk)) });
     return L;
   }
+  const myApp = () => (st.stuApps || []).find(a => a.id === S().appId);
+  const statusOf = () => { const a = myApp(); return a ? a.status : S().status; };
+  // 운영단이 팀에서 정한 자리(지원한 자리와 다를 수 있음)
+  const slotOf = () => { const a = myApp(); const tm = a && Object.values(st.teams || {}).find(t => t.at && t.members.some(m => m.sa === a.id)); const m = tm && tm.members.find(x => x.sa === a.id); return m ? m.slot : S().role; };
+  const setStatus = v => { const a = myApp(); if (a) a.status = v; set({ status: v }); };
   const P = id => posts().find(p => p.id === id);
   const where = p => p.space ? shortAddr(SP[p.space]) : (p.near || '') + ' 근처';
   const groupsOfPost = p => [...new Set(p.roles.map(r => groupOf(r.major)))];
@@ -66,8 +73,8 @@
     if (!pf.groups.length || (s.reco && s.reco.key === key) || s.recoBusy === key) return;
     s.recoBusy = key;
     window.ASSIST.call('reco', { major: pf.major, groups: pf.groups, time: pf.time, slots: slots() })
-      .then(out => { if (S().recoBusy !== key) return; S().reco = { key, ai: true, pick: out.pick }; S().recoBusy = null; save(); if (S().step === 3) A.rerender(); })
-      .catch(() => { if (S().recoBusy === key) { S().reco = { key, ai: false, pick: null }; S().recoBusy = null; save(); if (S().step === 3) A.rerender(); } });
+      .then(out => { if (S().recoBusy !== key) return; S().reco = { key, ai: true, pick: out.pick }; S().recoBusy = null; save(); if (S().step === 3 && A.view().mode === 'student') A.rerender(); })
+      .catch(() => { if (S().recoBusy === key) { S().reco = { key, ai: false, pick: null }; S().recoBusy = null; save(); if (S().step === 3 && A.view().mode === 'student') A.rerender(); } });
   }
   // AI 질문: 지원서로 넘어갈 때 한 번 묻고(최대 몇 초), 안 되면 기본 질문
   async function loadQuestions() {
@@ -127,19 +134,23 @@
   }
 
   function s4() {
-    const s = S(), p = P(s.sel), r = p.roles[s.role], k = s.status;
+    const s = S(), p = P(s.sel), r = p.roles[slotOf()] || p.roles[s.role], k = statusOf(), ops = A.hasRole('ops');
+    const MY = window.MYSTORE, ownerStore = p.uid && MY ? MY.storeOf(p.uid) : null;
     const order = ['접수', '운영단 선발', '사장님 면담', '팀 확정', '한 학기 진행'];
     const at = { sent: 1, pass: 2, met: 3, team: 4, run: 5 }[k] || 1;
     return `<section class="ocard"><div class="ohead"><p class="kick">진행 상태</p><h2>${esc(r.t)} <small>@ ${esc(p.item)}</small></h2></div>
       <ol class="tl">${order.map((t, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}">${t}</li>`).join('')}</ol>
       ${k === 'drop' ? `<div class="okpost no"><p class="kick">이번에는 선발되지 않았어요</p><p>같은 연계 교과 안의 공동 과제(동성로 상권 조사)로 참여할 수 있고, 다음 학기에 우선 검토해요.</p></div>` : ''}
-      ${k === 'run' ? `<div class="okpost"><p class="kick">한 학기 진행 중</p><ul><li>1~4주: 현장 파악 · 사장님 인터뷰</li><li>5~8주: 결과물 1차 → <b>8주 중간 점검</b>(지도교수 · 운영단)</li><li>9~14주: 실행 · 고치기</li><li>15~16주: 인수인계(원본 파일 · 사용법) · 평가</li></ul></div>` : ''}
-      <div class="onav">${{ sent: `<button class="cta2" data-s="st" data-v="drop">운영단 처리: 이번엔 아님</button><button class="cta" data-s="st" data-v="pass">운영단 처리: 선발</button>`, pass: `<span></span><button class="cta" data-s="st" data-v="met">면담 완료</button>`, met: `<span></span><button class="cta" data-s="st" data-v="team">팀 확정</button>`, team: `<span></span><button class="cta" data-s="st" data-v="run">학기 시작</button>`, run: `<span></span><button class="cta" data-s="go5">학기 끝 → 경력 카드</button>`, drop: `<button class="cta2" data-s="reset">다른 과제 보기</button><span></span>` }[k] || ''}</div>
+      ${k === 'run' ? `<div class="okpost"><p class="kick">한 학기 진행 중</p><ul><li>1~4주: 현장 파악 · 사장님 인터뷰</li><li>5~8주: 결과물 1차 → <b>8주 중간 점검</b>(지도교수 · 운영단)</li><li>9~14주: 실행 · 고치기${p.kind === 'open' ? ' — 사장님 「내 가게」에서 <b>근처 바람에 답 1~2개</b> 올리기(초안은 학생 팀, 올리기는 사장님) · 답한 메뉴 기록 양식' : ' — 개업하면 「내 가게」에서 근처 바람에 답 1~2개'}</li><li>15~16주: 인수인계 — <b>체크 4개</b>(학생과 첫 답 올림 · 기록 2주 [가정] · 사장님 혼자 답 1개 · 사용법 한 장, 사장님 「내 가게 → 학생 팀」과 같은 값) · 평가</li></ul>
+        ${ownerStore ? `<p class="fine">이 가게 인수인계 체크 ${ownerStore.team.checks.filter(Boolean).length} / 4${ownerStore.team.handedAt ? ' · 끝남' : ''} · <button class="link" data-act="mystore">내 가게 함께 쓰기 →</button></p>` : ''}</div>` : ''}
+      ${k === 'sent' ? `<p class="was">운영단(대구시 + 지역 대학)이 선발해요. 결과가 나오면 여기 진행 상태가 바뀌어요.</p>` : ''}
+      ${k === 'met' ? `<p class="was">운영단이 가게마다 4인 팀과 지도교수를 짜는 중이에요.</p>` : ''}
+      <div class="onav">${{ sent: ops ? `<button class="cta2" data-s="ops" data-v="drop">운영단 처리: 이번엔 아님</button><button class="cta" data-s="ops" data-v="pass">운영단 처리: 선발</button>` : '', pass: `<span></span><button class="cta" data-s="st" data-v="met">면담 완료</button>`, met: ops ? `<span></span><button class="cta" data-act="ops">운영단 표에서 팀 짜기 →</button>` : '', team: `<span></span><button class="cta" data-s="st" data-v="run">학기 시작</button>`, run: `<span></span><button class="cta" data-s="go5">학기 끝 → 경력 카드</button>`, drop: `<button class="cta2" data-s="reset">다른 과제 보기</button><span></span>` }[k] || ''}</div>
       </section>`;
   }
 
   function s5() {
-    const s = S(), p = P(s.sel), r = p.roles[s.role], pf = s.prof;
+    const s = S(), p = P(s.sel), r = p.roles[slotOf()] || p.roles[s.role], pf = s.prof;
     return `<section class="ccard">
         <p class="ck">동성로 빈칸 · 동행 프로젝트 1기 · 직무 경력 카드</p>
         <h2>${esc(r.t)}</h2>
@@ -149,7 +160,8 @@
           <dt>결과물</dt><dd>${esc(r.out)} — 사장님께 인수인계 완료</dd>
           <dt>사장님 평</dt><dd class="ph">학기 말 평가에서 사장님이 직접 씀</dd>
           <dt>지도교수 평</dt><dd class="ph">학기 말 평가에서 지도교수가 직접 씀</dd>
-          <dt>학점</dt><dd>연계 교과 이수 (대학별 [가정])</dd></dl>
+          <dt>학점</dt><dd>연계 교과 이수 (대학별 [가정])</dd>
+          ${(() => { const MY = window.MYSTORE, so = p.uid && MY ? MY.storeOf(p.uid) : null; if (!so || !so.team.handedAt) return ''; const n = MY.myAnswers(so).filter(a => a.at > so.team.handedAt).length; return `<dt>남긴 것</dt><dd>인수인계 뒤 사장님이 혼자 올린 답 ${n}개 <small>(사장님 「내 가게」 기록)</small></dd>`; })()}</dl>
         <p class="fine">사장님 · 지도교수 학기 말 평가가 끝나면 발급돼요.</p>
       </section>
       <div class="onav"><button class="cta2" data-s="reset">다음 학기 과제 보기</button><button class="cta" data-act="owner">창업이 꿈이라면 → 예비 사장님으로</button></div>`;
@@ -191,7 +203,8 @@
       case 'pickrec': readForm(); S().sel = b.dataset.id; S().role = +v; S().qs = null; b.textContent = '질문 준비 중…'; loadQuestions().then(() => set({ step: 3 })); return;
       case 'newq': readForm(); if (b.disabled) return; b.disabled = true; b.textContent = '새 질문 받는 중…'; S().qs = null; loadQuestions().then(() => A.rerender()); return;
       case 'step': if (s.step === 3) readForm(); return set({ step: +v });
-      case 'st': return set({ status: v });
+      case 'st': return setStatus(v);
+      case 'ops': { if (!myApp()) { setStatus(v); return; } window.OPS.decideStudent(myApp().id, v); return A.rerender(); }
       case 'go5': return set({ step: 5 });
       case 'reset': { const prof = s.prof; st.stu = Object.assign(blank(), { prof }); save(); return A.rerender(); }
     }
@@ -205,14 +218,18 @@
     if (!pf.time.length) return err('가능 시간을 하나 이상 골라 주세요');
     if (s.ans.some(a => a.length < 10)) return err('질문 두 개에 10자 이상씩 답해 주세요');
     A.needAuth(() => {
-      if (st.user.role !== 'student') { st.user.role = 'student'; A.toast('대학생 역할을 더했어요'); }
-      st.stu.step = 4; st.stu.status = 'sent'; save(); A.rerender();
+      if (A.addRole('student')) A.toast('대학생 역할을 더했어요');
+      const s2 = S(), p = P(s2.sel), r = p.roles[s2.role], L = st.stuApps || (st.stuApps = []);
+      const qd = s2.qs && s2.qs.key === s2.sel + ':' + s2.role ? s2.qs.q : AI.questions(p, r);
+      const ap = { id: 'sa' + Date.now().toString(36), uid: st.user.id, name: st.user.name, prof: JSON.parse(JSON.stringify(s2.prof)), post: s2.sel, role: s2.role, roleT: r.t, item: p.item, qs: qd, ans: s2.ans.slice(), status: 'sent', at: Date.now() };
+      L.push(ap); s2.appId = ap.id; s2.step = 4; s2.status = 'sent'; save(); A.rerender();
     });
   });
 
   window.STUDENT = {
     render,
-    startWith(patch) { const prof = st.stu.prof; st.stu = Object.assign(blank(), { prof }, patch); save(); },
-    start(postId) { if (postId && P(postId)) { st.stu.sel = postId; st.stu.role = null; st.stu.step = 2; save(); } },
+    ensure: () => { S(); },
+    startWith(patch) { const prof = S().prof; st.stu = Object.assign(blank(), { prof }, patch); save(); },
+    start(postId) { if (postId && P(postId)) { S().sel = postId; S().role = null; S().step = 2; save(); } },
   };
 })();

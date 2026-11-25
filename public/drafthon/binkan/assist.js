@@ -2,7 +2,7 @@
 // 할 일은 사이트(chat.js)가 계산 · 실행해서 채팅 카드로 보여 준다. 숫자 · 목록은 AI가 아니라 사이트 데이터에서 나온다.
 // 브라우저(chat.js) · 서버 창구(api/binkan-assist → _binkan_assist.cjs 사본) · 터미널 시험(tools/test_assist.js)이 같이 쓴다.
 (function (root) {
-  const ACTS = ['recommend', 'spacecard', 'find', 'show', 'wish', 'like', 'owner', 'student', 'supports', 'page'];
+  const ACTS = ['recommend', 'spacecard', 'find', 'show', 'wish', 'like', 'owner', 'student', 'supports', 'page', 'mystore'];
   const TROUBLES = ['고객 관리', '홍보', '매출', '재고', '기타'];
   const GROUPS = ['경영 · 기획', '마케팅 · 콘텐츠', '디자인 · 공간', '데이터 · IT', '식품 · 메뉴'];
   const CATS = ['음식점', '카페 · 디저트', '술집', '공부 · 작업', '놀거리', '소품 · 옷', '생활 편의', '기타'];
@@ -17,6 +17,7 @@
 - 창업 카드(계산): 반경 100m 영업 업소 수와 같은 업종대(대분류) 수, 주변 빈칸 수, 직전 업종, 이 자리 바람과 맞는지, 받을 수 있는 지원. 경쟁 높음 · 보통 · 낮음 기준(60 · 30곳)은 [가정].
 - 지원 안내: 자리마다 하나만, 지금 화면 · 역할 · 지역 · 마감 · 이번에 본 횟수로 점수를 매겨 고른다. 상업 광고는 없다.
 - 동행 프로젝트(시범 사업): 사장님 상담 → 창업 카드 → 학생 팀과 할 과제 정리(1~4개) → 지원서(추적 · 인수인계 동의) → 운영단(대구시 + 지역 대학) 심사(준비 정도 · 그 자리 시민 바람 수(공감 포함) · 과제 적합성) → 선정되면 학생 모집. 대학생 4인 팀 + 지도교수, 한 학기 16주, 8주 중간 점검. 학생은 장학금 · 전공 학점(지역 대학 연계 교과, 대구 앵커사업 · 옛 RISE) · 경력 카드. 학생 선발은 운영단 → 사장님 면담. 세무 · 공사 · 계약은 학생 몫이 아니라 전문가 · 기관으로. 개업 뒤 6 · 12개월 [가정] 영업 유지를 「신청했지만 선정되지 않은 가게」와 비교한다.
+- 내 가게(경영 도우미): 운영 중인 사장님이 가게 근처(150m, 없으면 300m) 빈칸에 붙은 시민 바람을 보고 「우리 가게에서 해 볼게요」라고 답하고(바람 쓴 사람 · 공감한 사람에게 알림), 답한 메뉴의 판매 · 바람 보고 온 손님을 기록하고, 분기마다 가게 100m 안 상권 변화(같은 업종 수 · 사라진 업소 · 새 빈칸)를 본다. 답해도 바람은 닫히지 않는다. 로그인한 회원이면 열 수 있다.
 - 단계: 동성로 시범 → 대구 → 대국민.
 
 [할 일(do) — 필요할 때만, 최대 2개]
@@ -30,6 +31,7 @@
 - {"act":"student","group":"${GROUPS.join(' | ')} 또는 빈칸"}: 대학생 동행 프로젝트 화면을 연다.
 - {"act":"supports","who":"pre|open"}: 받을 수 있는 지원 목록을 채팅에.
 - {"act":"page","to":"home|howto|mine|login"}: 지도 처음 · 이용 방법 · 내 페이지 · 로그인 창(가입 · 로그인 문의 때).
+- {"act":"mystore"}: 사장님의 「내 가게」 화면을 연다(근처 시민 바람 보기 · 답하기 · 답한 메뉴 기록 · 상권 변화). 「우리 가게 근처 사람들은 뭘 원해요」 「바람에 답하고 싶어요」 「내 가게 열어 줘」에 쓴다. 「손님이 줄었어요」 같은 경영 고민 상담은 owner(status open)로.
 빈칸 id · 바람 id는 맥락에 나온 것만 쓴다. 「두 번째 자리」 「그거」는 [최근 보여 준 것]의 번호로 찾는다.
 
 [답(reply)]
@@ -54,7 +56,7 @@
   }
 
   const s = (v, n = 40) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
-  const id = v => (typeof v === 'string' && /^(V\d{3}|w\d+|u\d+)$/.test(v.trim()) ? v.trim() : '');
+  const id = v => (typeof v === 'string' && /^(V\d{3}|w\d+|u\d+|o[0-9a-f]{32})$/.test(v.trim()) ? v.trim() : '');
   function cleanAct(a) {
     if (!a || !ACTS.includes(a.act)) return null;
     const o = { act: a.act };
@@ -68,6 +70,7 @@
     if (a.act === 'student') { o.group = GROUPS.includes(a.group) ? a.group : ''; }
     if (a.act === 'supports') { o.who = a.who === 'open' ? 'open' : 'pre'; }
     if (a.act === 'page') { o.to = ['home', 'howto', 'mine', 'login'].includes(a.to) ? a.to : 'home'; }
+    // mystore는 채울 값이 없음
     return o;
   }
   // 받은 글에서 JSON만 꺼내 검증. 틀리면 null → 규칙 방식으로.
@@ -93,7 +96,7 @@
       parse: o => { const one = str(o.one, 60), why = arr(o.why, 3, 60), check = arr(o.check, 2, 50); return one && why.length >= 2 && check.length >= 1 ? { one, why, check } : null; },
     },
     tasks: {
-      system: `너는 동행 프로젝트(대학생 4인 팀 + 지도교수, 한 학기 16주) 과제 설계 도우미다. 사장님 가게에 맞춰 학생 팀이 할 과제 5~6개를 낸다. 각 과제는 필요한 전공, 사장님이 학기 뒤에도 쓸 결과물, 주 수(2~8)를 갖는다. 처음 4개가 가장 중요한 순서다. 매출 · 손님 기록이나 장부처럼 학기 뒤에도 사장님이 계속 쓰는 결과물을 하나 넣는다. 세무 · 법률 · 공사 · 계약 · 신고처럼 학생 몫이 아닌 일은 expert에 「일 → 맡을 곳」으로 2~4개. ${RULE}
+      system: `너는 동행 프로젝트(대학생 4인 팀 + 지도교수, 한 학기 16주) 과제 설계 도우미다. 사장님 가게에 맞춰 학생 팀이 할 과제 5~6개를 낸다. 각 과제는 필요한 전공, 사장님이 학기 뒤에도 쓸 결과물, 주 수(2~8)를 갖는다. 처음 4개가 가장 중요한 순서다. 운영 중인 가게면 「근처 바람으로 메뉴 실험」(전공 식품영양 · 경영 · 미디어, 결과물: 가게 근처 시민 바람에 답할 메뉴 · 답글 1~2개와 답한 메뉴 기록 양식)을 하나 넣는다. 결과물은 학기 뒤에도 사장님이 혼자 이어 갈 수 있어야 한다. 세무 · 법률 · 공사 · 계약 · 신고처럼 학생 몫이 아닌 일은 expert에 「일 → 맡을 곳」으로 2~4개. ${RULE}
 출력: {"list":[{"t":"과제(20자 안)","major":"전공 · 전공","out":"결과물(40자 안)","wk":4}],"expert":["일 → 맡을 곳"]}`,
       user: i => `[상황] ${i.status === 'open' ? '운영 중인 가게' : '창업 준비'}\n[업종] ${str(i.item, 30)}\n[자리] ${str(i.place, 40)}\n[어려움] ${str(i.trouble, 10)}\n[정리한 문제] ${str(i.problem, 80)}\n[상권 근거] ${arr(i.risks, 5, 120).join(' / ')}`,
       parse: o => {
@@ -113,6 +116,63 @@
 출력: {"pick":[{"id":"목록 id","why":"이유"}]}`,
       user: i => `[학생] 학과 ${str(i.major, 30)} · 관심 직무 ${arr(i.groups, 5, 20).join(', ')} · 가능 시간 ${arr(i.time, 3, 10).join(', ')}\n[자리 목록]\n${(Array.isArray(i.slots) ? i.slots.slice(0, 24) : []).map(x => `${str(x.id, 8)} | ${str(x.item, 30)} | ${str(x.t, 30)} | ${str(x.major, 24)}`).join('\n')}`,
       parse: (o, i) => { const ids = new Set((i.slots || []).map(x => x.id)); const pick = (Array.isArray(o.pick) ? o.pick : []).map(x => x && { id: str(x.id, 8), why: str(x.why, 80) }).filter(x => x && ids.has(x.id) && x.why).slice(0, 3); return pick.length ? { pick } : null; },
+    },
+  };
+  // 경영 도우미 「내 가게」 AI 칸 3개 (설계서 §6-3). 숫자는 사이트가 내고, 출력 안 숫자는 입력에 있던 값만 통과
+  // 숫자 맞추기: 8,000 · 8천 · 1만 2천 · 만 원 → 8000 · 8000 · 12000 · 10000, 한글 수(한 곳 · 세 곳 …) → 숫자
+  const HN = { 한: 1, 두: 2, 세: 3, 네: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10 };
+  const normNum = t => String(t).replace(/(\d),(?=\d{3})/g, '$1')
+    .replace(/(\d+)\s*만\s*(\d+)\s*천/g, (_, a, b) => String(a * 10000 + b * 1000))
+    .replace(/(\d+)\s*만(?=\s*원)/g, (_, a) => String(a * 10000)).replace(/(\d+)\s*천(?=\s*원)/g, (_, a) => String(a * 1000))
+    .replace(/(^|[^\d가-힣])(만|천)\s*원/g, (_, p, u) => p + (u === '만' ? '10000' : '1000') + '원')
+    .replace(/(^|[^가-힣])(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열)\s*(곳|개|명|시|가지)/g, (_, p, n, u) => p + HN[n] + u);
+  const GIFTW = /(할인|반\s*값|무료|공짜|1\s*\+\s*1|증정)/;
+  TASKS.answer = {
+    system: `너는 동성로에서 장사하는 사장님이 근처 시민 바람에 답하도록 돕는다. 바람은 빈칸(빈 점포)에 시민이 남긴 「여기 ○○ 있으면」이다. 가게 정보(업종 · 지금 메뉴)와 바람(한 줄 · 이유 · 공감 수 · 거리)을 보고, 이 가게가 그 바람을 채울 수 있는 정도를 「지금 메뉴로 됨 | 조금 바꾸면 됨 | 어려움」 중 하나로 판단한다. 지금 메뉴를 바탕으로 해 볼 방법 한 가지와 메뉴 이름을 낸다. 그리고 바람 아래에 보일 답글을 쓴다: 바람의 이유에 답하듯, 존댓말 100자 안, 가게 이름 대신 「저희 가게」. 업종이 너무 달라 어려우면 억지로 맞추지 말고 이유만 쓰고 menu · reply는 빈 문자열로 둔다. 가격 · 할인 · 날짜 · 영업시간은 [사장님이 적은 것]에 있을 때만 쓴다. 다른 가게나 빈칸 창업을 깎아내리지 않는다. 연락처 · 링크는 쓰지 않는다. ${RULE}
+출력: {"fit":"지금 메뉴로 됨|조금 바꾸면 됨|어려움","why":"판단 이유(50자 안)","idea":"해 볼 방법(60자 안)","menu":"메뉴 이름(20자 안)","reply":"답글(100자 안)"}`,
+    user: i => `[가게] ${str(i.item, 30)} @ ${str(i.place, 40)}\n[지금 메뉴] ${arr(i.menus, 8, 20).join(', ') || '없음'}\n[사장님이 적은 것] ${str(i.offer, 80) || '없음'}\n[바람] ${str(i.title, 30)} — ${str(i.why, 120)} (공감 ${parseInt(i.likes, 10) || 0} · 가게에서 약 ${parseInt(i.dist, 10) || 0}m)`,
+    parse: (o, i) => {
+      const FIT = ['지금 메뉴로 됨', '조금 바꾸면 됨', '어려움'];
+      if (!FIT.includes(o.fit)) return null;
+      const out = { fit: o.fit, why: str(o.why, 70), idea: str(o.idea, 80), menu: str(o.menu, 24), reply: str(o.reply, 140) };
+      if (!out.why) return null;
+      if (out.fit !== '어려움' && (!out.idea || !out.menu || !out.reply)) return null;
+      // 가격 · 할인 · 날짜 · 시간처럼 단위가 붙은 숫자가 입력에 없으면 버림(「1인」 같은 메뉴 이름은 통과). 12,000 → 12000으로 맞춰 비교
+      // 가격 · 할인(원 · %)은 [사장님이 적은 것] · 메뉴에 있던 숫자만, 날짜 · 시간 · 사람 수는 입력 어딘가에 있던 숫자만(공감 수 · 거리는 사람 수 · 거리로만)
+      const txt = normNum(out.idea + ' ' + out.menu + ' ' + out.reply), mine = normNum(str(i.offer, 80) + ' ' + arr(i.menus, 8, 20).join(' '));
+      const priceOk = new Set(mine.match(/\d+/g) || []), src = normNum([i.item, i.place, i.offer, i.title, i.why].map(v => str(v, 120)).concat(arr(i.menus, 8, 20)).join(' '));
+      const anyOk = new Set((src.match(/\d+/g) || []).concat(String(parseInt(i.likes, 10) || 0)));
+      if ([...txt.matchAll(/(\d+)\s*(원|%|퍼센트|프로)/g)].some(m => !priceOk.has(m[1]))) return null;
+      if ([...txt.matchAll(/(\d+)\s*(일|월|시|분|명)/g)].some(m => !anyOk.has(m[1]))) return null;
+      if ([...txt.matchAll(/(\d+)\s*(m|미터)/g)].some(m => m[1] !== String(parseInt(i.dist, 10) || 0))) return null;
+      if (GIFTW.test(txt) && !GIFTW.test(str(i.offer, 80))) return null;   // 사장님이 적지 않은 할인 · 무료
+      return out;
+    },
+  };
+  TASKS.themes = {
+    system: `너는 동성로 가게 사장님에게 근처 시민 바람을 정리해 주는 도우미다. 번호가 붙은 바람 목록을 읽고, 사람들이 바라는 공통점 2~3개(누가 · 언제 · 어떤 조건)를 찾는다. 공통점마다 근거 바람 번호(2개 이상이면 좋음)와, 이 가게(업종)가 바로 해 볼 수 있는 것 한 줄을 쓴다. 바람에 없는 내용을 만들지 않고, 공감 수 · 사람 수를 세어 쓰지 않는다(사이트가 센다). n은 목록 번호 그대로(1부터). ${RULE}
+출력: {"themes":[{"t":"공통점(20자 안)","refs":[1,3],"try":"이 가게가 해 볼 것(50자 안)"}]}`,
+    user: i => `[가게] ${str(i.item, 30)}\n[근처 바람]\n${(Array.isArray(i.wishes) ? i.wishes.slice(0, 12) : []).map((w, k) => `${k + 1}. ${str(w && w.title, 30)} — ${str(w && w.why, 80)}`).join('\n')}`,
+    parse: (o, i) => {
+      const N = Math.min(Array.isArray(i.wishes) ? i.wishes.length : 0, 12);
+      const themes = (Array.isArray(o.themes) ? o.themes : []).map(x => x && { t: str(x.t, 30), refs: [...new Set((Array.isArray(x.refs) ? x.refs : []).map(n => parseInt(n, 10)))].filter(n => n >= 1 && n <= N), try: str(x.try, 70) })
+        .filter(x => x && x.t && x.try && x.refs.length)
+        .filter(x => !/\d/.test(normNum(x.t + ' ' + x.try)) && !GIFTW.test(x.try)).slice(0, 3);   // 숫자 · 할인 약속은 사이트 · 사장님 몫이라 공통점에는 쓰지 않음
+      return N >= 2 && themes.length >= 1 ? { themes } : null;
+    },
+  };
+  TASKS.area = {
+    system: `너는 동성로 가게 사장님에게 분기마다 가게 주변 변화를 한 줄로 풀어 주는 도우미다. [숫자]에 있는 값만 그대로 인용해 2문장 안(120자 안)으로 쓴다. 원인(임대료 · 경기 등) 추측이나 다음 분기 예측은 하지 않는다. 사라진 업소의 직전 업종 가운데 이 가게와 같은 업종이 있으면 그것을 먼저 말한다. 새 빈칸 바람이 있으면 「근처 빈칸에 ○○ 바람이 있어요」로 끝낸다. ${RULE}
+출력: {"line":"한 줄"}`,
+    user: i => `[가게] ${str(i.item, 30)} · 업종 ${str(i.sub, 30)}\n[기간] ${str(i.q, 40)} · 가게 100m 안\n[숫자] 같은 업종 ${parseInt(i.before, 10) || 0}곳 → ${parseInt(i.now, 10) || 0}곳 (차이 ${Math.abs((parseInt(i.now, 10) || 0) - (parseInt(i.before, 10) || 0))} · 새로 ${parseInt(i.born, 10) || 0} · 사라짐 ${parseInt(i.gone, 10) || 0}) · 사라진 업소 전체 ${parseInt(i.goneAll, 10) || 0}곳\n[사라진 업소 직전 업종] ${arr(i.goneSubs, 8, 30).join(', ') || '없음'}\n[새 빈칸 바람] ${arr(i.wishes, 3, 40).join(' / ') || '없음'}`,
+    parse: (o, i) => {
+      const line = str(o.line, 160); if (!line) return null;
+      // 한 줄 안의 숫자는 모두 [숫자]에 있던 값이어야 함. 기간(○년 · ○분기)과 바람 제목 안 숫자는 떼고 본다
+      const diff = Math.abs((parseInt(i.now, 10) || 0) - (parseInt(i.before, 10) || 0));
+      const ok = new Set(['100', String(diff)].concat([i.before, i.now, i.born, i.gone, i.goneAll].map(v => String(parseInt(v, 10) || 0))).concat(arr(i.goneSubs, 8, 30).join(' ').match(/\d+/g) || []));
+      let rest = normNum(line).replace(/\d+\s*년|\d+\s*분기/g, ' ');
+      arr(i.wishes, 3, 40).forEach(w => { rest = rest.split(normNum(w)).join(' '); });
+      return (rest.match(/\d+/g) || []).every(d => ok.has(d)) ? { line } : null;
     },
   };
   const taskBody = (mode, input) => TASKS[mode] && ({ model: 'claude-opus-5-5', max_tokens: 3000, system: TASKS[mode].system, messages: [{ role: 'user', content: TASKS[mode].user(input || {}) }] });
