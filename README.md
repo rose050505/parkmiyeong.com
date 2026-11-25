@@ -30,6 +30,7 @@ npm run build    # dist/
 ## 빈칸 창업 분석
 
 - 빈칸의 자리 분석은 `/api/binkan-startup-risk`에서 Render AI 서비스로 요청을 전달합니다.
+- 자리 분석에서는 위험과 근거를 보여 줍니다. 「학생 팀과 할 과제 정리」를 누르면 분석 결과에 담긴 과제·전공·결과물을 선택할 수 있습니다.
 - Vercel 프로젝트의 Environment Variables에 Render AI 서비스와 동일한 `STARTUP_RISK_API_TOKEN`을 설정한 뒤 다시 배포합니다. 미리보기에서 확인하려면 Preview 환경에도 설정합니다.
 - 동성로1·2·3가 시범 범위 밖에서는 AI 분석 범위 안내와 기존 100m 상권 현황이 표시됩니다.
 
