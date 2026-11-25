@@ -278,8 +278,9 @@
     for (const part of [menu, reply]) for (const m of part.matchAll(GIFT)) {
       if (/^(은|는|이|도)?\s*(없|안\s*해|하지\s*않)/.test(part.slice(m.index + m[0].length, m.index + m[0].length + 6))) continue;   // 「할인은 없지만」
       if (/할인|반\s*값/.test(m[0]) && !/(할인|%|반\s*값)/.test(`${s.offer} ${s.perk}`)) return '할인은 가게 설정의 「가격 · 행사」에 먼저 적어 주세요';
-      const words = (part.slice(Math.max(0, m.index - 10), m.index).match(/[가-힣A-Za-z]{2,}/g) || []).map(w => w.replace(/(으로|로|을|를|이|가|은|는|도|만|에서|에게|께|와|과|랑)$/, '')).filter(w => w.length >= 2 && !STOP.test(w));
-      if (!mineT.trim() || words.some(w => !mineT.includes(w))) return '할인 · 무료 · 증정은 가게 설정의 「가격 · 행사」나 「첫 방문 혜택」에 적은 것만 쓸 수 있어요';
+      const words = (part.slice(Math.max(0, m.index - 10), m.index).match(/[가-힣A-Za-z]{2,}/g) || []).map(w => w.replace(/(으로|로|을|를|이|가|은|는|도|만|에서|에게|에는|엔|에|께|와|과|랑)$/, '')).filter(w => w.length >= 2 && !STOP.test(w));
+      const inMine = w => mineT.includes(w) || (w.length >= 3 && mineT.includes(w.slice(0, -1)));   // 조사가 남은 꼴(「방문엔」)도 맞춤
+      if (!mineT.trim() || words.some(w => !inMine(w))) return '할인 · 무료 · 증정은 가게 설정의 「가격 · 행사」나 「첫 방문 혜택」에 적은 것만 쓸 수 있어요';
     }
     return '';
   }
