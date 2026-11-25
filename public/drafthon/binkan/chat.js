@@ -47,14 +47,14 @@
       case 'other': return '';
       case 'hello': return `안녕하세요! 동성로 빈 점포에 <b>원하는 가게</b>를 남기거나, <b>창업 · 경영 상담</b>, <b>대학생 동행 프로젝트</b>로 안내해 드려요. 무엇이 궁금하세요?`;
       case 'student':
-        window.STUDENT.startWith({ filter: u.g || null }); A.go('student');
+        if (window.STUDENT.startWith({ filter: u.g || null }) === false) { A.go('student'); return R('쓰던 지원서가 있어 그대로 열었어요(지우지 않았어요). 과제 필터만 바꿨어요.'); } A.go('student');
         return R(`대학생 <b>동행 프로젝트</b>로 안내했어요. 장학금 · 전공 학점 · 실무 경력을 받으면서 동성로 가게의 개업 준비와 첫 운영을 한 학기 동안 도와요.${u.g ? ` <b>${esc(u.g)}</b> 과제만 골라 뒀어요.` : ''}`);
       case 'open':
-        window.OWNER.startWith({ status: 'open', trouble: u.trouble || '기타', story: text, item: u.item }); A.go('owner');
+        if (window.OWNER.startWith({ status: 'open', trouble: u.trouble || '기타', story: text, item: u.item }) === false) { A.go('owner'); return R('하던 상담이 있어 그대로 열었어요(지우지 않았어요).'); } A.go('owner');
         return R(`운영 중인 가게 고민으로 정리해 뒀어요 — 어려움: <b>${esc(u.trouble)}</b>${u.item ? `, 업종: <b>${esc(u.item)}</b>` : ''}. 화면에서 ${u.item ? '가게 위치만' : '업종 · 가게 위치를'} 확인하고 「AI와 문제 정리하기」를 눌러 주세요.`);
       case 'pre': {
         const known = u.item ? (sp ? 'both' : 'item') : (sp ? 'place' : null);
-        window.OWNER.startWith({ status: 'pre', known, item: u.item, space: sp ? sp.id : null }); A.go('owner');
+        if (window.OWNER.startWith({ status: 'pre', known, item: u.item, space: sp ? sp.id : null }) === false) { A.go('owner'); return R('하던 상담이 있어 그대로 열었어요(지우지 않았어요).'); } A.go('owner');
         return R(`창업 상담으로 안내했어요.${u.item ? ` 아이템 <b>${esc(u.item)}</b>` : ''}${sp ? ` · 자리 <b>${esc(shortAddr(sp))}</b>` : ''}${known ? '를 넣어 뒀어요.' : ' 정해 둔 것(아이템 · 자리)을 골라 주세요.'} 시민 바람이 많은 빈칸을 먼저 추천해 드려요.`);
       }
       case 'support': {
@@ -179,9 +179,9 @@
       case 'like': return like(a.wish);
       case 'owner': {
         const known = a.status === 'pre' ? (a.item && a.space ? 'both' : a.item ? 'item' : a.space ? 'place' : null) : null;
-        window.OWNER.startWith({ status: a.status, item: a.item, trouble: a.trouble, story: a.status === 'open' ? text : '', space: a.status === 'pre' ? (a.space || null) : null, known }); A.go('owner'); return '';
+        return window.OWNER.startWith({ status: a.status, item: a.item, trouble: a.trouble, story: a.status === 'open' ? text : '', space: a.status === 'pre' ? (a.space || null) : null, known }) === false ? (A.go('owner'), '<small>하던 상담이 있어 그대로 열었어요(지우지 않았어요).</small>') : (A.go('owner'), '');
       }
-      case 'student': window.STUDENT.startWith({ filter: a.group || null }); A.go('student'); return '';
+      case 'student': { const kept = window.STUDENT.startWith({ filter: a.group || null }) === false; A.go('student'); return kept ? '<small>쓰던 지원서가 있어 그대로 열었어요(지우지 않았어요). 과제 필터만 바꿨어요.</small>' : ''; }
       case 'supports': return cardSupports(a.who);
       case 'page': if (a.to === 'login' || (a.to === 'mine' && !A.st.user)) { A.needAuth(() => A.refresh()); return ''; } A.go(a.to); return '';
       case 'mystore': openStore(); return A.st.user ? '' : '<small>「내 가게」는 회원만 열 수 있어요 — 로그인 창을 열었어요.</small>';
@@ -236,7 +236,7 @@
       const d = drafts[b.dataset.k]; if (!d) return;
       A.needAuth(() => {
         if (store.bySpace(d.space).some(w => w.title.replace(/\s/g, '') === d.title.replace(/\s/g, ''))) return push('이 빈칸에 같은 바람이 이미 있어요. 그 바람에 공감해 주세요.');
-        if (A.BAD.test(d.title + d.why)) return push('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 바람 쓰기와 같은 기준
+        if (A.checkText(d.title + ' ' + d.why)) return push('욕설 · 비방 · 연락처 · 링크로 보이는 말이 있어 올리지 않았어요. 고쳐서 다시 말해 주세요.');   // app.js 바람 쓰기와 같은 기준
         const w = { id: 'u' + Date.now(), space: d.space, cat: d.cat, title: d.title, why: d.why || '—', who: A.roleName(A.st.user.role), likes: 0, ago: 0, uid: A.st.user.id };
         delete drafts[b.dataset.k];
         store.add(w).then(x => {

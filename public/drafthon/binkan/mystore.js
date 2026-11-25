@@ -47,9 +47,9 @@
     if (!BKon() || !s.setup || !st.user || s.uid !== st.user.id) return Promise.resolve(null);
     const body = storeBody(s); if (!body) return Promise.resolve(null);
     const sig = JSON.stringify(body); if (s.srvSig === sig && s.srvId) return Promise.resolve(s.srvId);
-    if (pending.store) return pending.store;
+    if (pending.store) { s.srvDirty = true; return pending.store; }   // 보내는 중에 바뀐 것은 끝난 뒤 한 번 더
     return pending.store = window.BK.isOwner().then(ok => ok ? window.BK.putStore(body).then(j => { const nw = s.srvId !== j.id; s.srvId = j.id; s.srvSig = sig; save(); if (nw) { mergedVer = -1; rerender(); } return j.id; }) : null)
-      .catch(e => { console.warn('가게 설정 서버 저장 실패:', e.message); return null; }).finally(() => { delete pending.store; });
+      .catch(e => { console.warn('가게 설정 서버 저장 실패:', e.message); return null; }).finally(() => { delete pending.store; if (s.srvDirty) { s.srvDirty = false; syncStore(s); } });
   }
   function syncAnswer(a) {
     if (!BKon() || a.remote || !st.user || a.uid !== st.user.id) return;
@@ -79,13 +79,16 @@
   function fromServer(s0) {
     window.BK.isOwner().then(ok => ok ? window.BK.getStore() : null).then(j => {
       if (!j || !j.id || !j.name) return;
-      const s = db.store(s0.uid); if (!s || s.setup) return;
+      const s = db.store(s0.uid); if (!s || pending.store) return;
+      const cmp = z => { const b = storeBody(z); if (!b) return ''; b.menus = b.menus.map(m => m.name + ':' + m.priceKrw).sort(); return JSON.stringify(b); };   // 메뉴 순서는 서버가 이름순이라 비교에서 뺌
+      const was = s.setup ? cmp(s) : '';
       const x = +j.longitude, y = +j.latitude;
       Object.assign(s, { name: j.name, item: j.category || s.item, sub: M.subs.includes(j.category) ? j.category : s.sub, pt: Number.isFinite(x) && Number.isFinite(y) ? { x, y, label: (j.roadAddress || '').replace(/^대구(광역시)?\s*중구\s*/, '') || '가게 위치' } : s.pt,
         perk: j.firstVisitBenefit || '', offer: j.offerDetails || '', menus: (j.menus || []).length ? j.menus.map(m => ({ name: m.name, price: m.priceKrw != null ? String(m.priceKrw) : '' })) : s.menus, setup: true, srvId: j.id });
       s.srvSig = JSON.stringify(storeBody(s)); st.mystores[s.uid] = s; save(); mergedVer = -1;
-      if (ui.view === 'k1') ui.view = 'k';
-      A.toast('이 계정의 가게 설정을 불러왔어요'); rerender();
+      if (was === cmp(s)) return;   // 이미 같음
+      if (ui.view === 'k1' && !was) ui.view = 'k';
+      A.toast(was ? '다른 기기에서 고친 가게 설정을 받았어요' : '이 계정의 가게 설정을 불러왔어요'); if (!typing()) rerender();
     }).catch(e => console.warn('가게 설정 불러오기 실패:', e.message));
   }
   // 다른 가게(서버)의 답을 이 브라우저 목록에 합침 — 시민 쪽 「근처 가게가 답했어요」 · 알림 · 가게 카드가 그대로 씀. 이 브라우저에서 올린 답(srv 같음)은 건너뜀
@@ -167,7 +170,7 @@
     }
     ui.view = c.mode === 'owner' && !c.s.setup ? 'k1' : 'k';
     ui.open = null; ui.pending = opts.wish || null;
-    if (c.mode === 'owner' && !c.s.setup && BKon()) fromServer(c.s);   // 이 계정 가게가 서버에 이미 있으면(같은 시범 가게 계정을 다른 기기에서 씀) 그 설정으로 채움
+    if (c.mode === 'owner' && BKon()) fromServer(c.s);   // 열 때마다: 이 계정 가게가 서버에 있으면(다른 기기에서 고쳤어도) 그 설정을 받음   // 이 계정 가게가 서버에 이미 있으면(같은 시범 가게 계정을 다른 기기에서 씀) 그 설정으로 채움
     if (c.s) myAnswers(c.s).forEach(x => ui.extra.add(x.wish));   // 내가 답한 바람은 150m 밖이어도 목록에 남김
     if (opts.view && c.mode === 'owner' && c.s.setup) ui.view = opts.view;
     if (c.mode === 'owner' && c.s.setup) { ui.since = c.s.lastSeen || 0; c.s.lastSeen = Date.now(); db.putStore(c.s); }   // 지난번 연 뒤 새로 생긴 회원 바람에 「새 바람」
@@ -360,6 +363,7 @@
     if (reply.length < 5) return '바람 아래에 보일 답글을 적어 주세요';
     if (/△△|○○/.test(t)) return '틀 문장의 ○○ · △△ 자리를 채워 주세요';
     if (/(쓰레기|망해라|꺼져|씨발|시발|ㅅㅂ|병신|개같)/.test(t)) return '욕설 · 비방으로 보이는 말이 있어요. 고쳐서 올려 주세요';
+    { const nc = noteCheck(t); if (nc && !/두 글자/.test(nc)) return nc + ' — 고쳐서 올려 주세요'; }   // 바람 · 한 줄과 같은 욕설 · 연락처 · 링크 기준
     if (/((다른|옆|근처|주변|딴|그)\s*[가-힣]{0,6}(집|가게|매장|식당|카페)|거기|저기).{0,15}(별로|비싸|맛없|못하|나쁘|더럽|불친절|엉망|최악|위생|구려|후지)/.test(t)
       || /(창업|새\s*가게|빈칸|여기\s*들어오).{0,15}(필요\s*없|소용\s*없|안\s*돼|망할|고생|들어오지|하지\s*마|말리)/.test(t)) return '다른 가게나 빈칸 창업을 깎아내리는 말은 쓸 수 없어요';
     if (/((01[016789]|공일공)[\s.-]?[\d일이삼사오육칠팔구공영]{3,4}|\d{2,3}-\d{3,4}-\d{4}|카톡|카카오\s*(톡|아이디|채널|id)|오픈\s*채팅|오픈톡|인스타|페북|페이스북|아이디|\bid\b|\bdm\b|디엠|문자\s*주|전화\s*주)/i.test(t)) return '연락처 · 계정은 답글에 넣을 수 없어요(시민은 이 사이트에서 가게를 찾아요)';
@@ -1002,7 +1006,7 @@
     const done = u && db.got('visits', u.id, aid + ':' + today());
     return `<div class="showcard${end ? ' end' : ''}">
       ${end ? '<p class="send">이 메뉴는 끝났어요</p>' : '<p class="sk">동성로 빈칸 · 바람 보고 왔어요</p>'}
-      <p class="ss">${esc(a.store)}</p><p class="si">${esc(a.item)} · ${esc(placeOf(s.id ? s : { near: '' }))}</p>
+      <p class="ss">${esc(a.store)}</p><p class="si">${esc(a.item)} · ${esc(s.id ? placeOf(s) : (a.pt && a.pt.label) || '')}</p>
       <p class="sm">${esc(a.menu)}</p>
       <p class="sr">「${esc(a.reply)}」</p>
       ${w ? `<p class="sw">바람 「${esc(w.title)}」에 답한 메뉴</p>` : ''}
@@ -1020,7 +1024,7 @@
     db.mark('visits', u.id, key, Date.now());
     const d = dayOf(a, today(), true); d.came = (d.came || 0) + 1; d.ok = (d.ok || 0) + 1; db.putAnswer(a);
     if (a.remote && BKon() && a.state === '판매 중' && !db.got('went', u.id, aid)) { db.mark('went', u.id, aid, Date.now()); a.went = (a.went || 0) + 1; window.BK.went(a.srv).catch(e => console.warn('방문 서버 저장 실패:', e.message)); }   // 다른 기기 가게: 서버 「가 봤어요」로 사장님 화면에 셈
-    return '확인했어요 · 「바람 보고 온 손님」에 하나 더했어요';
+    return a.remote ? '확인했어요 · 사장님 화면의 「가 봤어요」에 남았어요' : '확인했어요 · 「바람 보고 온 손님」에 하나 더했어요';
   }
   // 시민 지도: 근처 바람에 답하고 지금 하는(끝나지 않은) 가게 핀
   function storePins() {

@@ -35,6 +35,8 @@
   const statusOf = () => { const a = myApp(); return a ? a.status : S().status; };
   // 운영단이 팀에서 정한 자리(지원한 자리와 다를 수 있음)
   const slotOf = () => { const a = myApp(); const tm = a && Object.values(st.teams || {}).find(t => t.at && t.members.some(m => m.sa === a.id)); const m = tm && tm.members.find(x => x.sa === a.id); return m ? m.slot : S().role; };
+  // 운영단이 팀을 확정한 공고(다른 공고의 자리에 넣었을 수 있음) — 없으면 처음 지원한 공고
+  const teamPost = () => { const a = myApp(); const e = a && Object.entries(st.teams || {}).find(([, t]) => t.at && t.members.some(m => m.sa === a.id)); return (e && P(e[0])) || null; };
   const setStatus = v => { const a = myApp(); if (a) a.status = v; set({ status: v }); };
   const P = id => posts().find(p => p.id === id);
   const where = p => p.space ? shortAddr(SP[p.space]) : (p.near || '') + ' 근처';
@@ -73,8 +75,8 @@
     if (!pf.groups.length || (s.reco && s.reco.key === key) || s.recoBusy === key) return;
     s.recoBusy = key;
     window.ASSIST.call('reco', { major: pf.major, groups: pf.groups, time: pf.time, slots: slots() })
-      .then(out => { if (S().recoBusy !== key) return; S().reco = { key, ai: true, pick: out.pick }; S().recoBusy = null; save(); if (S().step === 3 && A.view().mode === 'student') A.rerender(); })
-      .catch(() => { if (S().recoBusy === key) { S().reco = { key, ai: false, pick: null }; S().recoBusy = null; save(); if (S().step === 3 && A.view().mode === 'student') A.rerender(); } });
+      .then(out => { if (S().recoBusy !== key) return; S().reco = { key, ai: true, pick: out.pick }; S().recoBusy = null; save(); if ((S().step === 3 || S().step === 1) && A.view().mode === 'student') A.rerender(); })
+      .catch(() => { if (S().recoBusy === key) { S().reco = { key, ai: false, pick: null }; S().recoBusy = null; save(); if ((S().step === 3 || S().step === 1) && A.view().mode === 'student') A.rerender(); } });
   }
   // AI 질문: 지원서로 넘어갈 때 한 번 묻고(최대 몇 초), 안 되면 기본 질문
   async function loadQuestions() {
@@ -90,11 +92,22 @@
       <span class="roles">${p.roles.map(r => `<i>${esc(r.t)}</i>`).join('')}</span>
       <span class="pg">${groupsOfPost(p).map(g => `<em>${esc(g)}</em>`).join('')}</span></button>`;
 
+  // 1단계 맨 위: 전공 · 관심 직무만 넣으면 AI가 올라온 과제의 자리 중 맞는 3개를 이유와 함께 고름(지원서 3단계와 같은 추천)
+  function recoFirst(s) {
+    const pf = s.prof, rk = recoKey(pf), rec = s.reco && s.reco.key === rk ? s.reco : null, busy = s.recoBusy === rk;
+    const picks = rec && rec.ai && rec.pick ? rec.pick.map(x => { const [pid, ri] = String(x.id).split(':'), p = P(pid), r = p && p.roles[+ri]; return p ? `<li><button data-s="open" data-id="${esc(pid)}"><b>${esc(p.item)}${r ? ' · ' + esc(r.t) : ''}</b><small>${esc(x.why || '')}</small></button></li>` : ''; }).join('') : '';
+    return `<section class="oq"><h3>내 전공으로 맞는 자리 찾기 ${picks ? aiTag(true) : ''}</h3>
+        <div class="recoin"><input id="s1major" maxlength="30" placeholder="전공 (예: 시각디자인 · 경영 · 식품영양)" value="${esc(pf.major || '')}">
+        <div class="ochips">${GROUPS.map(g => `<button class="${pf.groups.includes(g) ? 'on' : ''}" data-s="s1g" data-v="${g}">${g}</button>`).join('')}</div>
+        <button class="cta sm" data-s="s1reco"${pf.groups.length && !busy ? '' : ' disabled'}>${busy ? 'AI가 고르는 중…' : pf.groups.length ? '맞는 자리 추천 받기' : '관심 직무를 하나 이상 골라 주세요'}</button></div>
+        ${picks ? `<ol class="s1reco">${picks}</ol>` : rec && !rec.ai ? '<p class="fine">AI 연결이 안 돼요. 아래 직무 칩으로 과제를 골라 보세요.</p>' : ''}</section>`;
+  }
   function s1() {
     const s = S(), L = posts().filter(p => !s.filter || groupsOfPost(p).includes(s.filter));
     return `<section class="oq hero"><h2>동성로 가게의 개업 준비와 첫 운영을, 한 학기 동안 돕기</h2>
         <div class="gets"><div><b>장학금</b><small>참여 학생 지원</small></div><div><b>전공 학점</b><small>지역 대학 연계 교과 · 대구 앵커사업(옛 RISE)</small></div><div><b>실무 경력</b><small>경력 카드로 남음</small></div></div>
         <p class="was">4인 팀 + 지도교수 · 16주 · 사장님 가게의 실제 과제. 알바가 아니라 내 직무 경력이 돼요.</p></section>
+      ${recoFirst(s)}
       <section class="oq"><h3>올라온 과제 <small>로그인 없이 볼 수 있어요</small></h3>
         <div class="ochips"><button class="${!s.filter ? 'on' : ''}" data-s="filter" data-v="">전체</button>${GROUPS.map(g => `<button class="${s.filter === g ? 'on' : ''}" data-s="filter" data-v="${g}">${g}</button>`).join('')}</div>
         <div class="plist">${L.map(postCard).join('') || '<p class="emptyw">이 직무의 과제가 아직 없어요.</p>'}</div>
@@ -134,7 +147,7 @@
   }
 
   function s4() {
-    const s = S(), p = P(s.sel), r = p.roles[slotOf()] || p.roles[s.role], k = statusOf(), ops = A.hasRole('ops');
+    const s = S(), tp = teamPost(), p = tp || P(s.sel), r = (tp ? p.roles[slotOf()] : null) || P(s.sel).roles[s.role], k = statusOf(), ops = A.hasRole('ops');
     const MY = window.MYSTORE, ownerStore = p.uid && MY ? MY.storeOf(p.uid) : null;
     const order = ['접수', '운영단 선발', '사장님 면담', '팀 확정', '한 학기 진행'];
     const at = { sent: 1, pass: 2, met: 3, team: 4, run: 5 }[k] || 1;
@@ -150,7 +163,7 @@
   }
 
   function s5() {
-    const s = S(), p = P(s.sel), r = p.roles[slotOf()] || p.roles[s.role], pf = s.prof;
+    const s = S(), tp = teamPost(), p = tp || P(s.sel), r = (tp ? p.roles[slotOf()] : null) || P(s.sel).roles[s.role], pf = s.prof;
     return `<section class="ccard">
         <p class="ck">동성로 빈칸 · 동행 프로젝트 1기 · 직무 경력 카드</p>
         <h2>${esc(r.t)}</h2>
@@ -198,6 +211,8 @@
     switch (k) {
       case 'map': return A.go('home');
       case 'filter': return set({ filter: v || null });
+      case 's1g': { const pf = S().prof, i = pf.groups.indexOf(v); if (i >= 0) pf.groups.splice(i, 1); else pf.groups.push(v); return set({}); }
+      case 's1reco': { const m = document.getElementById('s1major'); S().prof.major = m ? m.value.trim() : S().prof.major; save(); fetchReco(); return A.rerender(); }
       case 'open': return set({ sel: b.dataset.id, role: null, step: 2 });
       case 'go3': if (b.disabled) return; b.disabled = true; b.textContent = '질문 준비 중…'; S().qs = null; loadQuestions().then(() => { set({ step: 3 }); fetchReco(); }); return;
       case 'pickrec': readForm(); S().sel = b.dataset.id; S().role = +v; S().qs = null; b.textContent = '질문 준비 중…'; loadQuestions().then(() => set({ step: 3 })); return;
@@ -230,8 +245,8 @@
     render,
     ensure: () => { S(); },
     startWith(patch) {   // 쓰던 지원서(2단계 이상 · 아직 안 냄)가 있으면 지우지 않고 과제 필터만 바꿈
-      const cur = S(); if (cur && cur.step >= 2 && !cur.status) { if (patch.filter !== undefined) cur.filter = patch.filter; save(); window.APP.toast('쓰던 지원서를 이어서 보여 드려요'); return; }
-      const prof = cur.prof; st.stu = Object.assign(blank(), { prof }, patch); save(); },
+      const cur = S(); if (cur && cur.step >= 2) { if (patch.filter !== undefined) cur.filter = patch.filter; save(); window.APP.toast('쓰던 지원서를 이어서 보여 드려요'); return false; }
+      const prof = cur.prof; st.stu = Object.assign(blank(), { prof }, patch); save(); return true; },
     start(postId) { if (postId && P(postId)) { S().sel = postId; S().role = null; S().step = 2; save(); } },
   };
 })();

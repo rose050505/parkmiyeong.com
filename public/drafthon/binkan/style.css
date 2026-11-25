@@ -784,3 +784,18 @@ body.work-open .work { padding-bottom: 110px; }
 }
 @media (max-width: 640px) { body.work-open .chatfab { top: auto; bottom: 16px; left: auto; right: 12px; } }   /* 작업 화면에선 「← 지도로」를 가리지 않게 오른쪽 아래로 */
 .fine .link { margin: 0; font-size: inherit; }
+/* 첫 화면 세 칸: 시민 → AI → 대학생 팀 */
+.flow3 { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0; margin: 10px 0 4px; }
+.flow3 li { background: var(--bg); border-radius: 10px; padding: 8px 9px; font-size: 12px; line-height: 1.4; color: var(--ink2, #444); position: relative; }
+.flow3 li b { display: block; font-size: 13px; color: var(--ink); margin-bottom: 2px; }
+.flow3 li:nth-child(2) { background: #eef4ff; }
+.flow3 li:nth-child(2) b { color: #2456b8; }
+.hello .fine .link { color: var(--ink); font-weight: 700; }
+/* 학생 1단계: 전공으로 맞는 자리(AI 추천) */
+.recoin { display: grid; gap: 8px; }
+.recoin input { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: inherit; min-width: 0; }
+.recoin .cta.sm { justify-self: start; width: auto; }
+.s1reco { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+.s1reco button { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 9px 12px; display: grid; gap: 2px; }
+.s1reco button:hover { border-color: var(--ink); }
+.s1reco small { color: var(--ink3); line-height: 1.45; }

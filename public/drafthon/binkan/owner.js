@@ -272,8 +272,8 @@
         if (!o.story.trim()) o.story = `${o.trouble} 때문에 고민이에요`;
         set({ busy: 'problem' });
         window.ASSIST.call('problem', { item: o.item.trim(), trouble: o.trouble, story: o.story })
-          .then(out => set({ busy: null, problem: Object.assign(out, { ai: true }) }))
-          .catch(() => set({ busy: null, problem: Object.assign(AI.problem(o.trouble, o.story, o.item.trim()), { ai: false }) }));
+          .then(out => { set({ busy: null, problem: Object.assign(out, { ai: true }) }); setTimeout(() => { const el = W.querySelector('.oprob'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60); })
+          .catch(() => { set({ busy: null, problem: Object.assign(AI.problem(o.trouble, o.story, o.item.trim()), { ai: false }) }); setTimeout(() => { const el = W.querySelector('.oprob'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60); });
         return;
       }
       case 'go2': if (!o.item.trim()) return err('업종을 적어 주세요'); if (o.status === 'open' && !o.near) return err('가게 위치를 골라 주세요'); return set({ step: 2, tasks: null });
